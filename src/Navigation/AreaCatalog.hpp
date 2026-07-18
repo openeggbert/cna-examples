@@ -19,6 +19,17 @@
 #include "Demos/Input/Keyboard/SingleKeyQueryScreen.hpp"
 #include "Demos/Input/Keyboard/KeyHoldDurationScreen.hpp"
 
+#include "Demos/Input/Mouse/LivePositionButtonsScreen.hpp"
+#include "Demos/Input/Mouse/ScrollWheelScreen.hpp"
+#include "Demos/Input/Mouse/SetPositionScreen.hpp"
+#include "Demos/Input/Mouse/CursorShapesScreen.hpp"
+#include "Demos/Input/Mouse/ClickedEventScreen.hpp"
+#include "Demos/Input/Mouse/RelativeModeScreen.hpp"
+#include "Demos/Input/Mouse/GlobalPositionWarpScreen.hpp"
+#include "Demos/Input/Mouse/CaptureScreen.hpp"
+#include "Demos/Input/Mouse/StateEqualityHashScreen.hpp"
+#include "Demos/Input/Mouse/ButtonTransitionLogScreen.hpp"
+
 namespace CnaExamples::Navigation {
 
 using CnaExamples::GameStateManagement::GameScreen;
@@ -77,6 +88,32 @@ inline std::vector<DemoEntry> BuildKeyboardDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildMouseDemos() {
+    using namespace CnaExamples::Demos::Input::MouseDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<LivePositionButtonsScreen>(
+        "Live Position & Buttons", "GetState() -- position and all five button states"));
+    demos.push_back(MakeDemo<ScrollWheelScreen>(
+        "Scroll Wheel", "Cumulative value + derived per-frame delta, vertical and horizontal"));
+    demos.push_back(MakeDemo<SetPositionScreen>(
+        "SetPosition()", "The write side of the Mouse API -- warping the cursor"));
+    demos.push_back(MakeDemo<CursorShapesScreen>(
+        "Cursor Shapes", "MouseCursor's stock shape gallery (EXT)"));
+    demos.push_back(MakeDemo<ClickedEventScreen>(
+        "ClickedEXT Event", "Event-driven clicks vs. polling ButtonState (EXT)"));
+    demos.push_back(MakeDemo<RelativeModeScreen>(
+        "Relative Mode", "Absolute position vs. per-frame motion delta (EXT)"));
+    demos.push_back(MakeDemo<GlobalPositionWarpScreen>(
+        "Global Position & Warp", "Desktop-space coordinates, independent of the window (EXT)"));
+    demos.push_back(MakeDemo<CaptureScreen>(
+        "Capture", "Keep receiving events once the cursor leaves the window (EXT)"));
+    demos.push_back(MakeDemo<StateEqualityHashScreen>(
+        "State Equals()/GetHashCode()", "Snapshot comparison correctness"));
+    demos.push_back(MakeDemo<ButtonTransitionLogScreen>(
+        "Button Press/Release Log", "Edge-detected transitions from polled ButtonState"));
+    return demos;
+}
+
 // Builds the full Home -> Area -> Category -> Demo data set. This is the
 // single place new areas/categories/demos get registered as they are
 // implemented; see plan.md section 8 for what is intentionally still empty.
@@ -84,7 +121,7 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
     return {
         AreaEntry{"Input", {
             CategoryEntry{"Keyboard", BuildKeyboardDemos()},
-            CategoryEntry{"Mouse", {}},
+            CategoryEntry{"Mouse", BuildMouseDemos()},
             CategoryEntry{"Gamepad", {}},
             CategoryEntry{"Touch", {}},
             CategoryEntry{"Other", {}},
