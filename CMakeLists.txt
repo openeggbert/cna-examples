@@ -24,6 +24,13 @@ set(CNA_BUILD_TESTS           OFF CACHE BOOL "Build CNA tests"           FORCE)
 set(CNA_BUILD_EXAMPLES        OFF CACHE BOOL "Build CNA examples"        FORCE)
 set(SHARP_RUNTIME_BUILD_TESTS OFF CACHE BOOL "Build sharp-runtime tests" FORCE)
 
+# The Devices area (src/Demos/Devices/) demonstrates CNA::Devices::* (Camera,
+# Clipboard, DisplayInfo, FileDialog, Locale, MessageBox, PowerInfo,
+# SystemInfo, SystemTray, UrlLauncher) -- all compiled out entirely unless
+# this is ON (default OFF in CNA itself, since these are CNA-specific
+# extensions beyond XNA 4.0/WP7, not something every CNA consumer wants).
+set(CNA_DEVICES ON CACHE BOOL "Enable CNA-specific device/sensor extensions" FORCE)
+
 add_subdirectory(../cna CNA_BUILD)
 
 # Re-export the backend target name CNA sets internally, for the linker
