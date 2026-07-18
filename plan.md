@@ -134,7 +134,7 @@ The Home screen's entries mirror CNA's own XNA 4.0 namespace areas:
 |---|---|---|
 | Input | `Microsoft::Xna::Framework::Input`, `CNA::Internal::Input` | Keyboard, Mouse, Gamepad, Touch, Other |
 | Audio | `Microsoft::Xna::Framework::Audio` | SoundEffect, SoundEffectInstance, 3D Audio, DynamicSoundEffectInstance, Microphone |
-| Devices | `CNA` device/platform-capability surface | placeholder only |
+| Devices | `Microsoft::Devices::Sensors`, `Microsoft::Devices::VibrateController`, `CNA::Devices` | Sensors, Vibration, Camera, System & Display, Power, Desktop Integration |
 | Net | `Microsoft::Xna::Framework::Net`, `GamerServices` | placeholder only |
 | Media | `Microsoft::Xna::Framework::Media` | placeholder only |
 | 2D Graphics | `Microsoft::Xna::Framework::Graphics` (SpriteBatch, Texture2D, ...) | placeholder only |
@@ -143,11 +143,11 @@ The Home screen's entries mirror CNA's own XNA 4.0 namespace areas:
 More areas may be added later (e.g. Content pipeline, Math) — the `AreaEntry` list is just
 appended to; no structural change is needed.
 
-**Input** and **Audio** have their category lists filled in as of this pass. The remaining areas
-(Devices/Net/Media/2D Graphics/3D Graphics) exist as real, selectable Home-screen entries
-leading to an `AreaScreen` with zero categories (rendered as an empty/"coming soon" list) — this
-proves the navigation shell scales to the full area set without committing to any area's
-content yet.
+**Input**, **Audio**, and **Devices** have their category lists filled in as of this pass. The
+remaining areas (Net/Media/2D Graphics/3D Graphics) exist as real, selectable Home-screen
+entries leading to an `AreaScreen` with zero categories (rendered as an empty/"coming soon"
+list) — this proves the navigation shell scales to the full area set without committing to any
+area's content yet.
 
 ### 5.1 Input area detail
 
@@ -273,6 +273,78 @@ project binaries (`.xgs`/`.xsb`/`.xwb`), which require Microsoft's XACT authorin
 produce and this app cannot generate or fake — unlike `SoundEffect`, which has a raw-PCM-buffer
 constructor that sidesteps needing any asset file at all.
 
+### 5.3 Devices area detail
+
+Devices is the first area that mixes two distinct API surfaces: the official (but WP7-only,
+never-ported-to-desktop-XNA) `Microsoft::Devices::Sensors`/`VibrateController` namespace, and
+`CNA::Devices`, a CNA-original extension namespace with no XNA/WP7 precedent at all (gated
+behind the `CNA_DEVICES` CMake option, `OFF` by default in `CNA` itself since it's an
+opt-in extension surface — this app's top-level `CMakeLists.txt` forces it `ON` before
+`add_subdirectory(../cna CNA_BUILD)`). 15 demo screens across 6 categories:
+
+- **Sensors** — **implemented** (4 demo screens, `src/Demos/Devices/Sensors/`): Accelerometer,
+  Gyroscope, Compass, and Motion (the fused sensor), all built on the shared
+  `Microsoft::Devices::Sensors::SensorBase<T>` pattern (`getIsSupportedProperty()`, a
+  constructor that may throw a sensor-specific `...FailedException`, `Start()`/`Stop()`,
+  `getStateProperty()` over the 6-value `SensorState` enum, `getCurrentValueProperty()`,
+  `getIsDataValidProperty()`, `getTimeBetweenUpdatesProperty()`, and the `CurrentValueChanged`
+  event); Compass additionally demonstrates the `Calibrate` event. **Not verified against real
+  sensor hardware** — this is a WP7-era mobile sensor API with no desktop backend; every screen
+  was confirmed to render and navigate correctly with `IsSupported: false` (the honest, correct
+  desktop answer) and no crash. Per explicit instruction, these are meant to be tested on
+  Android, not desktop.
+- **Vibration** — **implemented** (1 demo screen): `Microsoft::Devices::VibrateController`
+  (`EXT`-suffixed members reflect this being a CNA cross-platform extension of a WP7-only API) —
+  `IsSupportedEXT`, `DeviceNameEXT`, `Start(duration)`/`StartLeftRightEXT(left, right,
+  duration)`. **Not verified against real vibration hardware** — confirmed to render correctly
+  and silently no-op (`IsSupportedEXT: false`) on this desktop machine, consistent with
+  `VibrateController` being meaningful mainly on a phone/gamepad-with-rumble; try on Android.
+- **Camera** — **implemented** (1 demo screen): `CNA::Devices::Camera`'s live-capture path —
+  enumerates available capture devices, opens the first one, lazily allocates a `Texture2D`
+  once the real frame size is known, and calls `TryAcquireFrame()` every `OnDemoUpdate` to draw
+  a live feed via `SpriteBatch::Draw()`. **Verified on real desktop hardware, not just graceful
+  absence**: `Camera::getIsSupportedProperty()` is genuinely `true` on this Linux dev machine
+  (the backend itself works), and with 0 physical cameras attached it correctly reports 0
+  available devices and shows a "no camera opened" message with no crash — the actual
+  live-frame-draw path is implemented and will engage on any machine with a webcam, but wasn't
+  exercised with a physical feed here.
+- **System & Display** — **implemented** (3 demo screens): `CNA::Devices::SystemInfo` (logical
+  CPU core count, system RAM), `CNA::Devices::DisplayInfo` (content scale, safe-area rectangle
+  in window client coordinates), and `CNA::Devices::Locale` (the ordered list of preferred
+  locales). **Verified against real desktop data** — all three screens showed genuine values
+  from the dev machine (16 logical cores, ~30 GB RAM, a 960x640 safe area matching the actual
+  window, and `en-US`/`en-US`/`en` as the real preferred-locale list) rather than placeholders.
+  Safe-area insets are most interesting on a real phone with a notch/curved edge, which this
+  desktop obviously doesn't have.
+- **Power** — **implemented** (1 demo screen): `CNA::Devices::PowerInfo` — `PowerState` (the
+  6-value enum: `Error`/`Unknown`/`OnBattery`/`NoBattery`/`Charging`/`Charged`), battery
+  percentage, and seconds-remaining estimate. **Verified against real hardware** — showed the
+  dev laptop's genuine state (`Charged`, 78%), consistent with the equivalent reading already
+  seen from `CNA::Input::Power` in the Input area's Other category.
+- **Desktop Integration** — **implemented** (5 demo screens): `CNA::Devices::Clipboard`
+  (`getHasTextProperty`/`getTextProperty`/`setTextProperty`), `CNA::Devices::MessageBox` (native
+  blocking dialog — `ShowSimple()` and `Show()` with Yes/No), `CNA::Devices::FileDialog` (native
+  async open-file/open-folder dialogs via a result callback, backed by a real dialog helper
+  process such as `zenity` on Linux), `CNA::Devices::UrlLauncher` (`Open()` hands a URL to the
+  system's default handler), and `CNA::Devices::SystemTray` (a real notification-area icon with
+  a checkable menu entry, created on `LoadContent()` and destroyed on `UnloadContent()`).
+  **Clipboard, UrlLauncher, and SystemTray verified against real desktop behavior**: a real
+  round-trip write+read against the actual X11 clipboard was performed (`HasText` went
+  false→true, `setTextProperty()` returned `true`), and SystemTray's real tray-icon
+  creation/entry-registration path ran with no crash (its `AddEntry` click callback is
+  `std::function<void()>`, not index-parameterized — corrected during implementation).
+  **MessageBox and FileDialog were deliberately not triggered** during this app's own automated
+  verification pass: `MessageBox::Show`/`ShowSimple` are genuinely thread-blocking (real SDL3
+  behavior, and the API's own doc comment says an automated test must never call it directly),
+  and `FileDialog`, though asynchronous at the call level, still launches a real native dialog
+  process that waits indefinitely for a human — both screens were confirmed to render and
+  navigate correctly (including showing `IsSupported: true` for both) without pressing their
+  trigger inputs; try them interactively.
+
+See `BuildSensorsDemos()`/`BuildVibrationDemos()`/`BuildCameraDemos()`/
+`BuildSystemAndDisplayDemos()`/`BuildPowerDemos()`/`BuildDesktopIntegrationDemos()` in
+`AreaCatalog.hpp`.
+
 ## 6. Project layout
 
 ```
@@ -302,13 +374,20 @@ cna-examples/
         │   ├── Gamepad/               (10 DemoScreen subclasses -- see section 5.1)
         │   ├── Touch/                 (10 DemoScreen subclasses -- see section 5.1)
         │   └── Other/                 (10 DemoScreen subclasses -- see section 5.1)
-        └── Audio/
-            ├── AudioDemoHelpers.hpp             (GenerateSineWavePcm16() -- no WAV asset needed)
-            ├── SoundEffect/                     (2 DemoScreen subclasses -- see section 5.2)
-            ├── SoundEffectInstance/             (3 DemoScreen subclasses -- see section 5.2)
-            ├── Audio3D/                         (2 DemoScreen subclasses -- see section 5.2)
-            ├── DynamicSoundEffectInstance/      (1 DemoScreen subclass -- see section 5.2)
-            └── Microphone/                      (2 DemoScreen subclasses -- see section 5.2)
+        ├── Audio/
+        │   ├── AudioDemoHelpers.hpp             (GenerateSineWavePcm16() -- no WAV asset needed)
+        │   ├── SoundEffect/                     (2 DemoScreen subclasses -- see section 5.2)
+        │   ├── SoundEffectInstance/             (3 DemoScreen subclasses -- see section 5.2)
+        │   ├── Audio3D/                         (2 DemoScreen subclasses -- see section 5.2)
+        │   ├── DynamicSoundEffectInstance/      (1 DemoScreen subclass -- see section 5.2)
+        │   └── Microphone/                      (2 DemoScreen subclasses -- see section 5.2)
+        └── Devices/
+            ├── Sensors/                         (4 DemoScreen subclasses -- see section 5.3)
+            ├── Vibration/                       (1 DemoScreen subclass -- see section 5.3)
+            ├── Camera/                          (1 DemoScreen subclass -- see section 5.3)
+            ├── SystemAndDisplay/                (3 DemoScreen subclasses -- see section 5.3)
+            ├── Power/                           (1 DemoScreen subclass -- see section 5.3)
+            └── DesktopIntegration/              (5 DemoScreen subclasses -- see section 5.3)
 ```
 
 `GameStateManagement/` is a local copy (adapted, not symlinked — `cna-samples` is a sibling
@@ -355,15 +434,23 @@ instruction. In scope now:
 - The Audio area's 5 categories, 12 demo screens total (see section 5.2), wired into
   `AreaCatalog.hpp` the same way. `AudioDemoHelpers.hpp`'s procedural sine-wave generator is new,
   reusable infrastructure for this and any future Audio demo that needs a tone with no WAV asset.
+- The Devices area's 6 categories, 15 demo screens total (see section 5.3), wired into
+  `AreaCatalog.hpp` the same way. This required forcing `CNA_DEVICES ON` in this app's own
+  `CMakeLists.txt` (the option defaults `OFF` in `CNA` itself) so `CNA::Devices::*` compiles in
+  at all.
 
 Explicitly **out of scope** still (future work):
 
-- Demo screens for any Area other than Input/Audio (Devices/Net/Media/2D Graphics/3D Graphics)
-  — Input's five categories and Audio's five categories are all done.
+- Demo screens for any Area other than Input/Audio/Devices (Net/Media/2D Graphics/3D Graphics)
+  — Input's five categories, Audio's five categories, and Devices' six categories are all done.
 - Hands-on verification passes for the Gamepad and Touch demos (and the joystick/haptics
   screens within Other) against real hardware (see section 5.1's notes on each) — no
   controller, touchscreen, raw joystick, or haptic device was available while building them.
   (Audio, by contrast, was verified against real hardware — see section 5.2.)
+- Hands-on verification of the Devices area's mobile-only Sensors/Vibration screens on real
+  Android hardware, and of Camera/MessageBox/FileDialog against a physical webcam/real human
+  interaction respectively — see section 5.3's per-screen notes on exactly what was and wasn't
+  exercised on this desktop dev machine.
 - XACT (`AudioEngine`/`SoundBank`/`WaveBank`/`Cue`/`AudioCategory`) — see section 5.2's closing
   note on why this is a deliberate omission, not an oversight.
 - The Phase 11 hardware-validation demonstrations are now covered in concept by the Keyboard/
