@@ -105,6 +105,18 @@
 #include "Demos/Net/Leaderboards/LeaderboardReaderScreen.hpp"
 #include "Demos/Net/Leaderboards/LeaderboardWriterScreen.hpp"
 
+#include "Demos/Media/Song/LoadAndPlayScreen.hpp"
+#include "Demos/Media/Song/VolumeMuteRepeatShuffleScreen.hpp"
+#include "Demos/Media/Song/QueueNavigationScreen.hpp"
+#include "Demos/Media/Song/EventsScreen.hpp"
+#include "Demos/Media/Song/UnsupportedFormatScreen.hpp"
+#include "Demos/Media/Song/VisualizationScreen.hpp"
+#include "Demos/Media/Video/LoadAndPlayScreen.hpp"
+#include "Demos/Media/Video/PlaybackControlScreen.hpp"
+#include "Demos/Media/Video/MultiTrackEXTScreen.hpp"
+#include "Demos/Media/MediaLibrary/MediaLibraryScreen.hpp"
+#include "Demos/Media/MediaLibrary/AlbumArtistGenrePlaylistScreen.hpp"
+
 namespace CnaExamples::Navigation {
 
 using CnaExamples::GameStateManagement::GameScreen;
@@ -435,6 +447,46 @@ inline std::vector<DemoEntry> BuildLeaderboardsDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildSongDemos() {
+    using namespace CnaExamples::Demos::Media::SongDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<LoadAndPlayScreen>(
+        "Load & Play", "Song's direct-from-file NOXNA constructor + transport controls"));
+    demos.push_back(MakeDemo<VolumeMuteRepeatShuffleScreen>(
+        "Volume/Mute/Repeat/Shuffle", "MediaPlayer's live-adjustable playback settings"));
+    demos.push_back(MakeDemo<QueueNavigationScreen>(
+        "Queue Navigation", "Play(SongCollection, index) + MoveNext()/MovePrevious()"));
+    demos.push_back(MakeDemo<EventsScreen>(
+        "MediaPlayer Events", "ActiveSongChanged/MediaStateChanged, pumped via FrameworkDispatcher"));
+    demos.push_back(MakeDemo<UnsupportedFormatScreen>(
+        "Unsupported Format", "A real .opus file -- constructs fine, Play() silently no-ops"));
+    demos.push_back(MakeDemo<VisualizationScreen>(
+        "Visualization", "GetVisualizationData() -- a confirmed, permanent stub"));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildVideoDemos() {
+    using namespace CnaExamples::Demos::Media::VideoDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<LoadAndPlayScreen>(
+        "Load & Play", "A real FFmpeg-decoded clip, live GetTexture() every frame"));
+    demos.push_back(MakeDemo<PlaybackControlScreen>(
+        "Playback Control", "Play/Pause/Resume/Stop + IsLooped + live Volume/IsMuted"));
+    demos.push_back(MakeDemo<MultiTrackEXTScreen>(
+        "Multi-Track (EXT)", "SetAudioTrackEXT()/SetVideoTrackEXT() -- CNA extensions"));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildMediaLibraryDemos() {
+    using namespace CnaExamples::Demos::Media::MediaLibraryDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<MediaLibraryScreen>(
+        "Catalog Access", "Every accessor throws -- a hard stub, not gracefully empty"));
+    demos.push_back(MakeDemo<AlbumArtistGenrePlaylistScreen>(
+        "Album/Artist/Genre/Playlist", "Unreachable on this platform -- private ctors, no live producer"));
+    return demos;
+}
+
 // Builds the full Home -> Area -> Category -> Demo data set. This is the
 // single place new areas/categories/demos get registered as they are
 // implemented; see plan.md section 8 for what is intentionally still empty.
@@ -468,7 +520,11 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"GamerServices", BuildGamerServicesDemos()},
             CategoryEntry{"Leaderboards", BuildLeaderboardsDemos()},
         }},
-        AreaEntry{"Media", {}},
+        AreaEntry{"Media", {
+            CategoryEntry{"Song", BuildSongDemos()},
+            CategoryEntry{"Video", BuildVideoDemos()},
+            CategoryEntry{"MediaLibrary", BuildMediaLibraryDemos()},
+        }},
         AreaEntry{"2D Graphics", {}},
         AreaEntry{"3D Graphics", {}},
     };
