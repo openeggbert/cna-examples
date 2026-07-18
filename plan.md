@@ -167,7 +167,20 @@ The Input area is the first to be fleshed out. Its category list:
   relative-mouse-mode (`EXT`), desktop-global position and warp (`EXT`), capture (`EXT`),
   `MouseState::Equals()`/`GetHashCode()`/`operator==`/`operator!=`, and an edge-detected
   button press/release log. See `BuildMouseDemos()` in `AreaCatalog.hpp`.
-- **Gamepad** — connected-pad detection, buttons/thumbsticks/triggers, vibration, capabilities.
+- **Gamepad** — **implemented** (10 demo screens, `src/Demos/Input/Gamepad/`): connection +
+  capabilities across all 4 `PlayerIndex` slots, a live digital-button grid, `DPad`+`ThumbSticks`
+  (with a marker-in-a-box visualization for each analog stick), `Triggers` (text progress bars +
+  `GamePad::TriggerThreshold`), a `None`/`IndependentAxes`/`Circular` dead-zone-mode comparison,
+  `SetVibration()`/`SetTriggerVibrationEXT()`, battery/power state (`EXT`), the player-number LED
+  (`GetPlayerIndexEXT`/`SetPlayerIndexEXT`, `EXT`), a combined device-info sheet (GUID/path/
+  serial/firmware/Steam handle/connection medium/touchpad count/button-label, all `EXT`), and
+  `GamePadState::Equals()`/`GetHashCode()`/`operator==`/`operator!=`. See `BuildGamepadDemos()`
+  in `AreaCatalog.hpp`. **Not yet verified against a real controller** (none available in the
+  dev/CI environment this was built in) — every screen was confirmed to render correctly and not
+  crash with zero controllers connected (`IsConnected` false, `GetCapabilities()` all-false,
+  string getters empty, `GetPowerInfoEXT` returning `Error`, etc.), which is the realistic
+  default state, but live button/stick/trigger/vibration/LED behavior needs a hands-on pass with
+  actual hardware before it can be called fully proven.
 - **Touch** — `TouchPanel` state, `TouchLocation`, `GestureSample` recognition.
 - **Other** — anything Input-related that doesn't fit the above four (sensors, power,
   joystick-as-distinct-from-gamepad, haptics, global mouse state, and similar `EXT`
@@ -206,7 +219,8 @@ cna-examples/
         ├── DemoScreen.hpp             (shared leaf-screen chrome: title, Back, DrawLines() helper)
         └── Input/
             ├── Keyboard/              (10 DemoScreen subclasses -- see section 5.1)
-            └── Mouse/                 (10 DemoScreen subclasses -- see section 5.1)
+            ├── Mouse/                 (10 DemoScreen subclasses -- see section 5.1)
+            └── Gamepad/               (10 DemoScreen subclasses -- see section 5.1)
 ```
 
 `GameStateManagement/` is a local copy (adapted, not symlinked — `cna-samples` is a sibling
@@ -245,17 +259,19 @@ instruction. In scope now:
   yet" and lets the user back out — proving the architecture end-to-end without real demo
   content.
 - **Since extended beyond the initial pass:** the shared `DemoScreen` base (title/Back chrome,
-  `DrawLines()` helper) plus all 10 Keyboard and all 10 Mouse demo screens (see section 5.1),
-  wired into `AreaCatalog.hpp`. `MenuScreen` also gained auto-scroll-to-selection
+  `DrawLines()` helper) plus all 10 Keyboard, all 10 Mouse, and all 10 Gamepad demo screens (see
+  section 5.1), wired into `AreaCatalog.hpp`. `MenuScreen` also gained auto-scroll-to-selection
   (`scrollOffset_`) once Keyboard's 10-demo + Back list overflowed a single screen — any
   category with enough demos to overflow the viewport now scrolls correctly, not just Keyboard.
 
 Explicitly **out of scope** still (future work):
 
-- Gamepad/Touch/Other demo screens for Input, and anything for Audio/Devices/Net/Media/2D/3D.
-- The Phase 11 hardware-validation demonstrations that need a human with a real gamepad or
-  touchscreen attached (Keyboard's and Mouse's demos above cover that need for those two
-  devices already).
+- Touch/Other demo screens for Input, and anything for Audio/Devices/Net/Media/2D/3D.
+- A hands-on verification pass for the Gamepad demos against real controller hardware (see
+  section 5.1's Gamepad note) — no controller was available while building them.
+- The Phase 11 hardware-validation demonstrations that need a human with a real touchscreen
+  attached (Keyboard's, Mouse's, and Gamepad's demos above cover keyboard/mouse/controller
+  already, modulo the Gamepad hands-on verification note above).
 - Search (`javafx-ensemble8`'s `SearchPopover` equivalent).
 - Multi-backend CI, non-EasyGL verification.
 - macOS/iOS/console targets.

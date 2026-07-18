@@ -30,6 +30,17 @@
 #include "Demos/Input/Mouse/StateEqualityHashScreen.hpp"
 #include "Demos/Input/Mouse/ButtonTransitionLogScreen.hpp"
 
+#include "Demos/Input/Gamepad/ConnectionAndCapabilitiesScreen.hpp"
+#include "Demos/Input/Gamepad/LiveButtonsGridScreen.hpp"
+#include "Demos/Input/Gamepad/DPadThumbsticksScreen.hpp"
+#include "Demos/Input/Gamepad/TriggersScreen.hpp"
+#include "Demos/Input/Gamepad/DeadZoneModesScreen.hpp"
+#include "Demos/Input/Gamepad/VibrationScreen.hpp"
+#include "Demos/Input/Gamepad/PowerInfoScreen.hpp"
+#include "Demos/Input/Gamepad/PlayerIndexEXTScreen.hpp"
+#include "Demos/Input/Gamepad/DeviceInfoScreen.hpp"
+#include "Demos/Input/Gamepad/StateEqualityHashScreen.hpp"
+
 namespace CnaExamples::Navigation {
 
 using CnaExamples::GameStateManagement::GameScreen;
@@ -114,6 +125,32 @@ inline std::vector<DemoEntry> BuildMouseDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildGamepadDemos() {
+    using namespace CnaExamples::Demos::Input::GamepadDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<ConnectionAndCapabilitiesScreen>(
+        "Connection & Capabilities", "IsConnected + GetCapabilities() across all 4 player slots"));
+    demos.push_back(MakeDemo<LiveButtonsGridScreen>(
+        "Live Buttons Grid", "IsButtonDown() on every digital button"));
+    demos.push_back(MakeDemo<DPadThumbsticksScreen>(
+        "DPad & Thumbsticks", "The DPad and analog stick positions, live"));
+    demos.push_back(MakeDemo<TriggersScreen>(
+        "Triggers", "Analog trigger values + GamePad::TriggerThreshold"));
+    demos.push_back(MakeDemo<DeadZoneModesScreen>(
+        "Dead Zone Modes", "None vs. IndependentAxes vs. Circular, side by side"));
+    demos.push_back(MakeDemo<VibrationScreen>(
+        "Vibration", "SetVibration() + SetTriggerVibrationEXT()"));
+    demos.push_back(MakeDemo<PowerInfoScreen>(
+        "Power Info", "Battery/charge state (EXT)"));
+    demos.push_back(MakeDemo<PlayerIndexEXTScreen>(
+        "Player Index LED", "The controller's own player-number LED (EXT)"));
+    demos.push_back(MakeDemo<DeviceInfoScreen>(
+        "Device Info", "GUID/path/serial/firmware/Steam handle/connection/touchpads (EXT)"));
+    demos.push_back(MakeDemo<StateEqualityHashScreen>(
+        "State Equals()/GetHashCode()", "Snapshot comparison correctness"));
+    return demos;
+}
+
 // Builds the full Home -> Area -> Category -> Demo data set. This is the
 // single place new areas/categories/demos get registered as they are
 // implemented; see plan.md section 8 for what is intentionally still empty.
@@ -122,7 +159,7 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
         AreaEntry{"Input", {
             CategoryEntry{"Keyboard", BuildKeyboardDemos()},
             CategoryEntry{"Mouse", BuildMouseDemos()},
-            CategoryEntry{"Gamepad", {}},
+            CategoryEntry{"Gamepad", BuildGamepadDemos()},
             CategoryEntry{"Touch", {}},
             CategoryEntry{"Other", {}},
         }},
