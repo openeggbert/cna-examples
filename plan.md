@@ -133,7 +133,7 @@ The Home screen's entries mirror CNA's own XNA 4.0 namespace areas:
 | Area | CNA namespace(s) | Categories (this pass) |
 |---|---|---|
 | Input | `Microsoft::Xna::Framework::Input`, `CNA::Internal::Input` | Keyboard, Mouse, Gamepad, Touch, Other |
-| Audio | `Microsoft::Xna::Framework::Audio`, `Media.SoundEffect` | placeholder only |
+| Audio | `Microsoft::Xna::Framework::Audio` | SoundEffect, SoundEffectInstance, 3D Audio, DynamicSoundEffectInstance, Microphone |
 | Devices | `CNA` device/platform-capability surface | placeholder only |
 | Net | `Microsoft::Xna::Framework::Net`, `GamerServices` | placeholder only |
 | Media | `Microsoft::Xna::Framework::Media` | placeholder only |
@@ -143,10 +143,11 @@ The Home screen's entries mirror CNA's own XNA 4.0 namespace areas:
 More areas may be added later (e.g. Content pipeline, Math) — the `AreaEntry` list is just
 appended to; no structural change is needed.
 
-Only **Input** has its category list filled in for this pass, per the current task. All other
-areas exist as real, selectable Home-screen entries leading to an `AreaScreen` with zero
-categories (rendered as an empty/"coming soon" list) — this proves the navigation shell scales
-to the full area set without committing to any area's content yet.
+**Input** and **Audio** have their category lists filled in as of this pass. The remaining areas
+(Devices/Net/Media/2D Graphics/3D Graphics) exist as real, selectable Home-screen entries
+leading to an `AreaScreen` with zero categories (rendered as an empty/"coming soon" list) — this
+proves the navigation shell scales to the full area set without committing to any area's
+content yet.
 
 ### 5.1 Input area detail
 
@@ -224,6 +225,54 @@ automated in CI) will eventually be turned into interactive, on-screen demonstra
 recognition". That is not limited to only the Phase 11 items, though — the Input area is meant
 to demonstrate the whole Input API surface, automatable or not.
 
+### 5.2 Audio area detail
+
+Unlike Input, `Microsoft::Xna::Framework::Audio`'s own category boundaries aren't dictated by
+anything in XNA itself, so this app's five categories are a judgment call sized to the real API
+surface (smaller than Input's — 12 demo screens total, not padded to a fixed count per
+category):
+
+- **SoundEffect** — **implemented** (2 demo screens, `src/Demos/Audio/SoundEffect/`): the
+  simplest one-shot path, `Play()`/`Play(volume, pitch, pan)`, built on a procedurally generated
+  sine-wave PCM buffer (this app ships no WAV asset — see `AudioDemoHelpers.hpp`'s
+  `GenerateSineWavePcm16()`), plus the static, process-wide settings (`MasterVolume`/
+  `DistanceScale`/`DopplerScale`/`SpeedOfSound`) and the byte-count/duration math helpers
+  (`GetSampleDuration`/`GetSampleSizeInBytes`).
+- **SoundEffectInstance** — **implemented** (3 demo screens): the long-lived, controllable
+  counterpart to `SoundEffect::Play()` — transport controls (`Play`/`Pause`/`Resume`/`Stop` +
+  `State`), live-adjustable `Volume`/`Pitch`/`Pan` on a continuously looping tone, and
+  `IsLooped`.
+- **3D Audio** — **implemented** (2 demo screens): `SoundEffectInstance::Apply3D(listener,
+  emitter)` with a movable `AudioEmitter` (position-driven Volume/Pan), and a second screen
+  isolating the Doppler effect specifically (`AudioEmitter::Velocity` + `SoundEffect::
+  DopplerScale`/`SpeedOfSound` → a real closed-form pitch shift, not a native mixer feature).
+- **DynamicSoundEffectInstance** — **implemented** (1 demo screen): real-time audio synthesis —
+  the app supplies short PCM chunks on demand via the `BufferNeeded` event and `SubmitBuffer()`,
+  with a live-retunable frequency, rather than playing one fixed pre-generated buffer.
+- **Microphone** — **implemented** (2 demo screens): device enumeration
+  (`Microphone::All`/`Default` + per-device properties) and capture control
+  (`Start`/`Stop`/`GetData()` + the `BufferReady` event).
+
+See `BuildSoundEffectDemos()`/`BuildSoundEffectInstanceDemos()`/`BuildAudio3DDemos()`/
+`BuildDynamicSoundEffectInstanceDemos()`/`BuildMicrophoneDemos()` in `AreaCatalog.hpp`.
+
+**Verified against real audio hardware**, not just the "gracefully handle absence" bar Gamepad/
+Touch were held to: on the dev machine this was built on, `SoundEffect::Play()` actually
+returned `true` and played the generated tone, `SoundEffectInstance`'s Stopped→Playing state
+transition was observed live, `DynamicSoundEffectInstance`'s `BufferNeeded` event fired
+correctly on the real-time audio thread (26 chunks submitted and consumed with no crash or
+threading issue over a short session), and `Microphone::All` enumerated the machine's two real
+capture devices ("Ryzen HD Audio Controller Digital/Stereo Microphone") with `Start()` +
+`GetData()` reading genuine captured bytes (139264 bytes in one short test). `NoAudioHardwareException`
+is caught and shown honestly wherever construction/playback could throw it, for environments
+that truly have no audio device at all.
+
+Deliberately **not** covered: the XACT project-based audio system (`AudioEngine`/`SoundBank`/
+`WaveBank`/`Cue`/`AudioCategory`). Demonstrating it honestly would need real compiled XACT
+project binaries (`.xgs`/`.xsb`/`.xwb`), which require Microsoft's XACT authoring tool to
+produce and this app cannot generate or fake — unlike `SoundEffect`, which has a raw-PCM-buffer
+constructor that sidesteps needing any asset file at all.
+
 ## 6. Project layout
 
 ```
@@ -247,12 +296,19 @@ cna-examples/
     │                                    adapted from ../cna-samples/samples/GameStateManagement)
     └── Demos/
         ├── DemoScreen.hpp             (shared leaf-screen chrome: title, Back, DrawLines() helper)
-        └── Input/
-            ├── Keyboard/              (10 DemoScreen subclasses -- see section 5.1)
-            ├── Mouse/                 (10 DemoScreen subclasses -- see section 5.1)
-            ├── Gamepad/               (10 DemoScreen subclasses -- see section 5.1)
-            ├── Touch/                 (10 DemoScreen subclasses -- see section 5.1)
-            └── Other/                 (10 DemoScreen subclasses -- see section 5.1)
+        ├── Input/
+        │   ├── Keyboard/              (10 DemoScreen subclasses -- see section 5.1)
+        │   ├── Mouse/                 (10 DemoScreen subclasses -- see section 5.1)
+        │   ├── Gamepad/               (10 DemoScreen subclasses -- see section 5.1)
+        │   ├── Touch/                 (10 DemoScreen subclasses -- see section 5.1)
+        │   └── Other/                 (10 DemoScreen subclasses -- see section 5.1)
+        └── Audio/
+            ├── AudioDemoHelpers.hpp             (GenerateSineWavePcm16() -- no WAV asset needed)
+            ├── SoundEffect/                     (2 DemoScreen subclasses -- see section 5.2)
+            ├── SoundEffectInstance/             (3 DemoScreen subclasses -- see section 5.2)
+            ├── Audio3D/                         (2 DemoScreen subclasses -- see section 5.2)
+            ├── DynamicSoundEffectInstance/      (1 DemoScreen subclass -- see section 5.2)
+            └── Microphone/                      (2 DemoScreen subclasses -- see section 5.2)
 ```
 
 `GameStateManagement/` is a local copy (adapted, not symlinked — `cna-samples` is a sibling
@@ -296,14 +352,20 @@ instruction. In scope now:
   content, wired into `AreaCatalog.hpp`. `MenuScreen` also gained auto-scroll-to-selection
   (`scrollOffset_`) once Keyboard's 10-demo + Back list overflowed a single screen — any
   category with enough demos to overflow the viewport now scrolls correctly, not just Keyboard.
+- The Audio area's 5 categories, 12 demo screens total (see section 5.2), wired into
+  `AreaCatalog.hpp` the same way. `AudioDemoHelpers.hpp`'s procedural sine-wave generator is new,
+  reusable infrastructure for this and any future Audio demo that needs a tone with no WAV asset.
 
 Explicitly **out of scope** still (future work):
 
-- Demo screens for any Area other than Input (Audio/Devices/Net/Media/2D Graphics/3D Graphics)
-  — Input's own five categories (Keyboard/Mouse/Gamepad/Touch/Other) are all done.
+- Demo screens for any Area other than Input/Audio (Devices/Net/Media/2D Graphics/3D Graphics)
+  — Input's five categories and Audio's five categories are all done.
 - Hands-on verification passes for the Gamepad and Touch demos (and the joystick/haptics
   screens within Other) against real hardware (see section 5.1's notes on each) — no
   controller, touchscreen, raw joystick, or haptic device was available while building them.
+  (Audio, by contrast, was verified against real hardware — see section 5.2.)
+- XACT (`AudioEngine`/`SoundBank`/`WaveBank`/`Cue`/`AudioCategory`) — see section 5.2's closing
+  note on why this is a deliberate omission, not an oversight.
 - The Phase 11 hardware-validation demonstrations are now covered in concept by the Keyboard/
   Mouse/Gamepad/Touch/Other demos above, modulo the hands-on verification notes above.
 - Search (`javafx-ensemble8`'s `SearchPopover` equivalent).

@@ -63,6 +63,17 @@
 #include "Demos/Input/Other/InputDeviceHotplugScreen.hpp"
 #include "Demos/Input/Other/OtherSummaryScreen.hpp"
 
+#include "Demos/Audio/SoundEffect/PlayToneScreen.hpp"
+#include "Demos/Audio/SoundEffect/MasterVolumeAndSettingsScreen.hpp"
+#include "Demos/Audio/SoundEffectInstance/PlaybackControlScreen.hpp"
+#include "Demos/Audio/SoundEffectInstance/VolumePitchPanScreen.hpp"
+#include "Demos/Audio/SoundEffectInstance/LoopingScreen.hpp"
+#include "Demos/Audio/Audio3D/Apply3DScreen.hpp"
+#include "Demos/Audio/Audio3D/DopplerDistanceScreen.hpp"
+#include "Demos/Audio/DynamicSoundEffectInstance/StreamingSineWaveScreen.hpp"
+#include "Demos/Audio/Microphone/MicrophoneEnumerationScreen.hpp"
+#include "Demos/Audio/Microphone/MicrophoneCaptureScreen.hpp"
+
 namespace CnaExamples::Navigation {
 
 using CnaExamples::GameStateManagement::GameScreen;
@@ -225,6 +236,56 @@ inline std::vector<DemoEntry> BuildOtherDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildSoundEffectDemos() {
+    using namespace CnaExamples::Demos::Audio::SoundEffectDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<PlayToneScreen>(
+        "Play a Tone", "SoundEffect::Play() -- a generated sine wave, no WAV asset needed"));
+    demos.push_back(MakeDemo<MasterVolumeAndSettingsScreen>(
+        "Static Settings", "MasterVolume/DistanceScale/DopplerScale/SpeedOfSound + byte<->duration math"));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildSoundEffectInstanceDemos() {
+    using namespace CnaExamples::Demos::Audio::SoundEffectInstanceDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<PlaybackControlScreen>(
+        "Playback Control", "Play/Pause/Resume/Stop + the State property"));
+    demos.push_back(MakeDemo<VolumePitchPanScreen>(
+        "Volume/Pitch/Pan", "Live-adjustable while a looping tone plays"));
+    demos.push_back(MakeDemo<LoopingScreen>(
+        "Looping", "IsLooped -- play-once vs. repeat-until-stopped"));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildAudio3DDemos() {
+    using namespace CnaExamples::Demos::Audio::Audio3DDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<Apply3DScreen>(
+        "Apply3D", "AudioListener + a movable AudioEmitter recompute Volume/Pan live"));
+    demos.push_back(MakeDemo<DopplerDistanceScreen>(
+        "Doppler & Distance Scale", "Emitter velocity -> a real closed-form Doppler pitch shift"));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildDynamicSoundEffectInstanceDemos() {
+    using namespace CnaExamples::Demos::Audio::DynamicSoundEffectInstanceDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<StreamingSineWaveScreen>(
+        "Streaming Sine Wave", "Real-time synthesis via BufferNeeded + SubmitBuffer()"));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildMicrophoneDemos() {
+    using namespace CnaExamples::Demos::Audio::MicrophoneDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<MicrophoneEnumerationScreen>(
+        "Enumeration", "Microphone::All / Default + per-device properties"));
+    demos.push_back(MakeDemo<MicrophoneCaptureScreen>(
+        "Capture", "Start/Stop + GetData() + the BufferReady event"));
+    return demos;
+}
+
 // Builds the full Home -> Area -> Category -> Demo data set. This is the
 // single place new areas/categories/demos get registered as they are
 // implemented; see plan.md section 8 for what is intentionally still empty.
@@ -237,7 +298,13 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"Touch", BuildTouchDemos()},
             CategoryEntry{"Other", BuildOtherDemos()},
         }},
-        AreaEntry{"Audio", {}},
+        AreaEntry{"Audio", {
+            CategoryEntry{"SoundEffect", BuildSoundEffectDemos()},
+            CategoryEntry{"SoundEffectInstance", BuildSoundEffectInstanceDemos()},
+            CategoryEntry{"3D Audio", BuildAudio3DDemos()},
+            CategoryEntry{"DynamicSoundEffectInstance", BuildDynamicSoundEffectInstanceDemos()},
+            CategoryEntry{"Microphone", BuildMicrophoneDemos()},
+        }},
         AreaEntry{"Devices", {}},
         AreaEntry{"Net", {}},
         AreaEntry{"Media", {}},
