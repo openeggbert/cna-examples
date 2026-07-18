@@ -38,6 +38,14 @@ function(cna_examples_configure_target target_name)
         target_link_libraries(${target_name} PRIVATE SDL3::SDL3main)
     endif()
 
+    # CNA_Net (NetworkSession, PacketWriter/Reader, ...) pulls in CNA_GamerServices
+    # (GamerServicesComponent, Guide, SignedInGamer, ...) transitively via its own
+    # PUBLIC link -- lives in a separate static-library target from the umbrella
+    # CNA target, so it needs its own explicit link (see ../cna-samples' identical fix).
+    if(TARGET CNA_Net)
+        target_link_libraries(${target_name} PRIVATE CNA_Net)
+    endif()
+
     if(WIN32)
         set_target_properties(${target_name} PROPERTIES WIN32_EXECUTABLE TRUE)
         if(COMMAND cna_copy_sdl_runtime)

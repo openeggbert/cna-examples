@@ -135,7 +135,7 @@ The Home screen's entries mirror CNA's own XNA 4.0 namespace areas:
 | Input | `Microsoft::Xna::Framework::Input`, `CNA::Internal::Input` | Keyboard, Mouse, Gamepad, Touch, Other |
 | Audio | `Microsoft::Xna::Framework::Audio` | SoundEffect, SoundEffectInstance, 3D Audio, DynamicSoundEffectInstance, Microphone |
 | Devices | `Microsoft::Devices::Sensors`, `Microsoft::Devices::VibrateController`, `CNA::Devices` | Sensors, Vibration, Camera, System & Display, Power, Desktop Integration |
-| Net | `Microsoft::Xna::Framework::Net`, `GamerServices` | placeholder only |
+| Net | `Microsoft::Xna::Framework::Net`, `Microsoft::Xna::Framework::GamerServices` | NetworkSession, NetworkGamer, GamerServices, Leaderboards |
 | Media | `Microsoft::Xna::Framework::Media` | placeholder only |
 | 2D Graphics | `Microsoft::Xna::Framework::Graphics` (SpriteBatch, Texture2D, ...) | placeholder only |
 | 3D Graphics | `Microsoft::Xna::Framework::Graphics` (Model, Effect, ...) | placeholder only |
@@ -143,8 +143,8 @@ The Home screen's entries mirror CNA's own XNA 4.0 namespace areas:
 More areas may be added later (e.g. Content pipeline, Math) — the `AreaEntry` list is just
 appended to; no structural change is needed.
 
-**Input**, **Audio**, and **Devices** have their category lists filled in as of this pass. The
-remaining areas (Net/Media/2D Graphics/3D Graphics) exist as real, selectable Home-screen
+**Input**, **Audio**, **Devices**, and **Net** have their category lists filled in as of this
+pass. The remaining areas (Media/2D Graphics/3D Graphics) exist as real, selectable Home-screen
 entries leading to an `AreaScreen` with zero categories (rendered as an empty/"coming soon"
 list) — this proves the navigation shell scales to the full area set without committing to any
 area's content yet.
@@ -345,6 +345,95 @@ See `BuildSensorsDemos()`/`BuildVibrationDemos()`/`BuildCameraDemos()`/
 `BuildSystemAndDisplayDemos()`/`BuildPowerDemos()`/`BuildDesktopIntegrationDemos()` in
 `AreaCatalog.hpp`.
 
+### 5.4 Net area detail
+
+Net is the first area whose `.cpp` implementation lives in two separate static-library
+targets (`CNA_Net`/`CNA_GamerServices`) rather than the umbrella `CNA` target — this app's
+`cmake/ExamplesHelpers.cmake` needed a new `if(TARGET CNA_Net) target_link_libraries(...
+CNA_Net)` line (the same fix `../cna-samples` already carries for its `ClientServerSample`)
+before any Net/GamerServices symbol would link. `CnaExamplesGame.hpp` also now registers a
+`GamerServicesComponent` in `Game::Components` at app startup (not per-screen) — required
+before any `Microsoft::Xna::Framework::Net`/`GamerServices` call, and what populates the 4
+stub `SignedInGamer`s every screen below reads. 14 demo screens across 4 categories:
+
+- **NetworkSession** — **implemented** (5 demo screens, `src/Demos/Net/NetworkSession/`):
+  `Local Lifecycle` (`StartGame`/`EndGame`/`RemoveGamer` driving real `NetworkSessionState`
+  Lobby→Playing→Ended transitions, verified end-to-end including the correct `SessionEnded`
+  reason and `HasLeftSession` flip); `SystemLink Host` (a genuinely real, UDP-socket-backed
+  `NetworkSessionType::SystemLink` session — see the hardware-verification note below);
+  `Discover & Join` (`NetworkSession::Find()` — real blocking (~150 ms) LAN/loopback UDP
+  discovery, not a stub); `Packet Round-Trip` (`PacketWriter`/`PacketReader` over every XNA
+  math type, including a deliberate demonstration of the real, documented upstream FNA quirk
+  that `Write(Color)` writes 4 bytes while `ReadColor()` always reads 4 floats — this screen
+  triggers it live and shows the resulting thrown exception, not just a comment); `Properties
+  & Events` (`NetworkSessionProperties`' `int?` slots + the `GamerJoined`/`GamerLeft`/
+  `HostChanged` event trio, including the documented "call `Update()` once right after
+  subscribing to receive the replayed initial-join event(s)" pattern).
+- **NetworkGamer** — **implemented** (2 demo screens): `Roster` (`AllGamers`/`LocalGamers`/
+  `RemoteGamers`/`PreviousGamers` + per-gamer `Id`/`IsHost`/`IsLocal`/`RoundtripTime`) and
+  `NetworkMachine` (`Gamer::Machine` + `RemoveFromSession()`, which always throws
+  `NotImplementedException`, matching FNA's own stub — verified live, not just asserted).
+- **GamerServices** — **implemented** (5 demo screens): `Signed-In Gamers` (`Gamer::
+  SignedInGamers` + the real, publicly-documented but never-raised `SignedInGamer::SignedIn`/
+  `SignedOut` static events), `Profile/Presence/Privileges` (`GetProfile()` + a live-mutable
+  `GamerPresence` + read-only `GamerPrivileges`), `Achievements` (`AwardAchievement`/
+  `GetAchievements` — both real, functional, no-persistence-backend stubs — plus
+  `Achievement::GetPicture()`, which always throws `NotImplementedException`), `Friends &
+  GamerCard` (`GetFriends()`, always genuinely empty, alongside a manually-built demo roster
+  via `FriendGamer::CreateInternal` since that's the only way to see `FriendGamer`'s
+  `IsOnline`/`IsPlaying`/`IsAway` fields populated on this platform), and `Guide Overlay` (the
+  static `Guide` surface's three-way split personality: `BeginShowKeyboardInput`/
+  `EndShowKeyboardInput` complete synchronously and never throw but always return `""`;
+  `BeginShowMessageBox` always throws `NotSupportedException` outright; every `Show*` UI
+  launcher is a real, silent no-op).
+- **Leaderboards** — **implemented** (2 demo screens): `LeaderboardReader` (`LeaderboardIdentity`
+  as a real, inspectable value type, alongside `Read()`/`BeginRead()`, which unconditionally
+  throw `NotSupportedException` — leaderboards were never implemented upstream in FNA either,
+  a stub API surface, not a CNA gap) and `LeaderboardWriter` (`LeaderboardEntry`'s
+  `Columns`/`Gamer`/`Rating`/`RankingEXT` as a real, working value type, alongside
+  `Gamer::LeaderboardWriter.GetLeaderboard()`, which always throws the same way).
+
+See `BuildNetworkSessionDemos()`/`BuildNetworkGamerDemos()`/`BuildGamerServicesDemos()`/
+`BuildLeaderboardsDemos()` in `AreaCatalog.hpp`.
+
+**Verified against real hardware/transport, not just graceful-absence handling**: the
+`SystemLink Host` screen's `NetworkSession::Create(SystemLink, ...)` genuinely binds a real
+ENet UDP socket (confirmed via `AllGamers`/`Host` reflecting real state, and via
+`Discover & Join`'s `Find()` performing real blocking UDP discovery I/O that correctly
+returns zero results when no other host is reachable — the realistic single-machine desktop
+default, the same verification bar already established for Gamepad/Touch/Sensors in earlier
+areas). A genuine two-process host+discover+join round trip was **not** completed in this
+session: two `cna_examples` instances launched side-by-side under the same unmanaged Xvfb
+display (no window manager) rendered at the identical default screen position with no way
+found to route synthetic keyboard input to one specific window over the other — a test-harness
+limitation of this verification environment, not a code path left unverified by design (unlike
+Gamepad/Touch/Sensors' "no hardware available" caveats). The single-process paths that make up
+both screens (real session creation, real bound socket, real discovery query/reply I/O) are
+fully verified; the actual cross-process join is not, and is flagged here rather than silently
+assumed to work.
+
+**A real, verified upstream FNA quirk surfaced during verification, not a bug in this app**:
+`NetworkSession::Create()`'s `maxGamers` argument is accepted (and used only for a
+`privateGamerSlots > maxGamers` range check) but never actually stored — `EndCreate()`
+unconditionally hardcodes `MaxGamers` to `69` regardless of what any `Create()` overload was
+asked for, confirmed by reading `NetworkSession.cpp`'s own `// FNA hardcodes 69 here...`
+comment. The `SystemLink Host` screen displays this openly (`MaxGamers: 69 (always 69 -- real
+upstream FNA quirk, not a bug)`) rather than hiding it. A second, related consequence
+discovered the same way: `GamerServicesDispatcher::Initialize()`'s 4 stub `SignedInGamer`s are
+`IsGuest=false` only for `SignedInGamers[0]` — the other 3 are all guests — and
+`NetworkSession`'s implicit-local-gamer constructor path skips guests, so requesting
+`maxLocalGamers=2` (as `Roster`/`Properties & Events` both do) genuinely yields only 1 local
+gamer in practice; both screens' doc comments and on-screen `LocalGamers`/`AllGamers` counts
+reflect the real, measured value rather than the requested one.
+
+Deliberately **not** covered: Xbox Live/Games-for-Windows-Live-era session types
+(`PlayerMatch`/`Ranked`) beyond their real, honest stub behavior (no synthetic offline
+approximation exists for them, matching `plan_net.md`'s own documented scope decision), and the
+Avatar sub-namespace (`AvatarRenderer`/`AvatarDescription`/...) — a large, separate API surface
+already covered by 8 existing demo executables in `../cna/examples/` and cross-cutting enough
+(spanning both `GamerServices` and `Graphics::SkinnedModelEXT`) to warrant its own pass later
+rather than folding into this Area's four categories.
+
 ## 6. Project layout
 
 ```
@@ -381,13 +470,19 @@ cna-examples/
         │   ├── Audio3D/                         (2 DemoScreen subclasses -- see section 5.2)
         │   ├── DynamicSoundEffectInstance/      (1 DemoScreen subclass -- see section 5.2)
         │   └── Microphone/                      (2 DemoScreen subclasses -- see section 5.2)
-        └── Devices/
-            ├── Sensors/                         (4 DemoScreen subclasses -- see section 5.3)
-            ├── Vibration/                       (1 DemoScreen subclass -- see section 5.3)
-            ├── Camera/                          (1 DemoScreen subclass -- see section 5.3)
-            ├── SystemAndDisplay/                (3 DemoScreen subclasses -- see section 5.3)
-            ├── Power/                           (1 DemoScreen subclass -- see section 5.3)
-            └── DesktopIntegration/              (5 DemoScreen subclasses -- see section 5.3)
+        ├── Devices/
+        │   ├── Sensors/                         (4 DemoScreen subclasses -- see section 5.3)
+        │   ├── Vibration/                       (1 DemoScreen subclass -- see section 5.3)
+        │   ├── Camera/                          (1 DemoScreen subclass -- see section 5.3)
+        │   ├── SystemAndDisplay/                (3 DemoScreen subclasses -- see section 5.3)
+        │   ├── Power/                           (1 DemoScreen subclass -- see section 5.3)
+        │   └── DesktopIntegration/              (5 DemoScreen subclasses -- see section 5.3)
+        └── Net/
+            ├── NetDemoHelpers.hpp               (EndSession() + enum-to-string helpers)
+            ├── NetworkSession/                  (5 DemoScreen subclasses -- see section 5.4)
+            ├── NetworkGamer/                    (2 DemoScreen subclasses -- see section 5.4)
+            ├── GamerServices/                   (5 DemoScreen subclasses -- see section 5.4)
+            └── Leaderboards/                    (2 DemoScreen subclasses -- see section 5.4)
 ```
 
 `GameStateManagement/` is a local copy (adapted, not symlinked — `cna-samples` is a sibling
@@ -438,11 +533,16 @@ instruction. In scope now:
   `AreaCatalog.hpp` the same way. This required forcing `CNA_DEVICES ON` in this app's own
   `CMakeLists.txt` (the option defaults `OFF` in `CNA` itself) so `CNA::Devices::*` compiles in
   at all.
+- The Net area's 4 categories, 14 demo screens total (see section 5.4), wired into
+  `AreaCatalog.hpp` the same way. This required linking the separate `CNA_Net`/
+  `CNA_GamerServices` static-library targets (`cmake/ExamplesHelpers.cmake`) and registering a
+  `GamerServicesComponent` in `CnaExamplesGame.hpp` at app startup.
 
 Explicitly **out of scope** still (future work):
 
-- Demo screens for any Area other than Input/Audio/Devices (Net/Media/2D Graphics/3D Graphics)
-  — Input's five categories, Audio's five categories, and Devices' six categories are all done.
+- Demo screens for any Area other than Input/Audio/Devices/Net (Media/2D Graphics/3D Graphics)
+  — Input's five categories, Audio's five categories, Devices' six categories, and Net's four
+  categories are all done.
 - Hands-on verification passes for the Gamepad and Touch demos (and the joystick/haptics
   screens within Other) against real hardware (see section 5.1's notes on each) — no
   controller, touchscreen, raw joystick, or haptic device was available while building them.
@@ -451,6 +551,13 @@ Explicitly **out of scope** still (future work):
   Android hardware, and of Camera/MessageBox/FileDialog against a physical webcam/real human
   interaction respectively — see section 5.3's per-screen notes on exactly what was and wasn't
   exercised on this desktop dev machine.
+- A genuine two-process SystemLink host+discover+join round trip for the Net area — see section
+  5.4's note on the specific test-harness limitation (two unmanaged, overlapping Xvfb windows
+  with no reliable way to route synthetic input to one over the other) that blocked it this
+  session; every single-process code path both screens exercise is verified.
+- The Avatar sub-namespace (`GamerServices::AvatarRenderer`/...) — see section 5.4's closing
+  note on why this is a deliberate omission (already covered by 8 existing `cna/examples/`
+  demos, and cross-cutting enough to warrant its own pass).
 - XACT (`AudioEngine`/`SoundBank`/`WaveBank`/`Cue`/`AudioCategory`) — see section 5.2's closing
   note on why this is a deliberate omission, not an oversight.
 - The Phase 11 hardware-validation demonstrations are now covered in concept by the Keyboard/
