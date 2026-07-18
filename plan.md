@@ -197,11 +197,26 @@ The Input area is the first to be fleshed out. Its category list:
   (the actual default state reached), including the gesture-enable/restore lifecycle
   (`LoadContent`/`UnloadContent`) not crashing on entry/exit — but live gesture recognition
   itself needs a hands-on pass on a real touchscreen or Android device.
-- **Other** — anything Input-related that doesn't fit the above four (sensors, power,
-  joystick-as-distinct-from-gamepad, haptics, global mouse state, and similar `EXT`
-  extensions already present in CNA's Input backend).
+- **Other** — **implemented** (10 demo screens, `src/Demos/Input/Other/`): everything
+  Input-adjacent that doesn't fit the four device categories above, all `NOXNA`/`EXT`
+  extensions with no XNA 4.0 precedent. Raw joysticks (`CNA::Input::Joysticks` —
+  enumeration+capabilities, live unmapped axes/buttons/hats/trackballs, `JoystickStateEXT`'s
+  `operator==`/`!=`, and `ConnectedEXT`/`DisconnectedEXT` hot-plug events), host device motion
+  sensors (`CNA::Input::Sensors`, distinct from a gamepad's own gyro/accelerometer and from the
+  official `Microsoft::Devices::Sensors` XNA namespace, which belongs to the separate Devices
+  Area), host battery/power (`CNA::Input::Power` — XNA has no power API at all), force-feedback
+  haptics (`CNA::Input::Haptics` — richer than `GamePad::SetVibration`'s simple rumble),
+  mouse/keyboard/touch device enumeration and hot-plug events (`CNA::Input::InputDevices`), and
+  a one-screen "Summary" dashboard tying every subsystem above together. See
+  `BuildOtherDemos()` in `AreaCatalog.hpp`. **Verified against real host hardware**, unlike the
+  Gamepad/Touch caveats above — `CNA::Input::Power`/`InputDevices` read genuine data from the
+  dev machine this was built on (actual battery charge %, real enumerated mice/keyboards), since
+  no external peripheral was needed to exercise those APIs; only the joystick/haptics screens'
+  "device connected" paths remain unverified for the same no-hardware-available reason as
+  Gamepad.
 
-This area is where the `plan_input.md` Phase 11 hardware-validation tasks (the 15 tasks that
+This closes out every category in Input (Keyboard/Mouse/Gamepad/Touch/Other all have real demo
+screens now). This area is where the `plan_input.md` Phase 11 hardware-validation tasks (the 15 tasks that
 require a human with real keyboards/mice/gamepads/touchscreens attached, and could not be
 automated in CI) will eventually be turned into interactive, on-screen demonstrations — e.g.
 "press any key and see it echoed", "move the mouse and see the cursor/position tracked",
@@ -236,7 +251,8 @@ cna-examples/
             ├── Keyboard/              (10 DemoScreen subclasses -- see section 5.1)
             ├── Mouse/                 (10 DemoScreen subclasses -- see section 5.1)
             ├── Gamepad/               (10 DemoScreen subclasses -- see section 5.1)
-            └── Touch/                 (10 DemoScreen subclasses -- see section 5.1)
+            ├── Touch/                 (10 DemoScreen subclasses -- see section 5.1)
+            └── Other/                 (10 DemoScreen subclasses -- see section 5.1)
 ```
 
 `GameStateManagement/` is a local copy (adapted, not symlinked — `cna-samples` is a sibling
@@ -275,20 +291,21 @@ instruction. In scope now:
   yet" and lets the user back out — proving the architecture end-to-end without real demo
   content.
 - **Since extended beyond the initial pass:** the shared `DemoScreen` base (title/Back chrome,
-  `DrawLines()` helper) plus all 10 Keyboard, all 10 Mouse, all 10 Gamepad, and all 10 Touch demo
-  screens (see section 5.1), wired into `AreaCatalog.hpp`. `MenuScreen` also gained
-  auto-scroll-to-selection (`scrollOffset_`) once Keyboard's 10-demo + Back list overflowed a
-  single screen — any category with enough demos to overflow the viewport now scrolls correctly,
-  not just Keyboard.
+  `DrawLines()` helper) plus all 10 Keyboard, all 10 Mouse, all 10 Gamepad, all 10 Touch, and all
+  10 Other demo screens (see section 5.1) — every category in the Input area now has real demo
+  content, wired into `AreaCatalog.hpp`. `MenuScreen` also gained auto-scroll-to-selection
+  (`scrollOffset_`) once Keyboard's 10-demo + Back list overflowed a single screen — any
+  category with enough demos to overflow the viewport now scrolls correctly, not just Keyboard.
 
 Explicitly **out of scope** still (future work):
 
-- Other demo screens for Input (see section 5's table), and anything for
-  Audio/Devices/Net/Media/2D/3D.
-- Hands-on verification passes for the Gamepad and Touch demos against real hardware (see
-  section 5.1's notes on each) — no controller or touchscreen was available while building them.
+- Demo screens for any Area other than Input (Audio/Devices/Net/Media/2D Graphics/3D Graphics)
+  — Input's own five categories (Keyboard/Mouse/Gamepad/Touch/Other) are all done.
+- Hands-on verification passes for the Gamepad and Touch demos (and the joystick/haptics
+  screens within Other) against real hardware (see section 5.1's notes on each) — no
+  controller, touchscreen, raw joystick, or haptic device was available while building them.
 - The Phase 11 hardware-validation demonstrations are now covered in concept by the Keyboard/
-  Mouse/Gamepad/Touch demos above, modulo the Gamepad/Touch hands-on verification notes above.
+  Mouse/Gamepad/Touch/Other demos above, modulo the hands-on verification notes above.
 - Search (`javafx-ensemble8`'s `SearchPopover` equivalent).
 - Multi-backend CI, non-EasyGL verification.
 - macOS/iOS/console targets.
