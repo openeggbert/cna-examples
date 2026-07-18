@@ -165,16 +165,15 @@ The Home screen's entries mirror CNA's own XNA 4.0 namespace areas:
 | Net | `Microsoft::Xna::Framework::Net`, `Microsoft::Xna::Framework::GamerServices` | NetworkSession, NetworkGamer, GamerServices, Leaderboards |
 | Media | `Microsoft::Xna::Framework::Media` | Song, Video, MediaLibrary |
 | 2D Graphics | `Microsoft::Xna::Framework::Graphics` (SpriteBatch, Texture2D, SpriteFont, ...) | 4 Groups, 13 categories — see 5.6 |
-| 3D Graphics | `Microsoft::Xna::Framework::Graphics` (Model, Effect, ...) | placeholder only |
+| 3D Graphics | `Microsoft::Xna::Framework::Graphics` (Model, Effect, VertexPositionColor, ...) | 4 Groups, 14 categories — see 5.7 |
 
 More areas may be added later (e.g. Content pipeline, Math) — the `AreaEntry` list is just
 appended to; no structural change is needed.
 
-**Input**, **Audio**, **Devices**, **Net**, **Media**, and **2D Graphics** have their category
-lists filled in as of this pass. The remaining area (3D Graphics) exists as a real, selectable
-Home-screen entry leading to an `AreaScreen` with zero categories and zero groups (rendered as
-an empty/"coming soon" list) — this proves the navigation shell scales to the full area set
-without committing to any area's content yet.
+**Every Area** (Input, Audio, Devices, Net, Media, 2D Graphics, 3D Graphics) now has its category
+list filled in — this was the original full Area set planned for this app's demo catalog. Future
+work would mean either adding a new Area entirely (e.g. Content pipeline, Math) or deepening an
+existing one (e.g. real glTF model import, PbrEffect), not filling in a remaining placeholder.
 
 ### 5.1 Input area detail
 
@@ -663,6 +662,185 @@ per explicit direction; the `SamplerState` Mirror address mode (redundant with W
 Area's demonstration purposes); and hands-on verification against any GPU/driver other than this
 dev machine's EasyGL/Mesa software path.
 
+### 5.7 3D Graphics area detail
+
+3D Graphics closes out the app's original Area set: 4 Groups, 14 categories, 30 demo screens,
+covering exactly what 2D Graphics deliberately deferred (raw vertex/primitive drawing) plus the
+full stock Effect family, device state, camera math, and `Model`/`ModelMesh`/`ModelBone`. Built
+against `develop`'s EasyGL backend. As with every prior Area, every texture is generated
+procedurally at runtime (`Demos/Graphics3D/Geometry3DHelpers.hpp` for cube/quad geometry, reusing
+2D Graphics' `TextureDemoHelpers.hpp` for procedural textures) — no bundled asset, no content
+pipeline.
+
+**The one pattern every screen in this Area follows**, established in the first screen written
+(`VertexTypes/PositionColorScreen.hpp`) and reused throughout: the base `DemoScreen::Draw()`
+wraps `OnDemoDraw()` in a default `sb.Begin()`/`End()` pair (title + Back hint), so any screen
+drawing real 3D content must, inside `OnDemoDraw`: call `sb.End()` **first** — before touching
+any `GraphicsDevice` state (`Viewport`/`DepthStencilState`/`RasterizerState`) — since
+`SpriteBatch`'s default Deferred sort mode only rasterizes queued sprites (the title, already
+queued by the time `OnDemoDraw` runs) at `End()` time; changing device state first retroactively
+corrupts them (the exact bug class already found in 2D Graphics, and re-found in this Area's own
+`ScissorClippingScreen`-equivalent first drafts — see below). Then: set a restricted `Viewport`
+for the 3D content only (below the title text, above the Back hint), `DepthStencilState::Default`
+(depth test+write on — the app's own top-level `Game::Draw()` already clears the depth buffer
+once per frame via `Clear(Color)`, so no screen needs to clear it itself), and
+`RasterizerState::CullNone` by default (every screen except the one dedicated `CullMode` demo
+uses `CullNone`, so a geometry winding mistake never silently looks like "missing geometry").
+Draw via `effect.Apply()` directly (the confirmed real, tested pattern for a one-off draw call —
+`ModelMesh::Draw()` is the only place in this Area that loops `CurrentTechnique`'s `Passes`, since
+that idiom is baked into its own implementation for multi-part models) with a **typed**
+`DrawUser(Indexed)Primitives` overload — never the raw `void*`+`VertexDeclaration` overload with a
+typed vertex struct's own declaration (a confirmed real silent-corruption trap, see below). Then
+restore `Viewport`/`RasterizerState`/`DepthStencilState` and call `sb.Begin()` again before
+returning, so the trailing Back-hint text renders normally — `RasterizerState` in particular is
+never touched by `SpriteBatch::Begin()` (confirmed by reading `SpriteBatch.cpp`), so skipping this
+would leak state (most dramatically `FillMode::WireFrame`, which would render this app's entire
+subsequent UI as wireframe outlines) into every later frame.
+
+- **Primitives & Vertex Types** (3 categories, 8 screens, `src/Demos/Graphics3D/{VertexTypes,
+  PrimitiveTypes,Buffers}/`) — **implemented**. *Vertex Types* (3 screens): `VertexPositionColor`
+  (a flat-colored, unlit spinning cube — confirmed no lit shader combination exists for this
+  vertex type on this backend), `VertexPositionTexture` (unlit, procedurally textured),
+  `VertexPositionNormalTexture` (the vertex type `BasicEffect` actually needs to be lit, with a
+  live on/off `LightingEnabled` toggle proving the visual difference). *Primitive Types*
+  (2 screens): `TriangleList` vs. `TriangleStrip` drawing the identical 4-triangle zigzag band
+  (12 explicit vertices vs. 6 shared ones); `LineList`/`LineStrip`/`PointListEXT` drawing the same
+  square's corners 3 ways (CNA's point-primitive member is confirmed named `PointListEXT`, not
+  real XNA's `PointList` — an intentional CNA naming choice). *Buffers* (3 screens): immediate
+  mode (`DrawUserIndexedPrimitives`) vs. buffered (`VertexBuffer`+`IndexBuffer`, bound once,
+  drawn every frame) drawing the identical cube; a `DynamicVertexBuffer` 12×12 grid re-uploaded
+  into a sine ripple via `SetData(..., SetDataOptions::Discard)` every frame (a real C++ name-
+  hiding gotcha documented in the source: `DynamicVertexBuffer`'s own 4-argument `SetData`
+  overload hides the base `VertexBuffer`'s 2-argument one entirely, not just shadows it in
+  overload resolution); and a deliberate **confirmed real bug demonstration** — the generic
+  `DrawUserIndexedPrimitives(..., const void*, ..., const VertexDeclaration&)` overload, given
+  `VertexPositionColor`'s own declaration, uploads at that struct's real C++ `sizeof()` (40 bytes
+  — `Color` gained virtual bases, `IPackedVector`+`IEquatable`, long after XNA's tightly-packed
+  16-byte layout), which EasyGL's backend doesn't recognize; the fallback binds Position only,
+  leaving Color permanently unbound, so the cube renders solid black — indistinguishable from
+  this app's black background, i.e. the geometry appears to **vanish entirely**, not just look
+  wrong. The fix (used everywhere else in this Area): never pair a typed vertex struct's own
+  declaration with that overload — use the dedicated typed overload instead.
+
+- **BasicEffect & Lighting** (3 categories, 7 screens, `src/Demos/Graphics3D/{BasicRendering,
+  Lighting,Fog}/`) — **implemented**. *Basic Rendering* (3 screens): a live `VertexColorEnabled`
+  toggle (false correctly falls back to solid `DiffuseColor`, confirmed live); `Texture` cycling
+  live between 3 procedural textures on the same effect instance; `Alpha` blending (a translucent
+  front cube over an opaque back cube, `BlendState::AlphaBlend` — confirmed `BlendState`, like
+  `DepthStencilState`, is unconditionally reset by every `SpriteBatch::Begin()` call, by reading
+  `SpriteBatch.cpp` directly). *Lighting* (3 screens): `EnableDefaultLighting()`'s stock 3-point
+  key/fill/back rig with a live on/off toggle; `DirectionalLight0/1/2` set to red/green/blue and
+  independently toggled via keys 1/2/3, confirmed as 3 genuinely separate, independently-
+  directional light sources (toggling one measurably changes the other faces' shading, not just
+  its own); live-adjustable `AmbientLightColor` and `SpecularPower`. *Fog* (1 screen): 5 cubes
+  fading from unfogged to fully `FogColor`-faded across increasing distance — **a confirmed real,
+  deep framework limitation** found while building this screen (not fixable by adjusting the
+  demo's own parameters): the EasyGL fog shader computes its fog factor from the raw
+  **object-space** vertex Z attribute directly (`clamp((aPos.z + FogEnd) / (FogEnd - FogStart), 0,
+  1)`), never actually transforming the vertex through `World`/`View` first — the shader's own
+  code comment admits this "matches FNA's `ComputeFogFactor`... since World=View=Identity in
+  every CNA fog test/scene", i.e. it only ever worked in upstream tests because those happen to
+  use identity transforms, where object-space Z coincidentally equals camera-space depth. Placing
+  cubes away from the origin via ordinary `World`-matrix translation (as this screen originally
+  did) left every cube's fog factor computed from its own tiny ±0.8 local-Z range regardless of
+  its real on-screen distance, so **no cube ever fogged at all** — confirmed via an Xvfb
+  screenshot showing all 5 cubes at full, identical brightness. The working fix, kept in the
+  source with a full writeup: bake each cube's intended "distance" directly into its own vertex
+  data (so object-space Z really does equal `-distance`), and use `World` only for lateral (X)
+  placement plus a **fixed** Z-translation that re-centers the baked range back onto the camera's
+  actual position, without ever touching the object-space Z the fog shader reads. A second,
+  independent bug was found and fixed in the same screen: placing all 5 cubes directly on the
+  same camera axis let the nearest (largest on-screen) cube fully occlude the smaller-appearing
+  farther ones — fixed with a lateral stagger per cube.
+
+- **Effects Gallery** (5 categories, 8 screens, `src/Demos/Graphics3D/{AlphaTestEffect,
+  DualTextureEffect,EnvironmentMapEffect,SkinnedEffect,CustomShader}/`) — **implemented**.
+  *AlphaTestEffect* (2 screens): a radial alpha-gradient quad with live-adjustable
+  `ReferenceAlpha`; the same gradient cycling `AlphaFunction` through `Greater`/`Less`/
+  `GreaterEqual`/`Always`, each producing a visibly distinct, correct discard shape (confirmed
+  `Less` is the exact inverse silhouette of `Greater`). *DualTextureEffect* (1 screen): a cube
+  with two independent textures (`Texture` + `Texture2`) genuinely blended per pixel.
+  *EnvironmentMapEffect* (2 screens): a rotating cube fully reflecting a 6-distinct-color
+  procedural `TextureCube` (built via `TextureCube(device, size, mipMap, format)` +
+  per-face `SetData(CubeMapFace, ...)`), confirmed genuinely reflective (colors change as the
+  cube spins, not a fixed decal); `EnvironmentMapAmount`/`FresnelFactor` live-adjustable on the
+  same setup. *SkinnedEffect* (1 screen) and *Custom Shader* (2 screens) — see the two confirmed
+  real findings below.
+  - **Confirmed real bug, root-caused after extensive bisection against the one passing
+    reference test in the whole codebase** (`cna/examples/easygl_skinnedeffect_multilight_test
+    .cpp`): building a `VertexBuffer` with the vertex type's own explicit
+    `VertexPositionNormalTextureSkinned::getVertexDeclarationStatic()` (the generic, Task-1080
+    per-element attribute-binding path, `ApplyLayout()`'s `!declarationElements_.empty()` branch)
+    renders **nothing at all** for a skinned draw — no exception, no error, no crash, confirmed
+    across many bisection attempts (camera, lighting, `PreferPerPixelLighting`, indexed vs.
+    non-indexed draws, single- vs. multi-effect frames). Attribute-by-attribute analysis showed
+    this generic path *should* bind identically to the hardcoded stride-52 switch case for this
+    exact vertex layout, yet empirically it does not. The fix, matching the one confirmed-working
+    real usage found in the codebase: construct the `VertexBuffer` with the plain 2-argument
+    `VertexBuffer(device, count)` constructor (an intentionally **empty** `VertexDeclaration`),
+    so `SetDataRaw`'s stride parameter alone drives the hardcoded stride-52 case instead. The
+    final screen — a 2-column banner split at a hinge, left column rigidly bone-0, right column
+    bone-1 rotating live via `SetBoneTransforms()` — renders and animates correctly.
+  - **Custom Shader**: a hand-authored GLSL `ShaderEffect` (a time-pulsed color mix via a custom
+    `uTime` uniform) on a real `VertexPositionColor` cube, confirmed compiling
+    (`IsEffectValid()==true`) and rendering correctly; a companion screen deliberately constructs
+    a `ShaderEffect` from broken GLSL (undeclared variable, missing semicolon) and confirms
+    `IsEffectValid()==false` with no exception and no crash (confirmed via reading `ShaderEffect
+    .cpp` directly: the constructor has no `throw` path at all) — the invalid effect is never
+    `Apply()`'d or drawn; a separate valid cube renders alongside so the screen isn't empty.
+
+- **Device State, Camera & Model** (3 categories, 7 screens, `src/Demos/Graphics3D/
+  {DepthAndCulling,CameraAndProjection,ModelGroup}/`) — **implemented**. *Depth & Culling*
+  (3 screens): `DepthStencilState::Default` vs. `None` on 2 deliberately-wrong-draw-order
+  overlapping cubes (`Default` shows correct occlusion regardless of draw order; `None` shows
+  paint order winning instead, confirmed both ways); `RasterizerState.CullMode` on a single
+  spinning quad — the one screen in this Area that deliberately depends on real triangle winding
+  (every other screen uses `CullNone` specifically to avoid this) — confirmed the quad genuinely
+  vanishes and reappears as it turns edge-on, exactly matching the winding analysis worked out
+  before verifying; `RasterizerState.FillMode` `Solid`/`WireFrame` toggle, with the restore
+  discipline confirmed critical and correct (verified by backing all the way out to the Home
+  screen afterward and confirming the menu still renders as normal filled text, not wireframe).
+  *Camera & Projection* (2 screens): an orbiting `View` matrix (3 static cubes, confirmed via two
+  screenshots that only the camera moves — different cube faces become visible, the cubes
+  themselves never rotate); `CreatePerspectiveFieldOfView` vs. `CreateOrthographic` rendering the
+  identical depth-staggered 3-cube scene side by side in one frame (perspective genuinely shrinks
+  the farther cubes; orthographic keeps all 3 the same apparent size). *Model* (2 screens): a
+  real `Model`/`ModelMesh`/`ModelMeshPart` object graph built entirely by hand (2 mesh parts, 2
+  independent cubes, each its own `VertexBuffer`+`IndexBuffer`+`BasicEffect`), driven by
+  `model_->Draw(world, view, projection)` every frame; a real `ModelBone` parent/child hierarchy
+  (`shoulderBone.AddChild(elbowBone)`) where the child bone's own local rotation combines with
+  the parent's to move a whole rigid pair together while the child also swings independently.
+  - **Confirmed real, non-obvious API detail** (not in any header doc comment, found by reading
+    `Model.cpp` directly before writing the procedural-`Model` screen): `Model::Draw()` sets
+    `World`/`View`/`Projection` on each entry of `ModelMesh::getEffectsProperty()` — a *separate*
+    `ModelEffectCollection` — **not** on each `ModelMeshPart`'s own assigned `Effect` directly.
+    Setting a part's effect via `setEffectProperty()` alone is not sufficient for `Model::Draw()`
+    to ever touch its matrices; the same `Effect*` must *also* be added via
+    `mesh->getEffectsPropertyMutable().Add(effect)`, or the matrices silently stay at their
+    construction-time identity forever. A real trap for anyone else building a `Model` by hand.
+  - **Confirmed real bug, found via Xvfb screenshot**: the procedural-`Model` screen's 2 cube
+    meshes were both originally built around their own local origin with no offset; since
+    `Model::Draw()` applies one single shared `World` matrix to every mesh part (no per-part
+    transform without a real multi-bone hierarchy, deliberately out of scope here), both cubes
+    rendered exactly on top of each other — only the second-drawn cube was ever visible. Fixed by
+    baking a fixed lateral offset directly into each mesh's own vertex data (the same technique
+    used to work around the Fog screen's object-space-only fog calculation above).
+
+See `BuildVertexTypesDemos()`/`BuildPrimitiveTypesDemos()`/`BuildBuffersDemos()`/
+`BuildBasicRenderingDemos()`/`BuildLightingDemos()`/`BuildFogDemos()`/
+`BuildAlphaTestEffectDemos()`/`BuildDualTextureEffectDemos()`/`BuildEnvironmentMapEffectDemos()`/
+`BuildSkinnedEffectDemos()`/`BuildCustomShaderDemos()`/`BuildDepthAndCullingDemos()`/
+`BuildCameraAndProjectionDemos()`/`BuildModelGroupDemos()` in `AreaCatalog.hpp`.
+
+Deliberately **not** covered: compiled XNA `.fx` bytecode loading (`Effect(GraphicsDevice&, const
+std::vector<bytecs>&)` is confirmed to always throw `System::NotImplementedException` — tracked
+separately, not a gap in this Area); `PbrEffect`/`SkinnedPbrEffect` (real and implemented, but a
+distinct enough glTF-style material system to warrant its own future pass rather than folding
+into this Area's stock-XNA-effect scope); real glTF/`.glb` model import via `ContentManager`
+(this Area's `Model` screens deliberately stay procedural, matching every other Area's
+no-bundled-asset discipline); and hands-on verification against any GPU/driver other than this
+dev machine's EasyGL/Mesa software path.
+
 ## 6. Project layout
 
 ```
@@ -680,7 +858,7 @@ cna-examples/
     ├── Navigation/
     │   ├── HomeScreen.hpp
     │   ├── AreaScreen.hpp
-    │   ├── GroupScreen.hpp            (optional 5th level -- see section 4; 2D Graphics only so far)
+    │   ├── GroupScreen.hpp            (optional 5th level -- see section 4; 2D/3D Graphics use it)
     │   ├── CategoryScreen.hpp
     │   └── AreaCatalog.hpp            (the AreaEntry/GroupEntry/CategoryEntry/DemoEntry data)
     ├── GameStateManagement/           (ScreenManager/GameScreen/MenuScreen/MenuEntry/InputState,
@@ -718,21 +896,38 @@ cna-examples/
         │   ├── Song/                            (6 DemoScreen subclasses -- see section 5.5)
         │   ├── Video/                           (3 DemoScreen subclasses -- see section 5.5)
         │   └── MediaLibrary/                    (2 DemoScreen subclasses -- see section 5.5)
-        └── Graphics2D/
-            ├── TextureDemoHelpers.hpp           (procedural checkerboard/gradient/grid textures)
-            ├── DrawingBasics/                   (5 DemoScreen subclasses -- see section 5.6)
-            ├── SortModes/                       (5 DemoScreen subclasses -- see section 5.6)
-            ├── DrawString/                      (4 DemoScreen subclasses -- see section 5.6)
-            ├── BeginEndState/                   (4 DemoScreen subclasses -- see section 5.6)
-            ├── Texture2DBasics/                 (3 DemoScreen subclasses -- see section 5.6)
-            ├── SaveAsReload/                     (2 DemoScreen subclasses -- see section 5.6)
-            ├── SpriteFont/                       (4 DemoScreen subclasses -- see section 5.6)
-            ├── BlendState/                       (2 DemoScreen subclasses -- see section 5.6)
-            ├── SamplerState/                     (2 DemoScreen subclasses -- see section 5.6)
-            ├── ViewportScissor/                  (3 DemoScreen subclasses -- see section 5.6)
-            ├── RenderToTextureBasics/            (2 DemoScreen subclasses -- see section 5.6)
-            ├── ScreenTransition/                 (1 DemoScreen subclass -- see section 5.6)
-            └── DisposeSafety/                    (1 DemoScreen subclass -- see section 5.6)
+        ├── Graphics2D/
+        │   ├── TextureDemoHelpers.hpp           (procedural checkerboard/gradient/grid textures)
+        │   ├── DrawingBasics/                   (5 DemoScreen subclasses -- see section 5.6)
+        │   ├── SortModes/                       (5 DemoScreen subclasses -- see section 5.6)
+        │   ├── DrawString/                      (4 DemoScreen subclasses -- see section 5.6)
+        │   ├── BeginEndState/                   (4 DemoScreen subclasses -- see section 5.6)
+        │   ├── Texture2DBasics/                 (3 DemoScreen subclasses -- see section 5.6)
+        │   ├── SaveAsReload/                     (2 DemoScreen subclasses -- see section 5.6)
+        │   ├── SpriteFont/                       (4 DemoScreen subclasses -- see section 5.6)
+        │   ├── BlendState/                       (2 DemoScreen subclasses -- see section 5.6)
+        │   ├── SamplerState/                     (2 DemoScreen subclasses -- see section 5.6)
+        │   ├── ViewportScissor/                  (3 DemoScreen subclasses -- see section 5.6)
+        │   ├── RenderToTextureBasics/            (2 DemoScreen subclasses -- see section 5.6)
+        │   ├── ScreenTransition/                 (1 DemoScreen subclass -- see section 5.6)
+        │   └── DisposeSafety/                    (1 DemoScreen subclass -- see section 5.6)
+        └── Graphics3D/
+            ├── Geometry3DHelpers.hpp            (procedural cube/quad meshes -- Position/Color/
+            │                                     Texture/NormalTexture variants)
+            ├── VertexTypes/                     (3 DemoScreen subclasses -- see section 5.7)
+            ├── PrimitiveTypes/                  (2 DemoScreen subclasses -- see section 5.7)
+            ├── Buffers/                         (3 DemoScreen subclasses -- see section 5.7)
+            ├── BasicRendering/                  (3 DemoScreen subclasses -- see section 5.7)
+            ├── Lighting/                        (3 DemoScreen subclasses -- see section 5.7)
+            ├── Fog/                             (1 DemoScreen subclass -- see section 5.7)
+            ├── AlphaTestEffect/                 (2 DemoScreen subclasses -- see section 5.7)
+            ├── DualTextureEffect/               (1 DemoScreen subclass -- see section 5.7)
+            ├── EnvironmentMapEffect/            (2 DemoScreen subclasses -- see section 5.7)
+            ├── SkinnedEffect/                   (1 DemoScreen subclass -- see section 5.7)
+            ├── CustomShader/                    (2 DemoScreen subclasses -- see section 5.7)
+            ├── DepthAndCulling/                 (3 DemoScreen subclasses -- see section 5.7)
+            ├── CameraAndProjection/             (2 DemoScreen subclasses -- see section 5.7)
+            └── ModelGroup/                      (2 DemoScreen subclasses -- see section 5.7)
 ```
 
 `GameStateManagement/` is a local copy (adapted, not symlinked — `cna-samples` is a sibling
@@ -800,12 +995,20 @@ instruction. In scope now:
   glyph-order bug in the hand-built `SpriteFont` demo, a scissor/`End()`-ordering bug that
   clipped title text, and 3 text-layout overflow/collision fixes — see section 5.6's closing
   note for details.
+- The 3D Graphics area's 4 Groups / 14 categories, 30 demo screens total (see section 5.7),
+  wired into `AreaCatalog.hpp` the same way — this Area covers exactly what 2D Graphics
+  deliberately deferred (raw vertex/primitive drawing) plus the full stock Effect family, device
+  state, camera math, and `Model`/`ModelMesh`/`ModelBone`. Needed no CMake changes; the only new
+  infrastructure is `Demos/Graphics3D/Geometry3DHelpers.hpp`'s procedural cube/quad builders (no
+  model asset bundled). Found and fixed 6 real defects during Xvfb verification, 2 of them deep
+  framework-level findings not fixable by adjusting demo parameters alone (a fog shader that only
+  ever reacts to raw object-space vertex Z, and a generic per-element vertex-attribute-binding
+  path that silently renders nothing for a skinned draw) — see section 5.7's closing notes for
+  the full writeups. This closes out the app's original 7-Area set: every Area from section 5 now
+  has real demo content.
 
 Explicitly **out of scope** still (future work):
 
-- Demo screens for the remaining Area (3D Graphics) — Input's five categories, Audio's five
-  categories, Devices' six categories, Net's four categories, Media's three categories, and 2D
-  Graphics' 13 categories are all done.
 - Hands-on verification passes for the Gamepad and Touch demos (and the joystick/haptics
   screens within Other) against real hardware (see section 5.1's notes on each) — no
   controller, touchscreen, raw joystick, or haptic device was available while building them.
@@ -830,6 +1033,11 @@ Explicitly **out of scope** still (future work):
   the shared "unreachable" narration `Album`/`Artist`/`Genre`/`Playlist` already cover.
 - The Phase 11 hardware-validation demonstrations are now covered in concept by the Keyboard/
   Mouse/Gamepad/Touch/Other demos above, modulo the hands-on verification notes above.
+- `PbrEffect`/`SkinnedPbrEffect` (real and implemented, but a distinct enough glTF-style material
+  system to warrant its own future pass — see section 5.7's closing note); real glTF/`.glb`
+  `Model` import via `ContentManager` (this Area's `Model` screens deliberately stay procedural);
+  compiled XNA `.fx` bytecode loading (confirmed to always throw, tracked separately, not a
+  demo-content gap).
 - Search (`javafx-ensemble8`'s `SearchPopover` equivalent).
 - Multi-backend CI, non-EasyGL verification.
 - macOS/iOS/console targets.

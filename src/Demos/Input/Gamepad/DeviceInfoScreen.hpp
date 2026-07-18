@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "CNA/Input/GamePadButtonLabel.hpp"
 #include "CNA/Input/GamePadConnectionState.hpp"
 #include "Microsoft/Xna/Framework/Input/Buttons.hpp"
 #include "Microsoft/Xna/Framework/Input/GamePad.hpp"
