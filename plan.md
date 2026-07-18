@@ -181,7 +181,22 @@ The Input area is the first to be fleshed out. Its category list:
   string getters empty, `GetPowerInfoEXT` returning `Error`, etc.), which is the realistic
   default state, but live button/stick/trigger/vibration/LED behavior needs a hands-on pass with
   actual hardware before it can be called fully proven.
-- **Touch** — `TouchPanel` state, `TouchLocation`, `GestureSample` recognition.
+- **Touch** — **implemented** (10 demo screens, `src/Demos/Input/Touch/`): raw per-finger state
+  from `GetState()` (up to `MAX_TOUCHES`, with position markers), `GetCapabilities()` + display
+  geometry, the discrete gestures (Tap/DoubleTap, Hold/Flick) and continuous ones (Drag family,
+  Pinch's two-finger `Position2`/`Delta2`), an "every `GestureType` at once" log, the
+  `IsGestureAvailable`/`ReadGesture()` drain-the-queue contract made explicit, `TouchLocation`
+  `Equals()`/`GetHashCode()`/`ToString()`, and `TouchDeviceExistsEXT` + a derived peak-
+  simultaneous-touches metric. Each gesture-recognizing screen saves/restores
+  `TouchPanel::EnabledGestures` in `LoadContent()`/`UnloadContent()` since it is process-wide
+  state, not per-screen. See `BuildTouchDemos()` in `AreaCatalog.hpp`. **Not verified against
+  real touch/gesture input** — no touchscreen was available in the dev/CI environment this was
+  built in, and synthetic X11 mouse events (the only input this environment can inject) do not
+  reliably become SDL touch events, unlike keyboard/mouse which do have working synthetic-input
+  paths. Every screen was confirmed to render correctly and not crash with zero active touches
+  (the actual default state reached), including the gesture-enable/restore lifecycle
+  (`LoadContent`/`UnloadContent`) not crashing on entry/exit — but live gesture recognition
+  itself needs a hands-on pass on a real touchscreen or Android device.
 - **Other** — anything Input-related that doesn't fit the above four (sensors, power,
   joystick-as-distinct-from-gamepad, haptics, global mouse state, and similar `EXT`
   extensions already present in CNA's Input backend).
@@ -220,7 +235,8 @@ cna-examples/
         └── Input/
             ├── Keyboard/              (10 DemoScreen subclasses -- see section 5.1)
             ├── Mouse/                 (10 DemoScreen subclasses -- see section 5.1)
-            └── Gamepad/               (10 DemoScreen subclasses -- see section 5.1)
+            ├── Gamepad/               (10 DemoScreen subclasses -- see section 5.1)
+            └── Touch/                 (10 DemoScreen subclasses -- see section 5.1)
 ```
 
 `GameStateManagement/` is a local copy (adapted, not symlinked — `cna-samples` is a sibling
@@ -259,19 +275,20 @@ instruction. In scope now:
   yet" and lets the user back out — proving the architecture end-to-end without real demo
   content.
 - **Since extended beyond the initial pass:** the shared `DemoScreen` base (title/Back chrome,
-  `DrawLines()` helper) plus all 10 Keyboard, all 10 Mouse, and all 10 Gamepad demo screens (see
-  section 5.1), wired into `AreaCatalog.hpp`. `MenuScreen` also gained auto-scroll-to-selection
-  (`scrollOffset_`) once Keyboard's 10-demo + Back list overflowed a single screen — any
-  category with enough demos to overflow the viewport now scrolls correctly, not just Keyboard.
+  `DrawLines()` helper) plus all 10 Keyboard, all 10 Mouse, all 10 Gamepad, and all 10 Touch demo
+  screens (see section 5.1), wired into `AreaCatalog.hpp`. `MenuScreen` also gained
+  auto-scroll-to-selection (`scrollOffset_`) once Keyboard's 10-demo + Back list overflowed a
+  single screen — any category with enough demos to overflow the viewport now scrolls correctly,
+  not just Keyboard.
 
 Explicitly **out of scope** still (future work):
 
-- Touch/Other demo screens for Input, and anything for Audio/Devices/Net/Media/2D/3D.
-- A hands-on verification pass for the Gamepad demos against real controller hardware (see
-  section 5.1's Gamepad note) — no controller was available while building them.
-- The Phase 11 hardware-validation demonstrations that need a human with a real touchscreen
-  attached (Keyboard's, Mouse's, and Gamepad's demos above cover keyboard/mouse/controller
-  already, modulo the Gamepad hands-on verification note above).
+- Other demo screens for Input (see section 5's table), and anything for
+  Audio/Devices/Net/Media/2D/3D.
+- Hands-on verification passes for the Gamepad and Touch demos against real hardware (see
+  section 5.1's notes on each) — no controller or touchscreen was available while building them.
+- The Phase 11 hardware-validation demonstrations are now covered in concept by the Keyboard/
+  Mouse/Gamepad/Touch demos above, modulo the Gamepad/Touch hands-on verification notes above.
 - Search (`javafx-ensemble8`'s `SearchPopover` equivalent).
 - Multi-backend CI, non-EasyGL verification.
 - macOS/iOS/console targets.
