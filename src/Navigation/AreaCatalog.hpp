@@ -52,6 +52,17 @@
 #include "Demos/Input/Touch/TouchLocationQueryScreen.hpp"
 #include "Demos/Input/Touch/PeakTouchesScreen.hpp"
 
+#include "Demos/Input/Other/JoystickEnumerationScreen.hpp"
+#include "Demos/Input/Other/JoystickLiveStateScreen.hpp"
+#include "Demos/Input/Other/JoystickStateEqualityScreen.hpp"
+#include "Demos/Input/Other/JoystickHotplugScreen.hpp"
+#include "Demos/Input/Other/SensorsScreen.hpp"
+#include "Demos/Input/Other/PowerScreen.hpp"
+#include "Demos/Input/Other/HapticsScreen.hpp"
+#include "Demos/Input/Other/InputDeviceEnumerationScreen.hpp"
+#include "Demos/Input/Other/InputDeviceHotplugScreen.hpp"
+#include "Demos/Input/Other/OtherSummaryScreen.hpp"
+
 namespace CnaExamples::Navigation {
 
 using CnaExamples::GameStateManagement::GameScreen;
@@ -188,6 +199,32 @@ inline std::vector<DemoEntry> BuildTouchDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildOtherDemos() {
+    using namespace CnaExamples::Demos::Input::OtherDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<JoystickEnumerationScreen>(
+        "Joystick Enumeration", "Raw joystick/wheel/flight-stick enumeration + capabilities (EXT)"));
+    demos.push_back(MakeDemo<JoystickLiveStateScreen>(
+        "Joystick Live State", "Unmapped raw axes/buttons/hats/trackballs (EXT)"));
+    demos.push_back(MakeDemo<JoystickStateEqualityScreen>(
+        "Joystick State ==/!=", "Snapshot comparison correctness (EXT)"));
+    demos.push_back(MakeDemo<JoystickHotplugScreen>(
+        "Joystick Hot-plug Events", "Connected/DisconnectedEXT (EXT)"));
+    demos.push_back(MakeDemo<SensorsScreen>(
+        "Host Device Sensors", "The machine's own accelerometer/gyroscope (EXT)"));
+    demos.push_back(MakeDemo<PowerScreen>(
+        "Host Power/Battery", "XNA has no power API at all -- a pure CNA extension (EXT)"));
+    demos.push_back(MakeDemo<HapticsScreen>(
+        "Haptics", "Force-feedback device enumeration + capability checks (EXT)"));
+    demos.push_back(MakeDemo<InputDeviceEnumerationScreen>(
+        "Input Device Enumeration", "Every mouse/keyboard/touch device by id (EXT)"));
+    demos.push_back(MakeDemo<InputDeviceHotplugScreen>(
+        "Device Hot-plug Events", "Mouse/Keyboard Connected/DisconnectedEXT (EXT)"));
+    demos.push_back(MakeDemo<OtherSummaryScreen>(
+        "Summary", "An at-a-glance dashboard across every subsystem above"));
+    return demos;
+}
+
 // Builds the full Home -> Area -> Category -> Demo data set. This is the
 // single place new areas/categories/demos get registered as they are
 // implemented; see plan.md section 8 for what is intentionally still empty.
@@ -198,7 +235,7 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"Mouse", BuildMouseDemos()},
             CategoryEntry{"Gamepad", BuildGamepadDemos()},
             CategoryEntry{"Touch", BuildTouchDemos()},
-            CategoryEntry{"Other", {}},
+            CategoryEntry{"Other", BuildOtherDemos()},
         }},
         AreaEntry{"Audio", {}},
         AreaEntry{"Devices", {}},
