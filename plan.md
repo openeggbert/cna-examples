@@ -87,19 +87,23 @@ HomeScreen (MenuScreen)
       │  (selecting an Area pushes an AreaScreen)
       ▼
 AreaScreen (MenuScreen)
- └─ one MenuEntry per Category within that Area
+ └─ one MenuEntry per Group within that Area (if any), OR one MenuEntry per Category
+      │  (an Area populates exactly one of `groups`/`categories` — see below)
+      ▼
+GroupScreen (MenuScreen)                         [only when an Area needs a Group level]
+ └─ one MenuEntry per Category within that Group
       │  (selecting a Category pushes a CategoryScreen, or directly a DemoScreen if the
       │   category has only one demo)
       ▼
-CategoryScreen (MenuScreen)                      [only when an Area needs a 3rd level]
+CategoryScreen (MenuScreen)                      [only when an Area/Group needs one more level]
  └─ one MenuEntry per Demo within that Category
       ▼
 DemoScreen (GameScreen, one concrete subclass per demo)
- └─ the actual live demonstration; Back / Cancel pops back to the CategoryScreen/AreaScreen
+ └─ the actual live demonstration; Back / Cancel pops back to the CategoryScreen/GroupScreen/AreaScreen
 ```
 
 Every level above `DemoScreen` is generic and **data-driven** — a `MenuScreen` built from a
-declarative list, not a hand-written screen per Area/Category. Concretely:
+declarative list, not a hand-written screen per Area/Group/Category. Concretely:
 
 ```cpp
 struct DemoEntry {
@@ -113,18 +117,41 @@ struct CategoryEntry {
     std::vector<DemoEntry> demos;             // empty for now — filled in later per area
 };
 
-struct AreaEntry {
+struct GroupEntry {
     std::string title;
     std::vector<CategoryEntry> categories;
 };
+
+struct AreaEntry {
+    std::string title;
+    std::vector<CategoryEntry> categories;    // populated when the Area needs no Group level
+    std::vector<GroupEntry> groups;            // populated when the Area needs one (see below)
+};
 ```
 
-`HomeScreen`, `AreaScreen` and `CategoryScreen` are each a thin `MenuScreen` subclass that
-builds its `MenuEntry` list from one of these structs and pushes the next level via
-`ScreenManager::AddScreen` in the entry's `Selected` callback (`OnCancel` pops back, inherited
-unchanged from `MenuScreen`). Adding a new Area, Category or Demo later is a data change, not
-a new screen class — this is what keeps the skeleton extensible without re-architecting when
-real demo content is added.
+`HomeScreen`, `AreaScreen`, `GroupScreen` and `CategoryScreen` are each a thin `MenuScreen`
+subclass that builds its `MenuEntry` list from one of these structs and pushes the next level
+via `ScreenManager::AddScreen` in the entry's `Selected` callback (`OnCancel` pops back,
+inherited unchanged from `MenuScreen`). Adding a new Area, Group, Category or Demo later is a
+data change, not a new screen class — this is what keeps the skeleton extensible without
+re-architecting when real demo content is added.
+
+**The Group level** was added when the 2D Graphics area's demo count grew large enough (13
+categories) that a flat Area→Category→Demo list would have made the Area screen itself an
+unwieldy 13+-entry menu. `AreaEntry` gained an optional `groups` field: an Area populates
+*either* `categories` directly (every Area through Media — Input, Audio, Devices, Net, Media)
+*or* `groups` (2D Graphics, so far the only one) but never both. `AreaScreen`'s constructor
+checks `groups` first and builds `MenuEntry`s that navigate to a `GroupScreen` if non-empty,
+falling back to the original `categories`-direct behavior otherwise (and to a "(coming soon)"
+placeholder only when both are empty, e.g. 3D Graphics today). This is a fully backward-
+compatible generalization — every existing Area's navigation is unchanged, verified via Xvfb
+that Media (still `categories`-only) and 2D Graphics (`groups`-only) both navigate correctly
+side by side. `GroupScreen.hpp` is structurally identical to `AreaScreen.hpp`/
+`CategoryScreen.hpp` (a `MenuScreen` over a declarative list, pushing the next level on
+selection) — no new navigation concept was invented, just one more optional link in the same
+chain. Any future Area with a large, naturally-grouped category set can reuse `groups` the same
+way; Areas with a handful of categories should keep using `categories` directly rather than
+introducing a Group level for its own sake.
 
 ## 5. Areas (top-level menu)
 
@@ -137,17 +164,17 @@ The Home screen's entries mirror CNA's own XNA 4.0 namespace areas:
 | Devices | `Microsoft::Devices::Sensors`, `Microsoft::Devices::VibrateController`, `CNA::Devices` | Sensors, Vibration, Camera, System & Display, Power, Desktop Integration |
 | Net | `Microsoft::Xna::Framework::Net`, `Microsoft::Xna::Framework::GamerServices` | NetworkSession, NetworkGamer, GamerServices, Leaderboards |
 | Media | `Microsoft::Xna::Framework::Media` | Song, Video, MediaLibrary |
-| 2D Graphics | `Microsoft::Xna::Framework::Graphics` (SpriteBatch, Texture2D, ...) | placeholder only |
+| 2D Graphics | `Microsoft::Xna::Framework::Graphics` (SpriteBatch, Texture2D, SpriteFont, ...) | 4 Groups, 13 categories — see 5.6 |
 | 3D Graphics | `Microsoft::Xna::Framework::Graphics` (Model, Effect, ...) | placeholder only |
 
 More areas may be added later (e.g. Content pipeline, Math) — the `AreaEntry` list is just
 appended to; no structural change is needed.
 
-**Input**, **Audio**, **Devices**, **Net**, and **Media** have their category lists filled in as
-of this pass. The remaining areas (2D Graphics/3D Graphics) exist as real, selectable Home-screen
-entries leading to an `AreaScreen` with zero categories (rendered as an empty/"coming soon"
-list) — this proves the navigation shell scales to the full area set without committing to any
-area's content yet.
+**Input**, **Audio**, **Devices**, **Net**, **Media**, and **2D Graphics** have their category
+lists filled in as of this pass. The remaining area (3D Graphics) exists as a real, selectable
+Home-screen entry leading to an `AreaScreen` with zero categories and zero groups (rendered as
+an empty/"coming soon" list) — this proves the navigation shell scales to the full area set
+without committing to any area's content yet.
 
 ### 5.1 Input area detail
 
@@ -513,6 +540,129 @@ Deliberately **not** covered: `Picture`/`PictureAlbum`(+collections) beyond the 
 `Album`/`Artist` already cover), and `feature/media`'s in-progress rewrite (see this section's
 opening note) — this Area describes `develop`'s current, real behavior only.
 
+### 5.6 2D Graphics area detail
+
+2D Graphics is the first Area to use the Group navigation level (section 4): 4 Groups, 13
+categories, 38 demo screens total, all built against `develop`'s EasyGL backend (this app's
+default). Scope was deliberately fixed up front via two decisions: a Group level rather than a
+flat 13-category list, and raw vertex/primitive drawing (`VertexPositionColor`,
+`GraphicsDevice::DrawUserPrimitives`, `PrimitiveType`) left entirely for a future 3D Graphics
+area — this Area covers only `SpriteBatch`/`Texture2D`/`SpriteFont`/2D-relevant
+`GraphicsDevice` state. Every texture used across all 38 screens is generated procedurally at
+runtime via `TextureDemoHelpers.hpp` (`CreateCheckerboardTexture`/`CreateGradientTexture`/
+`CreateGridTexture`, all built on `Texture2D::CreateFromPixels`) — no PNG/image asset is
+bundled, the same "no third-party asset" discipline as Audio's `GenerateSineWavePcm16()` and
+Media's ffmpeg-generated clips.
+
+**A recurring implementation pattern worth calling out**: `DemoScreen::Draw()` wraps every
+`OnDemoDraw()` call in a default-parameter `sb.Begin()`/`sb.End()` pair (for the title and Back
+hint). Since `SpriteBatch::Begin()` throws if called while already begun, any demo needing a
+custom `SpriteSortMode`/`BlendState`/`SamplerState`/`RasterizerState`/transform-`Matrix`, or
+that switches the active render target, must inside its own `OnDemoDraw`: call `sb.End()`
+first (flushing whatever the base class already queued into the still-open default batch —
+critically, this must happen **before** any direct `GraphicsDevice` state mutation, e.g.
+`ScissorRectangle` or `SetRenderTarget`, since `SpriteBatch` with the default `Deferred` sort
+mode only rasterizes queued sprites at `End()` time — changing device state first retroactively
+corrupts anything already queued but not yet flushed), then `sb.Begin(customParams...)`, do the
+custom draws, `sb.End()` again, restore default state, then `sb.Begin()` once more before
+returning so the base class's trailing Back-hint text has a valid open batch. This dance is
+demonstrated at length in `SortModes/DeferredSortScreen.hpp`'s code comment and reused across
+roughly a third of the screens in this Area.
+
+- **SpriteBatch** (4 categories, 18 demo screens, `src/Demos/Graphics2D/{DrawingBasics,
+  SortModes,DrawString,BeginEndState}/`) — **implemented**. *Drawing Basics* (5 screens):
+  position-only `Draw`, destination-rectangle scaling, source-rectangle sub-sprite selection,
+  rotation/origin, and `SpriteEffects` flip + scale, all pixel-verified including a
+  quadrant-colored (red/green/blue/yellow) test texture specifically so flips/rotation can be
+  checked for exact pixel correctness rather than "looks about right". *Sort Modes* (5 screens):
+  `Deferred`/`Immediate` (visually identical submission-order result, confirmed side by side),
+  `Texture` (honestly shown as pointer-dependent/nondeterministic, not given false precision),
+  and `BackToFront`/`FrontToBack` proven as exact visual opposites via two comparable
+  screenshots. *DrawString* (4 screens): basic text, a transformed/orbiting text demo,
+  `SpriteEffects` on `DrawString` (confirmed the **whole string mirrors as a block**, e.g.
+  "ABC 123" flips to read backwards, not each glyph individually in place) plus the
+  `MeasureString` trailing-newline gotcha (a trailing `\n` adds one full empty line's height, not
+  a fraction), and a `StringBuilder` overload screen. *Begin/End & State* (4 screens): a real
+  nested-`Begin()` exception, a real draw-outside-`Begin()` exception (app remains stable after
+  both), a live device-state readback proving `BlendState` set inside a batch leaks past `End()`
+  until explicitly reset, and the 7-argument `Begin()` transform-`Matrix` overload driving an
+  orbiting-camera effect over 3 fixed-position markers.
+- **Textures & Fonts** (3 categories, 9 demo screens, `src/Demos/Graphics2D/{Texture2DBasics,
+  SaveAsReload,SpriteFont}/`) — **implemented**. *Texture2D Basics* (3 screens): the NOXNA
+  `CreateFromPixels` one-liner vs. the XNA-idiomatic `Texture2D(device,w,h)` + `SetData`
+  construction paths side by side, a real `SetData`/`GetData` round trip confirmed byte-for-byte
+  (`MATCH (all 64 pixels)`), and `IsDisposed`/`HasBackend()` lifecycle checks after `Dispose()`.
+  *SaveAs & Reload* (2 screens): a genuine on-disk round trip for both `SaveAsPng` (a real
+  393-byte PNG, confirmed via the `file` command and reloaded pixel-exact) and `SaveAsJpeg` (a
+  real 1965-byte JPEG, reloaded closely matching per JPEG's lossy nature, noted honestly rather
+  than hidden). *SpriteFont* (4 screens): `MeasureString` on short/long/multi-line samples with
+  real measured dimensions; `DefaultCharacter` fallback, confirming both the real fallback
+  substitution and the real `std::invalid_argument("Text contains characters that cannot be
+  resolved by this SpriteFont.")` throw when unset (the font's actual missing-glyph search is
+  dynamic, not a hardcoded assumed codepoint); live-adjustable `LineSpacing`/`Spacing`; and a
+  brand-new `SpriteFont` built entirely from scratch via the NOXNA public constructor (10
+  flat-color digit glyphs on a hand-built atlas) — this last screen caught a genuine bug during
+  verification (below).
+- **Device State & Blending** (3 categories, 7 demo screens, `src/Demos/Graphics2D/{BlendState,
+  SamplerState,ViewportScissor}/`) — **implemented**. *BlendState* (2 screens): `Opaque`/
+  `AlphaBlend`/`Additive`/`NonPremultiplied` cycled live over two overlapping squares, plus a
+  dedicated Premultiplied-Alpha-gotcha screen showing the same orange color built two ways
+  (correct pairing vs. a deliberately swapped/wrong pairing) to explain exactly why `Additive`/
+  `NonPremultiplied` look dimmer than `AlphaBlend`/`Opaque` when combined with the wrong kind of
+  source color. *SamplerState* (2 screens): `PointClamp` (crisp) vs. `LinearClamp` (blurry)
+  filtering on the same 8×8-upscaled-to-200×200 texture, and `PointWrap` (tiles 4×4) vs.
+  `PointClamp` (edge-smear) addressing on a 4×-oversized source rectangle — both real,
+  EasyGL-pixel-verified differences (the Mirror address mode was deliberately skipped as
+  optional/redundant with Wrap for demonstration purposes). *Viewport & Scissor* (3 screens): a
+  live `Viewport` inspector that shrinks/restores a 300×200 sub-viewport (confirmed real —
+  shrinking genuinely clips all rendering, including `Clear()`, to the sub-rect, leaving stale
+  pixels outside it until the viewport is restored and a full-screen `Clear()` runs again — an
+  authentic GPU behavior, not a bug); real `ScissorRectangle` clipping (confirmed a real bug
+  during verification, below); and a confirmed gotcha that `SetRenderTarget()` **silently resets
+  Viewport and ScissorRectangle** back to the new target's full bounds every time it's called,
+  even switching to the same backbuffer via `SetRenderTarget(nullptr)`.
+- **Render Targets** (3 categories, 4 demo screens, `src/Demos/Graphics2D/{RenderToTextureBasics,
+  ScreenTransition,DisposeSafety}/`) — **implemented**. *Render-to-Texture Basics* (2 screens): a
+  source texture drawn once into a `RenderTarget2D` in `LoadContent()` then sampled every frame
+  like any ordinary `Texture2D` (it is one), and two independent `RenderTarget2D` instances
+  switched to and from multiple times, confirming each keeps its own distinct content through a
+  round trip via the backbuffer. *Screen Transition* (1 screen): a live post-effect pattern —
+  three drifting quads rendered into a `RenderTarget2D` every frame, then drawn back over the
+  backbuffer with a continuously pulsing alpha, confirmed genuinely animating (not a static
+  frame) via two screenshots showing both the quad positions and the alpha level changed.
+  *Dispose Safety* (1 screen): `RenderTarget2D::Dispose()` confirmed to really throw
+  `System::InvalidOperationException("Disposing target that is still bound")` when the target is
+  still the device's active render target, matching FNA's own "disposing a bound render target
+  is a programming error" behavior — the app remains fully stable and navigable after the
+  exception.
+
+See `BuildDrawingBasicsDemos()`/`BuildSortModesDemos()`/`BuildDrawStringDemos()`/
+`BuildBeginEndStateDemos()`/`BuildTexture2DBasicsDemos()`/`BuildSaveAsReloadDemos()`/
+`BuildSpriteFontDemos()`/`BuildBlendStateDemos()`/`BuildSamplerStateDemos()`/
+`BuildViewportScissorDemos()`/`BuildRenderToTextureBasicsDemos()`/`BuildScreenTransitionDemos()`/
+`BuildDisposeSafetyDemos()` in `AreaCatalog.hpp`.
+
+**Real defects found and fixed during Xvfb verification** (all rebuilt and reverified after
+fixing, not just reasoned about): the hand-built `SpriteFont` screen reused its atlas-cell
+rectangle for both `glyphBounds` (correct) and `cropping` (wrong — cropping is a per-glyph
+*rendering offset relative to the pen*, not the glyph's atlas position; reusing it doubled up
+with the pen's own advance and reversed left-to-right glyph order for any non-monotonic string,
+e.g. drawing "42" rendered as "24" — confirmed by tracing `SpriteBatch::DrawString`'s actual
+layout math against the bug before fixing it); the Scissor Clipping screen set
+`GraphicsDevice::ScissorRectangle` to its narrow demo rect **before** calling the first
+`sb.End()`, so the base class's already-queued title text was clipped along with the intended
+texture once `SpriteBatch`'s deferred flush ran under the new (narrow) scissor state — fixed by
+moving the state change to after that `End()` call, matching the pattern already used correctly
+elsewhere in this Area (e.g. `ScreenTransition/FadeTransitionScreen.hpp`). Several smaller
+text-layout/label-collision fixes (side-by-side labels overlapping at this app's 960px window
+width) were also found and fixed the same way as in prior Areas.
+
+Deliberately **not** covered: raw vertex/primitive drawing (`VertexPositionColor`,
+`GraphicsDevice::DrawUserPrimitives`, `PrimitiveType`) — reserved for a future 3D Graphics area
+per explicit direction; the `SamplerState` Mirror address mode (redundant with Wrap for this
+Area's demonstration purposes); and hands-on verification against any GPU/driver other than this
+dev machine's EasyGL/Mesa software path.
+
 ## 6. Project layout
 
 ```
@@ -530,8 +680,9 @@ cna-examples/
     ├── Navigation/
     │   ├── HomeScreen.hpp
     │   ├── AreaScreen.hpp
+    │   ├── GroupScreen.hpp            (optional 5th level -- see section 4; 2D Graphics only so far)
     │   ├── CategoryScreen.hpp
-    │   └── AreaCatalog.hpp            (the AreaEntry/CategoryEntry/DemoEntry data)
+    │   └── AreaCatalog.hpp            (the AreaEntry/GroupEntry/CategoryEntry/DemoEntry data)
     ├── GameStateManagement/           (ScreenManager/GameScreen/MenuScreen/MenuEntry/InputState,
     │                                    adapted from ../cna-samples/samples/GameStateManagement)
     └── Demos/
@@ -562,11 +713,26 @@ cna-examples/
         │   ├── NetworkGamer/                    (2 DemoScreen subclasses -- see section 5.4)
         │   ├── GamerServices/                   (5 DemoScreen subclasses -- see section 5.4)
         │   └── Leaderboards/                    (2 DemoScreen subclasses -- see section 5.4)
-        └── Media/
-            ├── MediaDemoHelpers.hpp             (content paths + MediaStateName())
-            ├── Song/                            (6 DemoScreen subclasses -- see section 5.5)
-            ├── Video/                           (3 DemoScreen subclasses -- see section 5.5)
-            └── MediaLibrary/                    (2 DemoScreen subclasses -- see section 5.5)
+        ├── Media/
+        │   ├── MediaDemoHelpers.hpp             (content paths + MediaStateName())
+        │   ├── Song/                            (6 DemoScreen subclasses -- see section 5.5)
+        │   ├── Video/                           (3 DemoScreen subclasses -- see section 5.5)
+        │   └── MediaLibrary/                    (2 DemoScreen subclasses -- see section 5.5)
+        └── Graphics2D/
+            ├── TextureDemoHelpers.hpp           (procedural checkerboard/gradient/grid textures)
+            ├── DrawingBasics/                   (5 DemoScreen subclasses -- see section 5.6)
+            ├── SortModes/                       (5 DemoScreen subclasses -- see section 5.6)
+            ├── DrawString/                      (4 DemoScreen subclasses -- see section 5.6)
+            ├── BeginEndState/                   (4 DemoScreen subclasses -- see section 5.6)
+            ├── Texture2DBasics/                 (3 DemoScreen subclasses -- see section 5.6)
+            ├── SaveAsReload/                     (2 DemoScreen subclasses -- see section 5.6)
+            ├── SpriteFont/                       (4 DemoScreen subclasses -- see section 5.6)
+            ├── BlendState/                       (2 DemoScreen subclasses -- see section 5.6)
+            ├── SamplerState/                     (2 DemoScreen subclasses -- see section 5.6)
+            ├── ViewportScissor/                  (3 DemoScreen subclasses -- see section 5.6)
+            ├── RenderToTextureBasics/            (2 DemoScreen subclasses -- see section 5.6)
+            ├── ScreenTransition/                 (1 DemoScreen subclass -- see section 5.6)
+            └── DisposeSafety/                    (1 DemoScreen subclass -- see section 5.6)
 ```
 
 `GameStateManagement/` is a local copy (adapted, not symlinked — `cna-samples` is a sibling
@@ -626,12 +792,20 @@ instruction. In scope now:
   `AreaCatalog.hpp` the same way. Needed no CMake changes at all (FFmpeg-backed `Video`/
   `VideoPlayer` build into the umbrella `CNA` target directly on Linux); the only new
   infrastructure is `Content/MediaDemo/`'s 5 ffmpeg-generated synthetic assets.
+- The 2D Graphics area's 4 Groups / 13 categories, 38 demo screens total (see section 5.6),
+  wired into `AreaCatalog.hpp` the same way — the first Area to use the new Group navigation
+  level (`GroupEntry`, `GroupScreen.hpp`, section 4). Needed no CMake changes; the only new
+  infrastructure is `Demos/Graphics2D/TextureDemoHelpers.hpp`'s procedural texture generators
+  (no image asset bundled). Found and fixed 5 real defects during Xvfb verification — a reversed
+  glyph-order bug in the hand-built `SpriteFont` demo, a scissor/`End()`-ordering bug that
+  clipped title text, and 3 text-layout overflow/collision fixes — see section 5.6's closing
+  note for details.
 
 Explicitly **out of scope** still (future work):
 
-- Demo screens for any Area other than Input/Audio/Devices/Net/Media (2D Graphics/3D Graphics)
-  — Input's five categories, Audio's five categories, Devices' six categories, Net's four
-  categories, and Media's three categories are all done.
+- Demo screens for the remaining Area (3D Graphics) — Input's five categories, Audio's five
+  categories, Devices' six categories, Net's four categories, Media's three categories, and 2D
+  Graphics' 13 categories are all done.
 - Hands-on verification passes for the Gamepad and Touch demos (and the joystick/haptics
   screens within Other) against real hardware (see section 5.1's notes on each) — no
   controller, touchscreen, raw joystick, or haptic device was available while building them.
