@@ -150,10 +150,16 @@ to the full area set without committing to any area's content yet.
 
 ### 5.1 Input area detail
 
-The Input area is the first to be fully fleshed out (in a later pass — see Scope below). Its
-category list:
+The Input area is the first to be fleshed out. Its category list:
 
-- **Keyboard** — key down/up/pressed reporting, modifiers, `TextInputEXT`, key-repeat.
+- **Keyboard** — **implemented** (10 demo screens, `src/Demos/Input/Keyboard/`): live
+  `IsKeyDown` state on a curated keyboard-shaped grid, `GetPressedKeys()`, an edge-detected
+  press/release log, `GetModStateEXT()` modifiers/locks, `TextInputEXT` composed text input,
+  scancode-vs-keycode naming (`GetScancodeNameEXT`/`GetKeyNameEXT`/their inverses),
+  `KeyboardState::Equals()`/`GetHashCode()`, the 4-slot `GetState(PlayerIndex)` API,
+  `IsKeyDown`/`IsKeyUp`/`operator[]`/`getItem` side by side, and a hold-duration/typematic-repeat
+  pattern built on `IsKeyDown` + `GameTime`. See `src/Navigation/AreaCatalog.hpp`'s
+  `BuildKeyboardDemos()` for the full registry.
 - **Mouse** — position, buttons, scroll wheel, relative/absolute mode, cursor visibility.
 - **Gamepad** — connected-pad detection, buttons/thumbsticks/triggers, vibration, capabilities.
 - **Touch** — `TouchPanel` state, `TouchLocation`, `GestureSample` recognition.
@@ -182,14 +188,18 @@ cna-examples/
 │   └── ExamplesHelpers.cmake
 └── src/
     ├── Program.cpp                    (entry point: #include "CNA/Entrypoint.hpp")
-    ├── CnaExamplesGame.hpp/.cpp       (Game subclass; owns GraphicsDeviceManager + ScreenManager)
+    ├── CnaExamplesGame.hpp            (Game subclass; owns GraphicsDeviceManager + ScreenManager)
     ├── Navigation/
-    │   ├── HomeScreen.hpp/.cpp
-    │   ├── AreaScreen.hpp/.cpp
-    │   ├── CategoryScreen.hpp/.cpp
-    │   └── AreaCatalog.hpp/.cpp       (the AreaEntry/CategoryEntry/DemoEntry data)
-    └── GameStateManagement/           (ScreenManager/GameScreen/MenuScreen/MenuEntry/InputState,
-                                         adapted from ../cna-samples/samples/GameStateManagement)
+    │   ├── HomeScreen.hpp
+    │   ├── AreaScreen.hpp
+    │   ├── CategoryScreen.hpp
+    │   └── AreaCatalog.hpp            (the AreaEntry/CategoryEntry/DemoEntry data)
+    ├── GameStateManagement/           (ScreenManager/GameScreen/MenuScreen/MenuEntry/InputState,
+    │                                    adapted from ../cna-samples/samples/GameStateManagement)
+    └── Demos/
+        ├── DemoScreen.hpp             (shared leaf-screen chrome: title, Back, DrawLines() helper)
+        └── Input/
+            └── Keyboard/              (10 DemoScreen subclasses -- see section 5.1)
 ```
 
 `GameStateManagement/` is a local copy (adapted, not symlinked — `cna-samples` is a sibling
@@ -227,20 +237,33 @@ instruction. In scope now:
   run: shows the Home menu, navigates into an Area, navigates into a Category, shows "no demos
   yet" and lets the user back out — proving the architecture end-to-end without real demo
   content.
+- **Since extended beyond the initial pass:** the shared `DemoScreen` base (title/Back chrome,
+  `DrawLines()` helper) plus all 10 Keyboard demo screens (see section 5.1), wired into
+  `AreaCatalog.hpp`. `MenuScreen` also gained auto-scroll-to-selection (`scrollOffset_`) once
+  Keyboard's 10-demo + Back list overflowed a single screen — any category with enough demos to
+  overflow the viewport now scrolls correctly, not just Keyboard.
 
-Explicitly **out of scope** for this pass (future work):
+Explicitly **out of scope** still (future work):
 
-- Any actual per-area demo (`DemoScreen` subclasses) — Keyboard/Mouse/Gamepad/Touch/Other
-  demonstrations for Input, or anything for Audio/Devices/Net/Media/2D/3D.
-- The Phase 11 hardware-validation demonstrations themselves.
+- Mouse/Gamepad/Touch/Other demo screens for Input, and anything for Audio/Devices/Net/Media/2D/3D.
+- The Phase 11 hardware-validation demonstrations that need a human with real gamepads/
+  touchscreens attached (Keyboard's demos above cover the keyboard half of that need already).
 - Search (`javafx-ensemble8`'s `SearchPopover` equivalent).
 - Multi-backend CI, non-EasyGL verification.
 - macOS/iOS/console targets.
+- Touch swipe/drag-to-scroll for browsing a long menu beyond the current selection (today's
+  auto-scroll only follows keyboard/gamepad Up/Down; a touch-only user can't yet reach an entry
+  further down an overflowing list than what's already on screen without a physical/virtual
+  D-pad).
 
 ## 9. Relationship to existing repos
 
 - **`../cna`** — the framework being demonstrated; consumed as a sibling `add_subdirectory`,
-  never vendored/copied.
+  never vendored/copied. Builds against whatever branch `../cna` has checked out (`develop` by
+  default) -- note that as of this writing the `feature/input` branch's Input-subsystem audit
+  fixes/hardening have not yet been merged into `develop`, so a Keyboard demo here reflects
+  `develop`'s current Input behavior, not `feature/input`'s. No cna-examples-side change is
+  needed once that branch merges; it will pick up the fixes on the next `../cna` update.
 - **`../sharp-runtime`** — pulled in transitively through `../cna`.
 - **`../cna-samples`** — reference/inspiration only for CMake structure
   (`cmake/SampleHelpers.cmake` → `cmake/ExamplesHelpers.cmake`) and for the

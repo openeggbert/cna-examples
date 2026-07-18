@@ -76,7 +76,16 @@ public:
 
         spriteBatch.Begin();
 
+        // Entries below the title/above the screen bottom scroll with
+        // scrollOffset_ (see UpdateMenuEntryLocations); skip drawing ones
+        // currently scrolled out of view instead of letting them overlap
+        // the title or run off the bottom edge.
+        const float top = kListTop - 4.0f;
+        const float bottom = (float)graphics.getViewportProperty().getHeightProperty();
         for (size_t i = 0; i < menuEntries_.size(); i++) {
+            const float y = menuEntries_[i]->Position().Y;
+            const float h = (float)menuEntries_[i]->GetHeight(*this);
+            if (y + h < top || y > bottom) continue;
             bool isSelected = IsActive() && ((int)i == selectedEntry_);
             menuEntries_[i]->Draw(*this, isSelected, gameTime);
         }
@@ -112,11 +121,14 @@ protected:
     // Positions entries in a vertical list, centered horizontally. Rows are
     // spaced generously (GetHeight() + kRowPadding) so touch targets stay
     // comfortably tappable on a phone screen, not just readable on desktop.
+    // When the list is taller than the viewport (e.g. Keyboard's 10 demos +
+    // Back), scrollOffset_ shifts everything up just enough to keep the
+    // selected entry on screen -- see AutoScrollToSelection().
     virtual void UpdateMenuEntryLocations() {
         constexpr float kRowPadding = 18.0f;
         float transitionOffset = (float)std::pow(TransitionPosition(), 2);
 
-        Vector2 position(0.0f, 175.0f);
+        Vector2 position(0.0f, kListTop - scrollOffset_);
 
         for (size_t i = 0; i < menuEntries_.size(); i++) {
             auto& menuEntry = menuEntries_[i];
@@ -133,11 +145,44 @@ protected:
             menuEntry->setPosition(position);
             position.Y += menuEntry->GetHeight(*this) + kRowPadding;
         }
+
+        AutoScrollToSelection();
     }
 
 private:
+    static constexpr float kListTop = 175.0f;
+    static constexpr float kListBottomMargin = 24.0f;
+
+    // Keeps the currently-selected entry within the visible viewport band
+    // by adjusting scrollOffset_ -- entries are repositioned on the *next*
+    // UpdateMenuEntryLocations() call using the new offset (one frame of
+    // lag, imperceptible at 60fps). Only keyboard/gamepad Up/Down and
+    // ContainsPoint (touch) drive selectedEntry_, so this alone keeps every
+    // reachable entry visible; a long list still needs a swipe/drag gesture
+    // to browse entries beyond the selection, which is future work.
+    void AutoScrollToSelection() {
+        if (menuEntries_.empty() || selectedEntry_ < 0 ||
+            selectedEntry_ >= (int)menuEntries_.size()) {
+            return;
+        }
+        auto& viewport = screenManager_->getGraphicsDeviceProperty().getViewportProperty();
+        const float bottom = (float)viewport.getHeightProperty() - kListBottomMargin;
+
+        auto& selected = menuEntries_[selectedEntry_];
+        const float y = selected->Position().Y;
+        const float h = (float)selected->GetHeight(*this);
+
+        if (y < kListTop) {
+            scrollOffset_ -= (kListTop - y);
+        } else if (y + h > bottom) {
+            scrollOffset_ += (y + h - bottom);
+        }
+        if (scrollOffset_ < 0.0f) scrollOffset_ = 0.0f;
+    }
+
     std::vector<std::shared_ptr<MenuEntry>> menuEntries_;
     int selectedEntry_ = 0;
+    float scrollOffset_ = 0.0f;
     std::string menuTitle_;
 };
 
