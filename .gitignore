@@ -1,0 +1,68 @@
+# Build directories
+cmake-build-*/
+build/
+out/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+_deps/
+
+# IDE project files
+.idea/
+.vscode/
+*.suo
+*.user
+*.sdf
+*.VC.db
+*.VC.opendb
+*.ncb
+*.opensdf
+.vs/
+
+# Compiled output
+*.exe
+*.out
+*.app
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+
+# Emscripten output
+*.wasm
+*.js.map
+*.html.map
+
+# Android build output
+*.apk
+*.aab
+.gradle/
+local.properties
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Packaging
+*.zip
+*.tar.gz
+*.7z
+
+# Logs
+*.log
+
+# Temporary
+*.tmp
+*.bak
+*.swp
+*~
