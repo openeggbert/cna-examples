@@ -41,6 +41,17 @@
 #include "Demos/Input/Gamepad/DeviceInfoScreen.hpp"
 #include "Demos/Input/Gamepad/StateEqualityHashScreen.hpp"
 
+#include "Demos/Input/Touch/LiveTouchesScreen.hpp"
+#include "Demos/Input/Touch/CapabilitiesAndDisplayScreen.hpp"
+#include "Demos/Input/Touch/TapAndDoubleTapScreen.hpp"
+#include "Demos/Input/Touch/HoldAndFlickScreen.hpp"
+#include "Demos/Input/Touch/DragGesturesScreen.hpp"
+#include "Demos/Input/Touch/PinchGestureScreen.hpp"
+#include "Demos/Input/Touch/AllGesturesLogScreen.hpp"
+#include "Demos/Input/Touch/GestureQueueScreen.hpp"
+#include "Demos/Input/Touch/TouchLocationQueryScreen.hpp"
+#include "Demos/Input/Touch/PeakTouchesScreen.hpp"
+
 namespace CnaExamples::Navigation {
 
 using CnaExamples::GameStateManagement::GameScreen;
@@ -151,6 +162,32 @@ inline std::vector<DemoEntry> BuildGamepadDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildTouchDemos() {
+    using namespace CnaExamples::Demos::Input::TouchDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<LiveTouchesScreen>(
+        "Live Touches", "Raw per-finger state from GetState(), up to MAX_TOUCHES"));
+    demos.push_back(MakeDemo<CapabilitiesAndDisplayScreen>(
+        "Capabilities & Display", "GetCapabilities() + the display geometry gestures use"));
+    demos.push_back(MakeDemo<TapAndDoubleTapScreen>(
+        "Tap & DoubleTap", "The two simplest discrete gestures"));
+    demos.push_back(MakeDemo<HoldAndFlickScreen>(
+        "Hold & Flick", "A stationary hold vs. a fast released drag"));
+    demos.push_back(MakeDemo<DragGesturesScreen>(
+        "Drag Gestures", "Horizontal/Vertical/Free drag + DragComplete"));
+    demos.push_back(MakeDemo<PinchGestureScreen>(
+        "Pinch Gesture", "The only gesture using both fingers' Position2/Delta2"));
+    demos.push_back(MakeDemo<AllGesturesLogScreen>(
+        "All Gestures Log", "Every GestureType enabled at once"));
+    demos.push_back(MakeDemo<GestureQueueScreen>(
+        "Gesture Queue", "IsGestureAvailable()/ReadGesture()'s drain-the-queue contract"));
+    demos.push_back(MakeDemo<TouchLocationQueryScreen>(
+        "TouchLocation Equals()/ToString()", "Snapshot comparison correctness"));
+    demos.push_back(MakeDemo<PeakTouchesScreen>(
+        "Peak Simultaneous Touches", "TouchDeviceExistsEXT + a derived peak-touch-count metric"));
+    return demos;
+}
+
 // Builds the full Home -> Area -> Category -> Demo data set. This is the
 // single place new areas/categories/demos get registered as they are
 // implemented; see plan.md section 8 for what is intentionally still empty.
@@ -160,7 +197,7 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"Keyboard", BuildKeyboardDemos()},
             CategoryEntry{"Mouse", BuildMouseDemos()},
             CategoryEntry{"Gamepad", BuildGamepadDemos()},
-            CategoryEntry{"Touch", {}},
+            CategoryEntry{"Touch", BuildTouchDemos()},
             CategoryEntry{"Other", {}},
         }},
         AreaEntry{"Audio", {}},
