@@ -32,7 +32,8 @@ see [plan.md](plan.md) §5.1 for exactly which screens still need that pass.
 
 - **Keyboard/gamepad:** Up/Down (or D-pad/left stick) to move the selection, Enter/Space/gamepad
   A to select, Esc/gamepad B to go back.
-- **Touch:** tap an entry to select it; tap the "< Back" hint at the bottom-left to go back.
+- **Mouse/touch:** click or tap an entry to select it; click/tap the "< Back" hint at the
+  bottom-left to go back.
 - A category with more entries than fit on screen scrolls automatically to keep the selected
   entry visible as you navigate with Up/Down.
 

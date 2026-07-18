@@ -2,20 +2,24 @@
 //
 // Adapted from the official XNA "Game State Management" sample's InputState
 // (see GameScreen.hpp for provenance), extended with a touch "tap" query
-// (IsNewTap) since cna-examples targets Android as a "now" platform and its
-// menus must be usable by touch, not just keyboard/gamepad.
+// (IsNewTap) and a mouse "click" query (IsNewClick) since cna-examples
+// targets both Android and desktop as "now" platforms and its menus must
+// be usable by touch or mouse, not just keyboard/gamepad.
 #pragma once
 
 #include <array>
 #include <optional>
 
 #include "Microsoft/Xna/Framework/PlayerIndex.hpp"
+#include "Microsoft/Xna/Framework/Input/ButtonState.hpp"
 #include "Microsoft/Xna/Framework/Input/Keyboard.hpp"
 #include "Microsoft/Xna/Framework/Input/KeyboardState.hpp"
 #include "Microsoft/Xna/Framework/Input/Keys.hpp"
 #include "Microsoft/Xna/Framework/Input/GamePad.hpp"
 #include "Microsoft/Xna/Framework/Input/GamePadState.hpp"
 #include "Microsoft/Xna/Framework/Input/Buttons.hpp"
+#include "Microsoft/Xna/Framework/Input/Mouse.hpp"
+#include "Microsoft/Xna/Framework/Input/MouseState.hpp"
 #include "Microsoft/Xna/Framework/Input/Touch/TouchPanel.hpp"
 #include "Microsoft/Xna/Framework/Vector2.hpp"
 
@@ -23,18 +27,22 @@ namespace CnaExamples::GameStateManagement {
 
 using Microsoft::Xna::Framework::PlayerIndex;
 using Microsoft::Xna::Framework::Vector2;
+using Microsoft::Xna::Framework::Input::ButtonState;
 using Microsoft::Xna::Framework::Input::KeyboardState;
 using Microsoft::Xna::Framework::Input::GamePadState;
 using Microsoft::Xna::Framework::Input::Keyboard;
 using Microsoft::Xna::Framework::Input::GamePad;
 using Microsoft::Xna::Framework::Input::Keys;
 using Microsoft::Xna::Framework::Input::Buttons;
+using Microsoft::Xna::Framework::Input::Mouse;
+using Microsoft::Xna::Framework::Input::MouseState;
 using Microsoft::Xna::Framework::Input::Touch::TouchPanel;
 using Microsoft::Xna::Framework::Input::Touch::TouchLocationState;
 
-// Reads input from keyboard, gamepad and touch, tracking current/previous
-// state and exposing high-level "menu up/down/select/cancel" and "tap"
-// queries so a single MenuScreen implementation can drive all three.
+// Reads input from keyboard, gamepad, mouse and touch, tracking current/
+// previous state and exposing high-level "menu up/down/select/cancel",
+// "tap" and "click" queries so a single MenuScreen implementation can
+// drive all four.
 class InputState {
 public:
     static const int MaxInputs = 4;
@@ -69,6 +77,14 @@ public:
                 break;
             }
         }
+
+        const MouseState mouse = Mouse::GetState();
+        newClickPosition_.reset();
+        if (mouse.getLeftButtonProperty() == ButtonState::Pressed &&
+            previousMouseLeftButton_ == ButtonState::Released) {
+            newClickPosition_ = Vector2((float)mouse.getXProperty(), (float)mouse.getYProperty());
+        }
+        previousMouseLeftButton_ = mouse.getLeftButtonProperty();
     }
 
     // Helper for checking if a key was newly pressed during this update.
@@ -144,8 +160,21 @@ public:
         return true;
     }
 
+    // NOXNA-style extension: reports a newly-pressed left mouse button this
+    // frame, if any, at the cursor's window-relative position -- the mouse
+    // equivalent of IsNewTap(), so desktop users can click a menu entry the
+    // same way touch users tap one (see MenuScreen::HandleInput).
+    bool IsNewClick(Vector2& position) const {
+        if (!newClickPosition_.has_value())
+            return false;
+        position = newClickPosition_.value();
+        return true;
+    }
+
 private:
     std::optional<Vector2> newTapPosition_;
+    std::optional<Vector2> newClickPosition_;
+    ButtonState previousMouseLeftButton_ = ButtonState::Released;
 };
 
 } // namespace CnaExamples::GameStateManagement

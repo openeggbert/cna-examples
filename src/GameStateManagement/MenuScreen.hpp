@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 //
 // Adapted from the official XNA "Game State Management" sample (see
-// GameScreen.hpp for provenance), extended with touch tap-to-select so the
-// same menu works on Android without a keyboard or gamepad.
+// GameScreen.hpp for provenance), extended with touch tap-to-select and
+// mouse click-to-select so the same menu works on Android and touch
+// devices, and with just a mouse on desktop, without requiring a keyboard
+// or gamepad.
 #pragma once
 
 #include <cmath>
@@ -16,8 +18,8 @@
 namespace CnaExamples::GameStateManagement {
 
 // Base class for screens that are a vertical list of selectable options.
-// The user can move up/down and confirm/cancel via keyboard or gamepad, or
-// tap an entry directly on a touch screen.
+// The user can move up/down and confirm/cancel via keyboard or gamepad, tap
+// an entry directly on a touch screen, or click it with a mouse.
 class MenuScreen : public GameScreen {
 public:
     explicit MenuScreen(const std::string& menuTitle) : menuTitle_(menuTitle) {
@@ -47,10 +49,10 @@ public:
             OnCancel(playerIndex);
         }
 
-        Vector2 tap;
-        if (input.IsNewTap(tap)) {
+        Vector2 point;
+        if (input.IsNewTap(point) || input.IsNewClick(point)) {
             for (size_t i = 0; i < menuEntries_.size(); i++) {
-                if (menuEntries_[i]->ContainsPoint(*this, tap)) {
+                if (menuEntries_[i]->ContainsPoint(*this, point)) {
                     selectedEntry_ = (int)i;
                     OnSelectEntry((int)i, PlayerIndex::One);
                     break;

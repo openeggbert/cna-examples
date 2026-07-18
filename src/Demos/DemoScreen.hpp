@@ -16,8 +16,9 @@ using Microsoft::Xna::Framework::Rectangle;
 
 // Shared base for every leaf demo screen (the 4th navigation level pushed by
 // a CategoryScreen entry). Provides consistent chrome -- a centered title,
-// a tappable/Esc/gamepad-B "Back" hint -- and a DrawLines() helper for the
-// common "stack of label: value readout lines" layout most Input demos use.
+// a clickable/tappable/Esc/gamepad-B "Back" hint -- and a DrawLines() helper
+// for the common "stack of label: value readout lines" layout most Input
+// demos use.
 // Concrete demos override OnDemoInput()/OnDemoDraw() instead of HandleInput/
 // Draw so Back navigation stays uniform across every demo.
 class DemoScreen : public GameScreen {
@@ -41,9 +42,9 @@ public:
             return;
         }
 
-        Vector2 tap;
-        if (input.IsNewTap(tap) &&
-            BackHitBox().Contains((int)tap.X, (int)tap.Y)) {
+        Vector2 point;
+        if ((input.IsNewTap(point) || input.IsNewClick(point)) &&
+            BackHitBox().Contains((int)point.X, (int)point.Y)) {
             ExitScreen();
             return;
         }
