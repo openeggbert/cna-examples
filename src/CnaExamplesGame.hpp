@@ -7,6 +7,7 @@
 #include "Microsoft/Xna/Framework/Game.hpp"
 #include "Microsoft/Xna/Framework/GraphicsDeviceManager.hpp"
 #include "Microsoft/Xna/Framework/Color.hpp"
+#include "Microsoft/Xna/Framework/GamerServices/GamerServicesComponent.hpp"
 
 #include "GameStateManagement/ScreenManager.hpp"
 #include "Navigation/HomeScreen.hpp"
@@ -17,6 +18,7 @@ using Microsoft::Xna::Framework::Game;
 using Microsoft::Xna::Framework::GraphicsDeviceManager;
 using Microsoft::Xna::Framework::Color;
 using Microsoft::Xna::Framework::GameTime;
+using Microsoft::Xna::Framework::GamerServices::GamerServicesComponent;
 
 // Top-level application class. All navigation/UI logic lives in the
 // ScreenManager component (see GameStateManagement/ and Navigation/); this
@@ -30,6 +32,12 @@ public:
         graphics_ = std::make_unique<GraphicsDeviceManager>(this);
         graphics_->setPreferredBackBufferWidthProperty(960);
         graphics_->setPreferredBackBufferHeightProperty(640);
+
+        // Must be registered before any Microsoft::Xna::Framework::Net or
+        // GamerServices API call (the Net area's demos rely on this being
+        // present at app start, not per-screen).
+        gamerServices_ = std::make_unique<GamerServicesComponent>(*this);
+        getComponentsProperty().Add(&*gamerServices_);
 
         screenManager_ = std::make_unique<GameStateManagement::ScreenManager>(*this);
         getComponentsProperty().Add(&*screenManager_);
@@ -50,6 +58,7 @@ protected:
 
 private:
     std::unique_ptr<GraphicsDeviceManager> graphics_;
+    std::unique_ptr<GamerServicesComponent> gamerServices_;
     std::unique_ptr<GameStateManagement::ScreenManager> screenManager_;
 };
 
