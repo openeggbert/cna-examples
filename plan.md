@@ -160,7 +160,13 @@ The Input area is the first to be fleshed out. Its category list:
   `IsKeyDown`/`IsKeyUp`/`operator[]`/`getItem` side by side, and a hold-duration/typematic-repeat
   pattern built on `IsKeyDown` + `GameTime`. See `src/Navigation/AreaCatalog.hpp`'s
   `BuildKeyboardDemos()` for the full registry.
-- **Mouse** — position, buttons, scroll wheel, relative/absolute mode, cursor visibility.
+- **Mouse** — **implemented** (10 demo screens, `src/Demos/Input/Mouse/`): live position and
+  all five button states (`GetState()`), scroll wheel (cumulative value + derived delta,
+  vertical and the `EXT` horizontal counterpart), `SetPosition()`'s write side, the
+  `MouseCursor` stock-shape gallery (`EXT`), the event-driven `ClickedEXT` (vs. polling),
+  relative-mouse-mode (`EXT`), desktop-global position and warp (`EXT`), capture (`EXT`),
+  `MouseState::Equals()`/`GetHashCode()`/`operator==`/`operator!=`, and an edge-detected
+  button press/release log. See `BuildMouseDemos()` in `AreaCatalog.hpp`.
 - **Gamepad** — connected-pad detection, buttons/thumbsticks/triggers, vibration, capabilities.
 - **Touch** — `TouchPanel` state, `TouchLocation`, `GestureSample` recognition.
 - **Other** — anything Input-related that doesn't fit the above four (sensors, power,
@@ -199,7 +205,8 @@ cna-examples/
     └── Demos/
         ├── DemoScreen.hpp             (shared leaf-screen chrome: title, Back, DrawLines() helper)
         └── Input/
-            └── Keyboard/              (10 DemoScreen subclasses -- see section 5.1)
+            ├── Keyboard/              (10 DemoScreen subclasses -- see section 5.1)
+            └── Mouse/                 (10 DemoScreen subclasses -- see section 5.1)
 ```
 
 `GameStateManagement/` is a local copy (adapted, not symlinked — `cna-samples` is a sibling
@@ -238,16 +245,17 @@ instruction. In scope now:
   yet" and lets the user back out — proving the architecture end-to-end without real demo
   content.
 - **Since extended beyond the initial pass:** the shared `DemoScreen` base (title/Back chrome,
-  `DrawLines()` helper) plus all 10 Keyboard demo screens (see section 5.1), wired into
-  `AreaCatalog.hpp`. `MenuScreen` also gained auto-scroll-to-selection (`scrollOffset_`) once
-  Keyboard's 10-demo + Back list overflowed a single screen — any category with enough demos to
-  overflow the viewport now scrolls correctly, not just Keyboard.
+  `DrawLines()` helper) plus all 10 Keyboard and all 10 Mouse demo screens (see section 5.1),
+  wired into `AreaCatalog.hpp`. `MenuScreen` also gained auto-scroll-to-selection
+  (`scrollOffset_`) once Keyboard's 10-demo + Back list overflowed a single screen — any
+  category with enough demos to overflow the viewport now scrolls correctly, not just Keyboard.
 
 Explicitly **out of scope** still (future work):
 
-- Mouse/Gamepad/Touch/Other demo screens for Input, and anything for Audio/Devices/Net/Media/2D/3D.
-- The Phase 11 hardware-validation demonstrations that need a human with real gamepads/
-  touchscreens attached (Keyboard's demos above cover the keyboard half of that need already).
+- Gamepad/Touch/Other demo screens for Input, and anything for Audio/Devices/Net/Media/2D/3D.
+- The Phase 11 hardware-validation demonstrations that need a human with a real gamepad or
+  touchscreen attached (Keyboard's and Mouse's demos above cover that need for those two
+  devices already).
 - Search (`javafx-ensemble8`'s `SearchPopover` equivalent).
 - Multi-backend CI, non-EasyGL verification.
 - macOS/iOS/console targets.
