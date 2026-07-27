@@ -7,6 +7,7 @@
 // or gamepad.
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <string>
@@ -33,11 +34,14 @@ public:
                 selectedEntry_--;
                 if (selectedEntry_ < 0)
                     selectedEntry_ = (int)menuEntries_.size() - 1;
+                // Moving the selection hands scroll control back to auto-scroll.
+                userScrolled_ = false;
             }
             if (input.IsMenuDown(ControllingPlayer())) {
                 selectedEntry_++;
                 if (selectedEntry_ >= (int)menuEntries_.size())
                     selectedEntry_ = 0;
+                userScrolled_ = false;
             }
         }
 
@@ -49,8 +53,51 @@ public:
             OnCancel(playerIndex);
         }
 
+        HandlePointer(input);
+    }
+
+    // Touch/mouse: drag to scroll, release without dragging to select.
+    //
+    // Selection deliberately happens on RELEASE, not on press. Selecting on
+    // press (the previous behaviour) makes drag-to-scroll impossible: the
+    // moment a finger lands on an entry to start scrolling, that entry runs.
+    void HandlePointer(InputState& input) {
         Vector2 point;
-        if (input.IsNewTap(point) || input.IsNewClick(point)) {
+
+        if (input.IsPointerDown(point)) {
+            if (!pointerWasDown_) {
+                pointerWasDown_ = true;
+                dragging_ = false;
+                dragStartY_ = point.Y;
+                dragLastY_ = point.Y;
+                scrollAtDragStart_ = scrollOffset_;
+            } else {
+                // A few pixels of slop before it counts as a drag, so a shaky
+                // tap still selects rather than nudging the list.
+                if (!dragging_ && std::fabs(point.Y - dragStartY_) > kDragThreshold) {
+                    dragging_ = true;
+                }
+                if (dragging_) {
+                    // Content follows the finger: dragging up scrolls down.
+                    scrollOffset_ = scrollAtDragStart_ - (point.Y - dragStartY_);
+                    ClampScroll();
+                    // Where the user scrolled to now wins over the selection.
+                    // Without this, releasing the finger let AutoScrollToSelection
+                    // immediately drag the list back to the selected entry, so a
+                    // drag appeared to do nothing at all.
+                    userScrolled_ = true;
+                }
+                dragLastY_ = point.Y;
+            }
+            return;
+        }
+
+        if (input.IsPointerReleased(point)) {
+            const bool wasDragging = dragging_;
+            pointerWasDown_ = false;
+            dragging_ = false;
+            if (wasDragging) return;   // a scroll gesture must not also select
+
             for (size_t i = 0; i < menuEntries_.size(); i++) {
                 if (menuEntries_[i]->ContainsPoint(*this, point)) {
                     selectedEntry_ = (int)i;
@@ -58,7 +105,10 @@ public:
                     break;
                 }
             }
+            return;
         }
+
+        pointerWasDown_ = false;
     }
 
     void Update(GameTime& gameTime, bool otherScreenHasFocus,
@@ -91,6 +141,8 @@ public:
             bool isSelected = IsActive() && ((int)i == selectedEntry_);
             menuEntries_[i]->Draw(*this, isSelected, gameTime);
         }
+
+        DrawScrollbar(spriteBatch);
 
         float transitionOffset = (float)std::pow(TransitionPosition(), 2);
 
@@ -148,7 +200,40 @@ protected:
             position.Y += menuEntry->GetHeight(*this) + kRowPadding;
         }
 
-        AutoScrollToSelection();
+        // Total laid-out height, recomputed here because entry heights come from
+        // the font and are not known until a ScreenManager exists.
+        contentHeight_ = position.Y - (kListTop - scrollOffset_);
+
+        // A drag owns the scroll position while it is happening, and keeps
+        // owning it after release until the selection moves -- see userScrolled_.
+        if (!dragging_ && !userScrolled_) AutoScrollToSelection();
+        ClampScroll();
+    }
+
+    // Drawn by Draw() after the entries. Only appears when the list actually
+    // overflows, so short menus stay visually clean.
+    void DrawScrollbar(SpriteBatch& spriteBatch) {
+        const float maxScroll = MaxScroll();
+        if (maxScroll <= 0.0f) return;
+
+        auto& viewport = screenManager_->getGraphicsDeviceProperty().getViewportProperty();
+        const float trackTop = kListTop;
+        const float trackHeight = (float)viewport.getHeightProperty() - kListBottomMargin - trackTop;
+        if (trackHeight <= 0.0f) return;
+
+        const float visibleFraction = trackHeight / contentHeight_;
+        const float thumbHeight = std::max(24.0f, trackHeight * visibleFraction);
+        const float progress = scrollOffset_ / maxScroll;
+        const float thumbY = trackTop + progress * (trackHeight - thumbHeight);
+
+        const int x = viewport.getWidthProperty() - 12;
+        const float alpha = TransitionAlpha();
+        spriteBatch.Draw(screenManager_->getBlankTexture(),
+                         Rectangle(x, (int)trackTop, 4, (int)trackHeight),
+                         mul(Color(48, 48, 48), alpha));
+        spriteBatch.Draw(screenManager_->getBlankTexture(),
+                         Rectangle(x, (int)thumbY, 4, (int)thumbHeight),
+                         mul(Color(130, 130, 130), alpha));
     }
 
 private:
@@ -179,12 +264,33 @@ private:
         } else if (y + h > bottom) {
             scrollOffset_ += (y + h - bottom);
         }
-        if (scrollOffset_ < 0.0f) scrollOffset_ = 0.0f;
     }
+
+    // How far the list can scroll before its last entry sits at the bottom.
+    float MaxScroll() const {
+        auto& viewport = screenManager_->getGraphicsDeviceProperty().getViewportProperty();
+        const float visible = (float)viewport.getHeightProperty() - kListBottomMargin - kListTop;
+        return std::max(0.0f, contentHeight_ - visible);
+    }
+
+    // Applied on every layout pass, not just after a drag: auto-scroll can also
+    // push past the end, and an unbounded offset scrolls the list into the void.
+    void ClampScroll() {
+        scrollOffset_ = std::clamp(scrollOffset_, 0.0f, MaxScroll());
+    }
+
+    static constexpr float kDragThreshold = 8.0f;
 
     std::vector<std::shared_ptr<MenuEntry>> menuEntries_;
     int selectedEntry_ = 0;
     float scrollOffset_ = 0.0f;
+    float contentHeight_ = 0.0f;
+    bool pointerWasDown_ = false;
+    bool dragging_ = false;
+    bool userScrolled_ = false;
+    float dragStartY_ = 0.0f;
+    float dragLastY_ = 0.0f;
+    float scrollAtDragStart_ = 0.0f;
     std::string menuTitle_;
 };
 

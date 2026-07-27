@@ -6,6 +6,7 @@
 #include "GameStateManagement/MenuScreen.hpp"
 #include "Navigation/AreaCatalog.hpp"
 #include "Navigation/AreaScreen.hpp"
+#include "Navigation/SearchScreen.hpp"
 
 namespace CnaExamples::Navigation {
 
@@ -17,8 +18,16 @@ using namespace CnaExamples::GameStateManagement;
 class HomeScreen : public MenuScreen {
 public:
     HomeScreen() : MenuScreen("CNA Examples") {
+        // First entry, above the areas: with ~174 demos five levels deep,
+        // search is the fastest route to a named demo and should not be buried.
+        auto search = std::make_shared<MenuEntry>("Search...");
+        search->Selected = [this](PlayerIndex p) {
+            GetScreenManager()->AddScreen(std::make_shared<SearchScreen>(), p);
+        };
+        MenuEntries().push_back(search);
+
         for (auto& area : BuildAreaCatalog()) {
-            auto entry = std::make_shared<MenuEntry>(area.title);
+            auto entry = std::make_shared<MenuEntry>(WithCount(area.title, CountDemos(area)));
             AreaEntry areaCopy = area;
             entry->Selected = [this, areaCopy](PlayerIndex p) {
                 GetScreenManager()->AddScreen(

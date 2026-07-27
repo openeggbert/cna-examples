@@ -81,6 +81,15 @@ public:
     // the wrong state.
     void SetScriptedOnly(bool scriptedOnly) { scriptedOnly_ = scriptedOnly; }
 
+    // Drives the pointer directly, for scripted runs. Drag-to-scroll is a
+    // gesture, not a keystroke, so it is unreachable from QueueScriptedAction --
+    // and an unverified gesture in the one code path that exists purely for
+    // touch users is exactly the kind of thing that quietly rots.
+    void SetScriptedPointer(bool down, Vector2 position) {
+        scriptedPointerDown_ = down;
+        scriptedPointerPosition_ = position;
+    }
+
     // Reads the latest state of the keyboard, gamepad and touch panel.
     void Update() {
         // Consume at most one scripted action per frame. It is combined with,
@@ -97,6 +106,11 @@ public:
             // before the switch can't be reported forever.
             newTapPosition_.reset();
             newClickPosition_.reset();
+
+            const bool wasScriptedDown = pointerDown_;
+            pointerDown_ = scriptedPointerDown_;
+            if (pointerDown_) pointerPosition_ = scriptedPointerPosition_;
+            pointerReleased_ = wasScriptedDown && !pointerDown_;
             return;
         }
 
@@ -112,10 +126,15 @@ public:
         }
 
         newTapPosition_.reset();
+        std::optional<Vector2> heldTouch;
         for (const auto& touch : TouchPanel::GetState()) {
             if (touch.getStateProperty() == TouchLocationState::Pressed) {
                 newTapPosition_ = touch.getPositionProperty();
-                break;
+            }
+            // Pressed and Moved both mean "still on the glass"; Released does not.
+            if (touch.getStateProperty() == TouchLocationState::Pressed ||
+                touch.getStateProperty() == TouchLocationState::Moved) {
+                heldTouch = touch.getPositionProperty();
             }
         }
 
@@ -126,6 +145,37 @@ public:
             newClickPosition_ = Vector2((float)mouse.getXProperty(), (float)mouse.getYProperty());
         }
         previousMouseLeftButton_ = mouse.getLeftButtonProperty();
+
+        // A single "pointer" abstraction over touch and mouse, tracking the held
+        // state rather than just the press edge. Drag-to-scroll needs to know
+        // where the finger is *now* and when it lifted; IsNewTap/IsNewClick only
+        // ever report the frame contact began.
+        const bool wasDown = pointerDown_;
+        if (heldTouch.has_value()) {
+            pointerDown_ = true;
+            pointerPosition_ = heldTouch.value();
+        } else if (mouse.getLeftButtonProperty() == ButtonState::Pressed) {
+            pointerDown_ = true;
+            pointerPosition_ = Vector2((float)mouse.getXProperty(), (float)mouse.getYProperty());
+        } else {
+            pointerDown_ = false;
+        }
+        pointerReleased_ = wasDown && !pointerDown_;
+    }
+
+    // True while a finger or the left mouse button is held; `position` is where.
+    bool IsPointerDown(Vector2& position) const {
+        if (!pointerDown_) return false;
+        position = pointerPosition_;
+        return true;
+    }
+
+    // True on the single frame contact ended; `position` is the last known
+    // location, which is what a tap-to-select wants.
+    bool IsPointerReleased(Vector2& position) const {
+        if (!pointerReleased_) return false;
+        position = pointerPosition_;
+        return true;
     }
 
     // Helper for checking if a key was newly pressed during this update.
@@ -223,6 +273,11 @@ private:
     std::vector<ScriptedAction> scripted_;
     ScriptedAction currentScripted_ = ScriptedAction::None;
     bool scriptedOnly_ = false;
+    bool pointerDown_ = false;
+    bool pointerReleased_ = false;
+    Vector2 pointerPosition_;
+    bool scriptedPointerDown_ = false;
+    Vector2 scriptedPointerPosition_;
 };
 
 } // namespace CnaExamples::GameStateManagement

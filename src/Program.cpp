@@ -22,9 +22,15 @@ int main(int argc, char** argv) {
     // Listing needs the catalog but no graphics device, so it runs before any
     // Game is constructed -- which is what makes it usable from a build script.
     if (options.listDemos) {
-        for (const auto& row : CnaExamples::Harness::FlattenCatalog(
-                 CnaExamples::Navigation::BuildAreaCatalog())) {
-            std::printf("%s\n", row.path.c_str());
+        const auto catalog = CnaExamples::Navigation::BuildAreaCatalog();
+        // Combining --list-demos with --search prints exactly what the search
+        // screen would show for that query. That is what makes the filter
+        // assertable from a shell instead of only inspectable in a screenshot.
+        const auto terms = CnaExamples::Harness::ParseQueryTerms(options.searchQuery);
+        for (const auto& row : CnaExamples::Harness::FlattenCatalog(catalog)) {
+            if (CnaExamples::Harness::MatchesTerms(row, terms)) {
+                std::printf("%s\n", row.path.c_str());
+            }
         }
         return 0;
     }

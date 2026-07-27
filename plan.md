@@ -283,10 +283,10 @@ folded into D7 rather than treated as new scope here:
 
 | # | Work |
 |---|---|
-| B1 | **Search.** A flattened index over every `DemoEntry` (title, description, `apis`, Area/Group/Category path). A `SearchScreen` reachable from Home, matching incrementally as the user types, launching a demo directly from its result row. This is the ensemble8 `SearchPopover` equivalent the previous plan listed as future work. |
-| B2 | **Drag-to-scroll + scrollbar.** `MenuScreen` currently auto-scrolls only to follow keyboard/gamepad selection; a touch-only user cannot reach an entry below the fold. Adds touch/mouse drag scrolling with inertia and a visible scrollbar. |
-| B3 | **Breadcrumbs and counts.** Demo screens show `Area › Group › Category › Demo` instead of a bare title; Home/Area/Group entries show how many demos are underneath them. |
-| B4 | **`apis` field** on `DemoEntry` (§5.2), populated for all ~290 demos, rendered as a footer line on each demo screen. |
+| B1 | **Done.** `SearchScreen`, reachable as the first Home entry, matching incrementally as the user types over each demo's path + description + `apis`. Space-separated terms AND together, so typing more narrows. The matcher lives in `Harness/DemoIndex.hpp` and is shared with `--list-demos --search <q>`, which is what makes the filter assertable from a shell instead of only inspectable in a screenshot. Also `--search <q>` to deep-link into the screen. |
+| B2 | **Done.** Drag-to-scroll and a scrollbar in `MenuScreen`. Two behavioural changes fell out and are the substance of it: selection moved from pointer *press* to *release* (selecting on press makes dragging impossible), and a manual scroll now suppresses `AutoScrollToSelection` until the selection moves (it used to yank the list straight back, making a drag look like a no-op). No inertia — deferred, since it needs velocity tracking and adds no correctness. |
+| B3 | **Done.** Demo screens show `Area > Group > Category > Demo` in place of the bare title — replacing it rather than adding a row, because the band between title and first content line is fully used by every existing demo. Home/Area/Group entries carry a `(N)` demo count. |
+| B4 | **Field landed; populated per area.** `DemoEntry::apis` renders right-aligned on the Back row (costing no vertical space) and feeds the search index. Media's 17 demos are populated; the other areas are filled in as each is built or revisited — see the assumption recorded in `NEXT.md`. |
 | B5 | **Done, pulled forward.** `--list-demos`, `--demo <path>`, `--keys`, `--key-interval`, `--frames`, `--screenshot`, `--help`, plus `tools/headless.sh`, `tools/sweep.sh` and `tools/check_shots.py`. Built first because A1 could not be verified without it — see §7.2. |
 
 ### Phase C — New Areas

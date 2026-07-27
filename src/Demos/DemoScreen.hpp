@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,31 @@ public:
     explicit DemoScreen(std::string title) : title_(std::move(title)) {
         setTransitionOnTime(TimeSpan::FromSeconds(0.3));
         setTransitionOffTime(TimeSpan::FromSeconds(0.3));
+    }
+
+    // Both are supplied from outside rather than by the screen itself: a demo
+    // knows what it demonstrates, but not the catalog path it was reached
+    // through, and duplicating the path in each screen would let the two drift.
+    // MakeDemo<>() sets the APIs; the CategoryScreen that pushes the screen (or
+    // the headless driver) sets the breadcrumb.
+    void SetApis(std::vector<std::string> apis) { apis_ = std::move(apis); }
+    void SetBreadcrumb(std::string breadcrumb) { breadcrumb_ = std::move(breadcrumb); }
+
+    // Shortens `text` with a trailing ellipsis until it measures no wider than
+    // `maxWidth`. Measured with the real font rather than assuming a character
+    // width -- the menu font is proportional, so a character count would cut
+    // "IIII" and "MMMM" at the same place.
+    //
+    // Public because the navigation screens (SearchScreen) need the same
+    // clipping rule as the demo screens; a second copy would drift.
+    static std::string Ellipsize(SpriteFont& font, const std::string& text, float maxWidth) {
+        if (maxWidth <= 0.0f || font.MeasureString(text).X <= maxWidth) return text;
+
+        std::string result = text;
+        while (!result.empty() && font.MeasureString(result + "...").X > maxWidth) {
+            result.pop_back();
+        }
+        return result + "...";
     }
 
     void Update(GameTime& gameTime, bool otherScreenHasFocus, bool coveredByOtherScreen) override {
@@ -61,12 +87,22 @@ public:
 
         sb.Begin();
 
-        const Vector2 titleSize = font.MeasureString(title_);
-        sb.DrawString(font, title_,
-                      Vector2(((float)viewport.getWidthProperty() - titleSize.X) / 2.0f, 20.0f),
+        // The breadcrumb replaces the bare title rather than adding a row above
+        // it: its last element already is this demo's catalog name, and the band
+        // between the title and the first content line is fully spoken for --
+        // every existing demo starts drawing at y=82..90.
+        const std::string heading =
+            breadcrumb_.empty()
+                ? title_
+                : Ellipsize(font, breadcrumb_, (float)viewport.getWidthProperty() - 32.0f);
+        const Vector2 headingSize = font.MeasureString(heading);
+        sb.DrawString(font, heading,
+                      Vector2(((float)viewport.getWidthProperty() - headingSize.X) / 2.0f, 20.0f),
                       mul(Color(192, 192, 192), alpha));
 
         OnDemoDraw(gameTime, sb, font);
+
+        DrawApiFooter(sb, font, alpha, viewport.getWidthProperty(), viewport.getHeightProperty());
 
         sb.DrawString(font, kBackText, Vector2(16.0f, (float)viewport.getHeightProperty() - 40.0f),
                       mul(Color(150, 150, 150), alpha));
@@ -121,20 +157,6 @@ protected:
         spriteBatch.Draw(GetScreenManager()->getBlankTexture(), rect, color);
     }
 
-    // Shortens `text` with a trailing ellipsis until it measures no wider than
-    // `maxWidth`. Measured with the real font rather than assuming a character
-    // width -- the menu font is proportional, so a character count would cut
-    // "IIII" and "MMMM" at the same place.
-    static std::string Ellipsize(SpriteFont& font, const std::string& text, float maxWidth) {
-        if (maxWidth <= 0.0f || font.MeasureString(text).X <= maxWidth) return text;
-
-        std::string result = text;
-        while (!result.empty() && font.MeasureString(result + "...").X > maxWidth) {
-            result.pop_back();
-        }
-        return result + "...";
-    }
-
     // Draws a vertical stack of lines starting at `origin`, one per string.
     // Lines are clipped to the viewport width: demos print real filesystem
     // paths, exception messages and API names, none of which have a bounded
@@ -171,6 +193,31 @@ protected:
     }
 
 private:
+    // Right-aligned on the Back hint's row, so it costs no vertical space at
+    // all. Demos already use every pixel between the title and the hint; a
+    // footer that pushed content up would have broken the layout of all ~174
+    // existing screens at once.
+    void DrawApiFooter(SpriteBatch& spriteBatch, SpriteFont& font, float alpha,
+                       int viewportWidth, int viewportHeight) const {
+        if (apis_.empty()) return;
+
+        std::string text;
+        for (const auto& api : apis_) {
+            if (!text.empty()) text += "  ";
+            text += api;
+        }
+
+        // The Back hint owns the left ~340px of this row; never overlap it.
+        constexpr float kBackHintWidth = 350.0f;
+        const float available = (float)viewportWidth - kBackHintWidth - 16.0f;
+        text = Ellipsize(font, text, available);
+
+        const float x = (float)viewportWidth - font.MeasureString(text).X - 16.0f;
+        spriteBatch.DrawString(font, text, Vector2(std::max(kBackHintWidth, x),
+                                                   (float)viewportHeight - 40.0f),
+                               mul(Color(95, 110, 95), alpha));
+    }
+
     // Rough tappable zone around the drawn "Back" hint, bottom-left corner.
     Rectangle BackHitBox() const {
         auto& viewport = GetScreenManager()->getGraphicsDeviceProperty().getViewportProperty();
@@ -180,6 +227,8 @@ private:
     static constexpr const char* kBackText = "< Back (Esc / B / tap here)";
 
     std::string title_;
+    std::string breadcrumb_;
+    std::vector<std::string> apis_;
 };
 
 } // namespace CnaExamples::Demos

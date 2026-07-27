@@ -18,17 +18,20 @@ using namespace CnaExamples::GameStateManagement;
 // CategoryScreen on selection.
 class GroupScreen : public MenuScreen {
 public:
-    explicit GroupScreen(GroupEntry group)
+    explicit GroupScreen(GroupEntry group, std::string pathPrefix = {})
         : MenuScreen(group.title), group_(std::move(group)) {
         if (group_.categories.empty()) {
             MenuEntries().push_back(std::make_shared<MenuEntry>("(coming soon)"));
         }
+        const std::string groupPath =
+            pathPrefix.empty() ? group_.title : pathPrefix + " > " + group_.title;
         for (auto& category : group_.categories) {
-            auto entry = std::make_shared<MenuEntry>(category.title);
+            auto entry = std::make_shared<MenuEntry>(
+                WithCount(category.title, CountDemos(category)));
             CategoryEntry categoryCopy = category;
-            entry->Selected = [this, categoryCopy](PlayerIndex p) {
+            entry->Selected = [this, categoryCopy, groupPath](PlayerIndex p) {
                 GetScreenManager()->AddScreen(
-                    std::make_shared<CategoryScreen>(categoryCopy), p);
+                    std::make_shared<CategoryScreen>(categoryCopy, groupPath), p);
             };
             MenuEntries().push_back(entry);
         }

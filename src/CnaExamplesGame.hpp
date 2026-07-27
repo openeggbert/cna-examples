@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstdio>
+#include <cstdlib>
 #include <memory>
 #include <string>
 
@@ -9,6 +10,7 @@
 #include "Microsoft/Xna/Framework/GraphicsDeviceManager.hpp"
 #include "Microsoft/Xna/Framework/Color.hpp"
 #include "Microsoft/Xna/Framework/Rectangle.hpp"
+#include "Microsoft/Xna/Framework/Vector2.hpp"
 #include "Microsoft/Xna/Framework/GamerServices/GamerServicesComponent.hpp"
 #include "Microsoft/Xna/Framework/Graphics/Texture2D.hpp"
 
@@ -16,6 +18,7 @@
 #include "Harness/CommandLine.hpp"
 #include "Harness/DemoIndex.hpp"
 #include "Navigation/HomeScreen.hpp"
+#include "Navigation/SearchScreen.hpp"
 
 namespace CnaExamples {
 
@@ -24,6 +27,7 @@ using Microsoft::Xna::Framework::GraphicsDeviceManager;
 using Microsoft::Xna::Framework::Color;
 using Microsoft::Xna::Framework::GameTime;
 using Microsoft::Xna::Framework::Rectangle;
+using Microsoft::Xna::Framework::Vector2;
 using Microsoft::Xna::Framework::GamerServices::GamerServicesComponent;
 using Microsoft::Xna::Framework::Graphics::Texture2D;
 
@@ -56,14 +60,29 @@ public:
         // driven only by --keys, never by whatever the desktop happens to deliver.
         if (options_.frames > 0) screenManager_->getInput().SetScriptedOnly(true);
 
+        if (options_.openSearch) {
+            screenManager_->AddScreen(
+                std::make_shared<Navigation::SearchScreen>(options_.searchQuery), std::nullopt);
+        }
+
         // --demo pushes the requested screen on top of Home rather than replacing
         // it, so Back still lands somewhere sensible and the screen runs in
         // exactly the context it would have when reached by hand.
         if (!options_.demoPath.empty()) {
-            const auto index = Harness::FlattenCatalog(Navigation::BuildAreaCatalog());
+            // Named local, not a temporary: the index holds pointers into it and
+            // the factory is invoked below. See FlattenCatalog's own comment.
+            const auto catalog = Navigation::BuildAreaCatalog();
+            const auto index = Harness::FlattenCatalog(catalog);
             std::string error;
             if (const auto* row = Harness::FindDemo(index, options_.demoPath, error)) {
-                screenManager_->AddScreen(row->demo->create(), std::nullopt);
+                auto screen = row->demo->create();
+                // Same breadcrumb a CategoryScreen would have stamped, so a
+                // headless screenshot shows exactly what a user navigating by
+                // hand would see rather than a subtly different heading.
+                if (auto* demoScreen = dynamic_cast<Demos::DemoScreen*>(screen.get())) {
+                    demoScreen->SetBreadcrumb(row->Breadcrumb());
+                }
+                screenManager_->AddScreen(std::move(screen), std::nullopt);
             } else {
                 std::fprintf(stderr, "--demo: %s\n", error.c_str());
                 startupFailed_ = true;
@@ -82,6 +101,7 @@ protected:
     void Update(GameTime& gameTime) override {
         Game::Update(gameTime);
         PumpScriptedKeys();
+        PumpScriptedPointer();
     }
 
     void Draw(const GameTime& gameTime) override {
@@ -105,6 +125,29 @@ private:
         if (frame_ < (nextKey_ + 1) * options_.keyInterval) return;
         screenManager_->getInput().QueueScriptedAction(options_.keys[(std::size_t)nextKey_]);
         nextKey_++;
+    }
+
+    // Presses, drags and releases a scripted pointer. It starts only after the
+    // scripted keys are done, so a run can navigate to a screen and *then*
+    // gesture on it. The drag is interpolated over several frames rather than
+    // teleporting, because MenuScreen only recognises a drag once the contact
+    // has moved past its threshold while still held.
+    void PumpScriptedPointer() {
+        if (!options_.pointerScript) return;
+
+        const int startFrame = (int)options_.keys.size() * options_.keyInterval + 8;
+        const int elapsed = frame_ - startFrame;
+        if (elapsed < 0) return;
+
+        auto& input = screenManager_->getInput();
+        if (elapsed > kPointerFrames) {
+            input.SetScriptedPointer(false, Vector2());   // release
+            return;
+        }
+
+        const float t = (float)elapsed / (float)kPointerFrames;
+        const float y = options_.pointerFromY + (options_.pointerToY - options_.pointerFromY) * t;
+        input.SetScriptedPointer(true, Vector2(options_.pointerX, y));
     }
 
     // Back-buffer readback rather than an X11 screen grab: capturing the root
@@ -133,6 +176,8 @@ private:
         shot.SaveAsPng(path);
         std::printf("[screenshot] %s (%dx%d, frame %d)\n", path.c_str(), width, height, frame_);
     }
+
+    static constexpr int kPointerFrames = 20;
 
     Harness::Options options_;
     bool startupFailed_ = false;

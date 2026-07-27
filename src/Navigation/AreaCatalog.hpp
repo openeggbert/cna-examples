@@ -203,6 +203,17 @@ using CnaExamples::GameStateManagement::GameScreen;
 struct DemoEntry {
     std::string title;
     std::string description;
+
+    // The CNA/XNA symbols this demo actually exercises, e.g.
+    // {"MediaLibrary::Songs", "Song::Album"}. One list drives three things --
+    // the footer line on the demo screen, the search index (SearchScreen), and
+    // the coverage question "which API does this demo prove works?" -- so it is
+    // answered in one place instead of three.
+    //
+    // Populated per area as areas are built or revisited; older entries that
+    // predate the field simply have none yet.
+    std::vector<std::string> apis;
+
     std::function<std::shared_ptr<GameScreen>()> create;
 };
 
@@ -234,10 +245,51 @@ struct AreaEntry {
 };
 
 // DemoEntry helper: builds an entry whose factory default-constructs T.
+//
+// The factory also hands the entry's `apis` list and breadcrumb to the screen
+// it creates, so a DemoScreen can render both without having to know how it was
+// reached. T must derive from DemoScreen for that to compile, which is exactly
+// the constraint we want on a demo registration.
 template <typename T>
-DemoEntry MakeDemo(std::string title, std::string description) {
-    return DemoEntry{std::move(title), std::move(description),
-                     [] { return std::make_shared<T>(); }};
+DemoEntry MakeDemo(std::string title, std::string description,
+                   std::vector<std::string> apis = {}) {
+    DemoEntry entry;
+    entry.title = std::move(title);
+    entry.description = std::move(description);
+    entry.apis = std::move(apis);
+
+    std::vector<std::string> apisForFactory = entry.apis;
+    entry.create = [apisForFactory] {
+        auto screen = std::make_shared<T>();
+        screen->SetApis(apisForFactory);
+        return screen;
+    };
+    return entry;
+}
+
+// Total demos underneath a Category / Group / Area, for the "(N)" counts shown
+// on the menus above them.
+inline int CountDemos(const CategoryEntry& category) {
+    return (int)category.demos.size();
+}
+
+inline int CountDemos(const GroupEntry& group) {
+    int total = 0;
+    for (const auto& category : group.categories) total += CountDemos(category);
+    return total;
+}
+
+inline int CountDemos(const AreaEntry& area) {
+    int total = 0;
+    for (const auto& category : area.categories) total += CountDemos(category);
+    for (const auto& group : area.groups) total += CountDemos(group);
+    return total;
+}
+
+// "Title  (12)" -- the label a parent menu shows for a child that contains
+// demos. Kept here so Home/Area/Group screens format it identically.
+inline std::string WithCount(const std::string& title, int count) {
+    return title + "   (" + std::to_string(count) + ")";
 }
 
 inline std::vector<DemoEntry> BuildKeyboardDemos() {
@@ -542,17 +594,26 @@ inline std::vector<DemoEntry> BuildSongDemos() {
     using namespace CnaExamples::Demos::Media::SongDemos;
     std::vector<DemoEntry> demos;
     demos.push_back(MakeDemo<LoadAndPlayScreen>(
-        "Load & Play", "Song's direct-from-file NOXNA constructor + transport controls"));
+        "Load & Play", "Song's direct-from-file NOXNA constructor + transport controls",
+        {"Song", "MediaPlayer::Play", "MediaPlayer::PlayPosition"}));
     demos.push_back(MakeDemo<VolumeMuteRepeatShuffleScreen>(
-        "Volume/Mute/Repeat/Shuffle", "MediaPlayer's live-adjustable playback settings"));
+        "Volume/Mute/Repeat/Shuffle", "MediaPlayer's live-adjustable playback settings",
+        {"MediaPlayer::Volume", "MediaPlayer::IsMuted", "MediaPlayer::IsRepeating",
+         "MediaPlayer::IsShuffled"}));
     demos.push_back(MakeDemo<QueueNavigationScreen>(
-        "Queue Navigation", "Play(SongCollection, index) + MoveNext()/MovePrevious()"));
+        "Queue Navigation", "Play(SongCollection, index) + MoveNext()/MovePrevious()",
+        {"SongCollection", "MediaQueue", "MediaPlayer::MoveNext"}));
     demos.push_back(MakeDemo<EventsScreen>(
-        "MediaPlayer Events", "ActiveSongChanged/MediaStateChanged, pumped via FrameworkDispatcher"));
+        "MediaPlayer Events", "ActiveSongChanged/MediaStateChanged, pumped via FrameworkDispatcher",
+        {"MediaPlayer::ActiveSongChanged", "MediaPlayer::MediaStateChanged",
+         "FrameworkDispatcher"}));
     demos.push_back(MakeDemo<UnsupportedFormatScreen>(
-        "Unsupported Format", "A real .opus file -- constructs fine, Play() silently no-ops"));
+        "Unsupported Format", "A real .opus file -- constructs fine, Play() silently no-ops",
+        {"Song", "MediaPlayer::State"}));
     demos.push_back(MakeDemo<VisualizationScreen>(
-        "Visualization", "GetVisualizationData() -- a confirmed, permanent stub"));
+        "Visualization", "Live FFT spectrum + waveform from the real post-mix tap",
+        {"MediaPlayer::IsVisualizationEnabled", "MediaPlayer::GetVisualizationData",
+         "VisualizationData"}));
     return demos;
 }
 
@@ -560,11 +621,14 @@ inline std::vector<DemoEntry> BuildVideoDemos() {
     using namespace CnaExamples::Demos::Media::VideoDemos;
     std::vector<DemoEntry> demos;
     demos.push_back(MakeDemo<LoadAndPlayScreen>(
-        "Load & Play", "A real FFmpeg-decoded clip, live GetTexture() every frame"));
+        "Load & Play", "A real FFmpeg-decoded clip, live GetTexture() every frame",
+        {"Video", "VideoPlayer::Play", "VideoPlayer::GetTexture"}));
     demos.push_back(MakeDemo<PlaybackControlScreen>(
-        "Playback Control", "Play/Pause/Resume/Stop + IsLooped + live Volume/IsMuted"));
+        "Playback Control", "Play/Pause/Resume/Stop + IsLooped + live Volume/IsMuted",
+        {"VideoPlayer::Pause", "VideoPlayer::IsLooped", "VideoPlayer::Volume"}));
     demos.push_back(MakeDemo<MultiTrackEXTScreen>(
-        "Multi-Track (EXT)", "SetAudioTrackEXT()/SetVideoTrackEXT() -- CNA extensions"));
+        "Multi-Track (EXT)", "SetAudioTrackEXT()/SetVideoTrackEXT() -- CNA extensions",
+        {"VideoPlayer::SetAudioTrackEXT", "VideoPlayer::SetVideoTrackEXT"}));
     return demos;
 }
 
@@ -572,13 +636,17 @@ inline std::vector<DemoEntry> BuildMediaLibraryDemos() {
     using namespace CnaExamples::Demos::Media::MediaLibraryDemos;
     std::vector<DemoEntry> demos;
     demos.push_back(MakeDemo<CatalogAccessScreen>(
-        "Catalog Access", "Index the bundled demo library or the real OS folders, live"));
+        "Catalog Access", "Index the bundled demo library or the real OS folders, live",
+        {"MediaLibrary", "MediaSource", "MediaLibrary::IsDisposed"}));
     demos.push_back(MakeDemo<SongMetadataScreen>(
-        "Song Metadata", "Name/Artist/Album/Genre/Duration/TrackNumber/Rating from real tags"));
+        "Song Metadata", "Name/Artist/Album/Genre/Duration/TrackNumber/Rating from real tags",
+        {"MediaLibrary::Songs", "Song::Album", "Song::Artist", "Song::TrackNumber"}));
     demos.push_back(MakeDemo<AlbumArtistGenreScreen>(
-        "Album/Artist/Genre", "The three grouping views derived from the same song tags"));
+        "Album/Artist/Genre", "The three grouping views derived from the same song tags",
+        {"AlbumCollection", "ArtistCollection", "GenreCollection", "Album::HasArt"}));
     demos.push_back(MakeDemo<PlaylistScreen>(
-        "Playlists", "Real .m3u parsing, entry order preserved, playable via MediaPlayer"));
+        "Playlists", "Real .m3u parsing, entry order preserved, playable via MediaPlayer",
+        {"PlaylistCollection", "Playlist::Songs", "Playlist::Duration"}));
     return demos;
 }
 
@@ -586,13 +654,17 @@ inline std::vector<DemoEntry> BuildPictureDemos() {
     using namespace CnaExamples::Demos::Media::PictureDemos;
     std::vector<DemoEntry> demos;
     demos.push_back(MakeDemo<PictureBrowserScreen>(
-        "Browse", "Picture metadata next to the decoded image it describes"));
+        "Browse", "Picture metadata next to the decoded image it describes",
+        {"MediaLibrary::Pictures", "Picture::Width", "Texture2D::FromStream"}));
     demos.push_back(MakeDemo<PictureAlbumTreeScreen>(
-        "Album Tree", "Walk RootPictureAlbum -> Albums -> Pictures, with Parent back-refs"));
+        "Album Tree", "Walk RootPictureAlbum -> Albums -> Pictures, with Parent back-refs",
+        {"MediaLibrary::RootPictureAlbum", "PictureAlbum::Albums", "PictureAlbum::Parent"}));
     demos.push_back(MakeDemo<SavePictureScreen>(
-        "SavePicture", "Write a generated BMP into the library; lazy \"Saved Pictures\" creation"));
+        "SavePicture", "Write a generated BMP into the library; lazy \"Saved Pictures\" creation",
+        {"MediaLibrary::SavePicture", "MediaLibrary::SavedPictures"}));
     demos.push_back(MakeDemo<PictureTokenScreen>(
-        "Tokens & Identity", "GetPictureFromToken round trip vs Equals/GetHashCode"));
+        "Tokens & Identity", "GetPictureFromToken round trip vs Equals/GetHashCode",
+        {"MediaLibrary::GetPictureFromToken", "Picture::Equals", "Picture::Date"}));
     return demos;
 }
 

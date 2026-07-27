@@ -26,21 +26,23 @@ public:
             // same pattern. This Area has no categories/groups registered yet.
             MenuEntries().push_back(std::make_shared<MenuEntry>("(coming soon)"));
         }
+        const std::string areaPath = area_.title;
         for (auto& group : area_.groups) {
-            auto entry = std::make_shared<MenuEntry>(group.title);
+            auto entry = std::make_shared<MenuEntry>(WithCount(group.title, CountDemos(group)));
             GroupEntry groupCopy = group;
-            entry->Selected = [this, groupCopy](PlayerIndex p) {
+            entry->Selected = [this, groupCopy, areaPath](PlayerIndex p) {
                 GetScreenManager()->AddScreen(
-                    std::make_shared<GroupScreen>(groupCopy), p);
+                    std::make_shared<GroupScreen>(groupCopy, areaPath), p);
             };
             MenuEntries().push_back(entry);
         }
         for (auto& category : area_.categories) {
-            auto entry = std::make_shared<MenuEntry>(category.title);
+            auto entry = std::make_shared<MenuEntry>(
+                WithCount(category.title, CountDemos(category)));
             CategoryEntry categoryCopy = category;
-            entry->Selected = [this, categoryCopy](PlayerIndex p) {
+            entry->Selected = [this, categoryCopy, areaPath](PlayerIndex p) {
                 GetScreenManager()->AddScreen(
-                    std::make_shared<CategoryScreen>(categoryCopy), p);
+                    std::make_shared<CategoryScreen>(categoryCopy, areaPath), p);
             };
             MenuEntries().push_back(entry);
         }
