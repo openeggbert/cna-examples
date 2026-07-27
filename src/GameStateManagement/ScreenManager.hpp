@@ -36,6 +36,16 @@ public:
     SpriteBatch& getSpriteBatch() { return *spriteBatch_; }
     SpriteFont&  getFont()        { return *font_; }
 
+    // A 1x1 opaque white texture. Exposed (rather than staying private to the
+    // fade-to-black helper below) because any demo that wants to draw a solid
+    // bar, meter or panel needs exactly this and nothing more -- see
+    // DemoScreen::FillRect().
+    Texture2D&   getBlankTexture() { return *blankTexture_; }
+
+    // Exposed so the headless driver can queue scripted menu actions -- see
+    // Harness/CommandLine.hpp and InputState::QueueScriptedAction().
+    InputState&  getInput()       { return input_; }
+
     void LoadContent() override {
         spriteBatch_ = std::make_unique<SpriteBatch>(getGraphicsDeviceProperty());
         auto& content = getGameProperty().getContentProperty();

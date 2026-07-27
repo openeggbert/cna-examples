@@ -3,30 +3,47 @@
 A single, cross-platform, in-app catalog of live demonstrations for every area of
 [CNA](https://github.com/openeggbert/cna) — a C++ reimplementation of the XNA 4.0 programming
 model built on SDL3. Conceptually inspired by
-[javafx-ensemble8](https://github.com/lusalome/javafx-ensemble8) (browsable sample catalog with
+[javafx-ensemble8](https://github.com/lusalome/javafx-ensemble8) (a browsable sample catalog with
 in-app navigation), but entirely CNA-specific — no JavaFX code, assets, or dependency involved.
 
-Pick an area from the home menu (Input, Audio, Devices, Net, Media, 2D Graphics, 3D Graphics, ...),
-drill into a category, and run the demo — all inside one application, on desktop, web or mobile.
+Pick an area from the home menu, drill into a category, and run the demo — all inside one
+application, on desktop, web or mobile.
 
-See [plan.md](plan.md) for the full architecture and navigation design.
+See [plan.md](plan.md) for the architecture, the CNA API coverage analysis, and the roadmap.
+[plan20260727.md](plan20260727.md) is the archived previous plan, kept as the record of how the
+first seven areas were built and verified.
 
 ## Status
 
-The **Input** area is complete: all five categories — Keyboard, Mouse, Gamepad, Touch, Other —
-have real, working demo screens (50 total), each exercising an actual
-`Microsoft::Xna::Framework::Input`/`CNA::Input` API call, not a mock. See [plan.md](plan.md)
-§5.1 for the full per-category breakdown.
+**7 areas, 50 categories, 174 demo screens**, every one of them exercising a real
+`Microsoft::Xna::Framework` / `CNA::*` API call rather than a mock.
 
-The other six areas (Audio, Devices, Net, Media, 2D Graphics, 3D Graphics) are registered on the
-Home menu but still show an empty "(coming soon)" category list — real demo content for them is
-in progress. Only the `EASYGL` graphics backend is targeted for now.
+| Area | Categories | Screens |
+|---|---|---:|
+| Input | Keyboard, Mouse, Gamepad, Touch, Other | 50 |
+| Audio | SoundEffect, SoundEffectInstance, 3D Audio, DynamicSoundEffectInstance, Microphone | 10 |
+| Devices | Sensors, Vibration, Camera, System & Display, Power, Desktop Integration | 15 |
+| Net | NetworkSession, NetworkGamer, GamerServices, Leaderboards | 14 |
+| Media | Song, Video, MediaLibrary, Pictures | 17 |
+| 2D Graphics | 4 groups, 13 categories | 38 |
+| 3D Graphics | 4 groups, 14 categories | 30 |
 
-**Hardware-verification note:** Keyboard, Mouse, and most of Other's demos were verified against
-real input on the dev machine this app is built on. Gamepad, Touch, and Other's
-joystick/haptics-device screens render correctly and handle "nothing connected" gracefully, but
-have not yet been exercised with an actual controller, touchscreen, joystick, or haptic device —
-see [plan.md](plan.md) §5.1 for exactly which screens still need that pass.
+Run `./build/cna_examples --list-demos` for the full, authoritative list.
+
+`tools/check_catalog.py` enforces that this table, `plan.md`, the screen files on disk and the
+registrations in `src/Navigation/AreaCatalog.hpp` all agree.
+
+### Verification status
+
+- **Verified against real hardware on the dev machine:** Keyboard, Mouse, most of Input's "Other"
+  category, and Audio.
+- **Verified headlessly (rendering + behaviour, under Xvfb):** the whole Media area, via
+  `tools/sweep.sh` and `tools/check_shots.py`.
+- **Renders correctly and degrades gracefully, but never exercised with the real device:**
+  Gamepad, Touch, and Input's joystick/haptics screens (no controller, touchscreen, raw joystick
+  or haptic device available); Devices' mobile-only Sensors/Vibration screens; Camera
+  (no webcam); MessageBox/FileDialog (need a human).
+- **Backend:** only `EASYGL` is verified. See `plan.md` §4.
 
 ## Navigating the app
 
@@ -37,12 +54,40 @@ see [plan.md](plan.md) §5.1 for exactly which screens still need that pass.
 - A category with more entries than fit on screen scrolls automatically to keep the selected
   entry visible as you navigate with Up/Down.
 
+## Running a single demo headlessly
+
+The app can open straight into one demo and capture it, with no window manager and no synthetic
+X11 input — this is what the verification sweeps use:
+
+```bash
+./cna_examples --list-demos
+./cna_examples --demo "Media/Pictures/Browse" --frames 90 --screenshot /tmp/browse.png
+./cna_examples --demo "Album/Artist/Genre" --keys select,down,select --frames 120
+```
+
+`--demo` accepts a full `Area/Category/Demo` path or any unambiguous substring. `--keys` scripts
+menu actions (`up`, `down`, `select`, `cancel`), one every `--key-interval` frames. Any run with
+`--frames` ignores real input devices entirely, so a sweep cannot be perturbed by a stray event.
+
+**Use `tools/headless.sh` rather than plain `xvfb-run`.** SDL3 picks the Wayland video driver
+whenever `WAYLAND_DISPLAY` is set and then ignores the `DISPLAY` that `xvfb-run` exports — so a
+command that looks headless still opens a window on your real desktop. The wrapper forces
+`SDL_VIDEODRIVER=x11` and unsets `WAYLAND_DISPLAY`:
+
+```bash
+tools/headless.sh --demo "Media/Song/Visualization" --frames 150 --screenshot /tmp/vis.png
+tools/sweep.sh                 # screenshot every demo
+tools/sweep.sh Media           # ...or just the ones matching a filter
+tools/check_shots.py build/screenshots   # flag blank/overflowing screens
+```
+
 ## Platforms
 
 | Tier | Platforms |
 |---|---|
-| Now | Windows, Linux, Web (Emscripten), Android |
-| Future | macOS, iPhone, consoles |
+| Now | Windows, Linux |
+| Targeted | Web (Emscripten) |
+| Later | Android, macOS, iPhone, consoles |
 
 ## Prerequisites
 
@@ -65,8 +110,9 @@ openeggbert/
 ## Building
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build
+cmake -B build -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
+cmake --build build -j4 --target cna_examples
 ```
 
 Run it:
@@ -74,6 +120,9 @@ Run it:
 ```bash
 ./build/cna_examples
 ```
+
+Keep the `-j4` ceiling and `ccache` — see `../CLAUDE.md` for why (unbounded parallel builds have
+driven this machine into swap).
 
 The graphics backend defaults to `EASYGL`; override with
 `-DCNA_GRAPHICS_BACKEND=<SDL_RENDERER|EASYGL|VULKAN|BGFX|WEBGPU>` if needed (subject to CNA's
@@ -83,25 +132,36 @@ own backend maturity — see CNA's `CLAUDE.md`).
 
 ```
 cna-examples/
-├── plan.md                        Full architecture + per-area/category breakdown
+├── plan.md                        Architecture, CNA coverage analysis, roadmap
+├── plan20260727.md                Archived previous plan
 ├── CMakeLists.txt                 Top-level build (sibling add_subdirectory of ../cna)
-├── Content/                       Menu font (baked via tools/gen_menu_font.py) + UI textures
-├── tools/gen_menu_font.py         Regenerates the menu SpriteFont from a system TTF
+├── Content/                       Menu font + UI textures + demo media
+│   ├── MediaDemo/                 ffmpeg-generated tones and a test video clip
+│   └── MediaLibraryDemo/          A synthetic music/picture library (see tools/)
+├── tools/
+│   ├── gen_menu_font.py           Regenerates the menu SpriteFont from a system TTF
+│   ├── gen_media_library.sh       Regenerates Content/MediaLibraryDemo/
+│   ├── headless.sh                Run one demo on a virtual display
+│   ├── sweep.sh                   Screenshot every demo
+│   ├── check_shots.py             Flag blank or overflowing screenshots
+│   └── check_catalog.py           Screens vs registrations vs docs consistency
 └── src/
-    ├── Program.cpp                 Entry point
-    ├── CnaExamplesGame.hpp         Game subclass; owns GraphicsDeviceManager + ScreenManager
+    ├── Program.cpp                 Entry point + CLI
+    ├── CnaExamplesGame.hpp         Game subclass; GraphicsDeviceManager + ScreenManager
+    ├── Harness/                    Headless driver: option parsing, flat demo index
     ├── GameStateManagement/        Screen-stack navigation (adapted from the XNA
     │                                "Game State Management" sample)
-    ├── Navigation/                 HomeScreen/AreaScreen/CategoryScreen + AreaCatalog.hpp
-    │                                (the single data-driven Area → Category → Demo registry)
+    ├── Navigation/                 HomeScreen/AreaScreen/GroupScreen/CategoryScreen +
+    │                                AreaCatalog.hpp (the Area→Group→Category→Demo registry)
     └── Demos/                      One subfolder per Area, one file per demo screen
-        └── Input/
-            ├── Keyboard/, Mouse/, Gamepad/, Touch/, Other/    (10 demo screens each)
 ```
 
-Adding a new demo means: write a `DemoScreen` subclass under `Demos/<Area>/<Category>/`, then
+Adding a demo means: write a `DemoScreen` subclass under `Demos/<Area>/<Category>/`, then
 register it with `MakeDemo<YourScreen>(title, description)` in `AreaCatalog.hpp`'s
-`Build<Category>Demos()` function.
+`Build<Category>Demos()` function. Run `tools/check_catalog.py` afterwards.
+
+All bundled media is synthetic — generated by `ffmpeg` from `lavfi` sources, or built
+procedurally at runtime. No third-party audio, video, image or metadata is shipped.
 
 ## Development
 

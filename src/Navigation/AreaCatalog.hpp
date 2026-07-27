@@ -114,8 +114,14 @@
 #include "Demos/Media/Video/LoadAndPlayScreen.hpp"
 #include "Demos/Media/Video/PlaybackControlScreen.hpp"
 #include "Demos/Media/Video/MultiTrackEXTScreen.hpp"
-#include "Demos/Media/MediaLibrary/MediaLibraryScreen.hpp"
-#include "Demos/Media/MediaLibrary/AlbumArtistGenrePlaylistScreen.hpp"
+#include "Demos/Media/MediaLibrary/CatalogAccessScreen.hpp"
+#include "Demos/Media/MediaLibrary/SongMetadataScreen.hpp"
+#include "Demos/Media/MediaLibrary/AlbumArtistGenreScreen.hpp"
+#include "Demos/Media/MediaLibrary/PlaylistScreen.hpp"
+#include "Demos/Media/Pictures/PictureBrowserScreen.hpp"
+#include "Demos/Media/Pictures/PictureAlbumTreeScreen.hpp"
+#include "Demos/Media/Pictures/SavePictureScreen.hpp"
+#include "Demos/Media/Pictures/PictureTokenScreen.hpp"
 
 #include "Demos/Graphics2D/DrawingBasics/PositionDrawScreen.hpp"
 #include "Demos/Graphics2D/DrawingBasics/DestinationRectangleScreen.hpp"
@@ -565,10 +571,28 @@ inline std::vector<DemoEntry> BuildVideoDemos() {
 inline std::vector<DemoEntry> BuildMediaLibraryDemos() {
     using namespace CnaExamples::Demos::Media::MediaLibraryDemos;
     std::vector<DemoEntry> demos;
-    demos.push_back(MakeDemo<MediaLibraryScreen>(
-        "Catalog Access", "Every accessor throws -- a hard stub, not gracefully empty"));
-    demos.push_back(MakeDemo<AlbumArtistGenrePlaylistScreen>(
-        "Album/Artist/Genre/Playlist", "Unreachable on this platform -- private ctors, no live producer"));
+    demos.push_back(MakeDemo<CatalogAccessScreen>(
+        "Catalog Access", "Index the bundled demo library or the real OS folders, live"));
+    demos.push_back(MakeDemo<SongMetadataScreen>(
+        "Song Metadata", "Name/Artist/Album/Genre/Duration/TrackNumber/Rating from real tags"));
+    demos.push_back(MakeDemo<AlbumArtistGenreScreen>(
+        "Album/Artist/Genre", "The three grouping views derived from the same song tags"));
+    demos.push_back(MakeDemo<PlaylistScreen>(
+        "Playlists", "Real .m3u parsing, entry order preserved, playable via MediaPlayer"));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildPictureDemos() {
+    using namespace CnaExamples::Demos::Media::PictureDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<PictureBrowserScreen>(
+        "Browse", "Picture metadata next to the decoded image it describes"));
+    demos.push_back(MakeDemo<PictureAlbumTreeScreen>(
+        "Album Tree", "Walk RootPictureAlbum -> Albums -> Pictures, with Parent back-refs"));
+    demos.push_back(MakeDemo<SavePictureScreen>(
+        "SavePicture", "Write a generated BMP into the library; lazy \"Saved Pictures\" creation"));
+    demos.push_back(MakeDemo<PictureTokenScreen>(
+        "Tokens & Identity", "GetPictureFromToken round trip vs Equals/GetHashCode"));
     return demos;
 }
 
@@ -907,6 +931,7 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"Song", BuildSongDemos()},
             CategoryEntry{"Video", BuildVideoDemos()},
             CategoryEntry{"MediaLibrary", BuildMediaLibraryDemos()},
+            CategoryEntry{"Pictures", BuildPictureDemos()},
         }},
         AreaEntry{"2D Graphics", {}, {
             GroupEntry{"SpriteBatch", {

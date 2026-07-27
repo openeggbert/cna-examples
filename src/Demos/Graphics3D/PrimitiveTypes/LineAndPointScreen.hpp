@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>
@@ -103,9 +104,10 @@ protected:
         sb.Begin();
 
         const Color tint = mul(Color::White, TransitionAlpha());
-        sb.DrawString(font, "LineList", Vector2(60.0f, 560.0f), tint);
-        sb.DrawString(font, "LineStrip", Vector2(430.0f, 560.0f), tint);
-        sb.DrawString(font, "PointListEXT", Vector2(770.0f, 560.0f), tint);
+        const float labelY = std::min(560.0f, LabelBaselineLimit(font));
+        sb.DrawString(font, "LineList", Vector2(60.0f, labelY), tint);
+        sb.DrawString(font, "LineStrip", Vector2(430.0f, labelY), tint);
+        sb.DrawString(font, "PointListEXT", Vector2(770.0f, labelY), tint);
     }
 
 private:

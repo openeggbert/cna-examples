@@ -40,13 +40,15 @@ protected:
                       SpriteEffects::FlipHorizontally, 0.0f);
         sb.DrawString(font, "FlipHorizontally", Vector2(280.0f, end.Y + 50.0f), tint);
 
+        // Split across two rows instead of one long line: the single-line form
+        // ran past the right edge of the window at this font size.
         const Vector2 withoutNewline = font.MeasureString("one line");
         const Vector2 withNewline = font.MeasureString("one line\n");
-        sb.DrawString(font, "MeasureString(\"one line\").Y = " + std::to_string((int)withoutNewline.Y),
-                      Vector2(60.0f, end.Y + 100.0f), tint);
-        sb.DrawString(font, "MeasureString(\"one line\\n\").Y = " + std::to_string((int)withNewline.Y) +
-                             " (a full extra empty line, not a partial one)",
-                      Vector2(60.0f, end.Y + 125.0f), tint);
+        std::vector<std::string> measured;
+        measured.push_back("MeasureString(\"one line\").Y   = " + std::to_string((int)withoutNewline.Y));
+        measured.push_back("MeasureString(\"one line\\n\").Y = " + std::to_string((int)withNewline.Y));
+        measured.push_back("A trailing newline adds a full extra empty line, not a partial one.");
+        DrawLines(sb, font, Vector2(60.0f, end.Y + 100.0f), measured, tint);
     }
 };
 

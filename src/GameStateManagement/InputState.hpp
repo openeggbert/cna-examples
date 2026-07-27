@@ -9,6 +9,7 @@
 
 #include <array>
 #include <optional>
+#include <vector>
 
 #include "Microsoft/Xna/Framework/PlayerIndex.hpp"
 #include "Microsoft/Xna/Framework/Input/ButtonState.hpp"
@@ -55,10 +56,50 @@ public:
 
     std::array<bool, MaxInputs> GamePadWasConnected{};
 
+    // A menu action injected by the headless driver (see Harness/CommandLine.hpp)
+    // instead of coming from a real device. Only these four exist: they are
+    // exactly the vocabulary MenuScreen and DemoScreen navigate with, so a
+    // scripted run can reach any screen in the catalog without an X server, a
+    // window manager or synthetic X11 key events.
+    enum class ScriptedAction { None, Up, Down, Select, Cancel };
+
     InputState() = default;
+
+    // Queues an action to be reported by exactly one future Update(). Queued
+    // rather than applied immediately so each action lands on its own frame,
+    // matching how a real key press is seen (down this frame, up the next) --
+    // menus reject a repeat within the same frame otherwise.
+    void QueueScriptedAction(ScriptedAction action) { scripted_.push_back(action); }
+
+    [[nodiscard]] bool HasQueuedScriptedActions() const { return !scripted_.empty(); }
+
+    // Headless runs stop reading real devices altogether. A verification sweep
+    // must depend only on what it scripted: a stray X event reaching the window
+    // (seen once in practice under Xvfb -- a phantom "select" that silently
+    // toggled a demo's mode before the screenshot) otherwise turns a sweep into
+    // a flaky one, and the resulting screenshot looks plausible while showing
+    // the wrong state.
+    void SetScriptedOnly(bool scriptedOnly) { scriptedOnly_ = scriptedOnly; }
 
     // Reads the latest state of the keyboard, gamepad and touch panel.
     void Update() {
+        // Consume at most one scripted action per frame. It is combined with,
+        // not substituted for, real device state, so a scripted run still works
+        // if a real key happens to be held.
+        currentScripted_ = ScriptedAction::None;
+        if (!scripted_.empty()) {
+            currentScripted_ = scripted_.front();
+            scripted_.erase(scripted_.begin());
+        }
+
+        if (scriptedOnly_) {
+            // Still clear the per-frame edge state, so a stale tap/click from
+            // before the switch can't be reported forever.
+            newTapPosition_.reset();
+            newClickPosition_.reset();
+            return;
+        }
+
         for (int i = 0; i < MaxInputs; i++) {
             LastKeyboardStates[i] = CurrentKeyboardStates[i];
             LastGamePadStates[i]  = CurrentGamePadStates[i];
@@ -120,6 +161,7 @@ public:
     // Checks for a "menu select" input action (keyboard/gamepad only; touch
     // taps are queried separately via IsNewTap since they carry a position).
     bool IsMenuSelect(std::optional<PlayerIndex> controllingPlayer, PlayerIndex& playerIndex) {
+        if (currentScripted_ == ScriptedAction::Select) { playerIndex = PlayerIndex::One; return true; }
         return IsNewKeyPress(Keys::Space, controllingPlayer, playerIndex) ||
                IsNewKeyPress(Keys::Enter, controllingPlayer, playerIndex) ||
                IsNewButtonPress(Buttons::A, controllingPlayer, playerIndex) ||
@@ -128,6 +170,7 @@ public:
 
     // Checks for a "menu cancel" input action.
     bool IsMenuCancel(std::optional<PlayerIndex> controllingPlayer, PlayerIndex& playerIndex) {
+        if (currentScripted_ == ScriptedAction::Cancel) { playerIndex = PlayerIndex::One; return true; }
         return IsNewKeyPress(Keys::Escape, controllingPlayer, playerIndex) ||
                IsNewButtonPress(Buttons::B, controllingPlayer, playerIndex) ||
                IsNewButtonPress(Buttons::Back, controllingPlayer, playerIndex);
@@ -135,6 +178,7 @@ public:
 
     // Checks for a "menu up" input action.
     bool IsMenuUp(std::optional<PlayerIndex> controllingPlayer) {
+        if (currentScripted_ == ScriptedAction::Up) return true;
         PlayerIndex playerIndex;
         return IsNewKeyPress(Keys::Up, controllingPlayer, playerIndex) ||
                IsNewButtonPress(Buttons::DPadUp, controllingPlayer, playerIndex) ||
@@ -143,6 +187,7 @@ public:
 
     // Checks for a "menu down" input action.
     bool IsMenuDown(std::optional<PlayerIndex> controllingPlayer) {
+        if (currentScripted_ == ScriptedAction::Down) return true;
         PlayerIndex playerIndex;
         return IsNewKeyPress(Keys::Down, controllingPlayer, playerIndex) ||
                IsNewButtonPress(Buttons::DPadDown, controllingPlayer, playerIndex) ||
@@ -175,6 +220,9 @@ private:
     std::optional<Vector2> newTapPosition_;
     std::optional<Vector2> newClickPosition_;
     ButtonState previousMouseLeftButton_ = ButtonState::Released;
+    std::vector<ScriptedAction> scripted_;
+    ScriptedAction currentScripted_ = ScriptedAction::None;
+    bool scriptedOnly_ = false;
 };
 
 } // namespace CnaExamples::GameStateManagement

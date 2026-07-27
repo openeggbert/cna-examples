@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>
@@ -116,8 +117,9 @@ protected:
         sb.Begin();
 
         const Color tint = mul(Color::White, TransitionAlpha());
-        sb.DrawString(font, "Immediate", Vector2(180.0f, 560.0f), tint);
-        sb.DrawString(font, "Buffered", Vector2(620.0f, 560.0f), tint);
+        const float labelY = std::min(560.0f, LabelBaselineLimit(font));
+        sb.DrawString(font, "Immediate", Vector2(180.0f, labelY), tint);
+        sb.DrawString(font, "Buffered", Vector2(620.0f, labelY), tint);
     }
 
 private:

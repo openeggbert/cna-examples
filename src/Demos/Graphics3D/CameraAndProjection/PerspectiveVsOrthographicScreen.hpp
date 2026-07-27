@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>
@@ -103,8 +104,11 @@ protected:
         sb.Begin();
 
         const Color tint = mul(Color::White, TransitionAlpha());
-        sb.DrawString(font, "Perspective (shrinks with depth)", Vector2(30.0f, (float)(sceneY + sceneH + 10)), tint);
-        sb.DrawString(font, "Orthographic (constant size)", Vector2((float)(halfW + 30), (float)(sceneY + sceneH + 10)), tint);
+        // Clamped against the Back hint rather than placed at a fixed offset
+        // below the scene -- see DemoScreen::LabelBaselineLimit().
+        const float labelY = std::min((float)(sceneY + sceneH + 10), LabelBaselineLimit(font));
+        sb.DrawString(font, "Perspective (shrinks with depth)", Vector2(30.0f, labelY), tint);
+        sb.DrawString(font, "Orthographic (constant size)", Vector2((float)(halfW + 30), labelY), tint);
     }
 
 private:

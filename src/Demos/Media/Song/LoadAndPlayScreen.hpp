@@ -18,11 +18,15 @@ using Microsoft::Xna::Framework::Media::MediaPlayer;
 using Microsoft::Xna::Framework::Media::MediaState;
 using Microsoft::Xna::Framework::Media::Song;
 
-// Demonstrates Song's NOXNA direct-from-file constructor (real XNA's Song has
-// no public constructor at all -- only obtainable via MediaLibrary, which is
-// a stub on this platform, see the MediaLibrary category) and MediaPlayer's
-// transport controls, on a procedurally-generated WAV tone (ffmpeg lavfi
-// sine source -- no licensed audio asset needed).
+// Demonstrates Song's NOXNA direct-from-file constructor and MediaPlayer's
+// transport controls, on a procedurally-generated WAV tone (ffmpeg lavfi sine
+// source -- no licensed audio asset needed).
+//
+// Real XNA's Song has no public constructor at all: the only way to get one is
+// through MediaLibrary, which indexes the user's own music. CNA keeps that route
+// working (see the MediaLibrary category) and adds this direct-from-file
+// constructor as a NOXNA extension, so a game can ship and load its own audio
+// without going through the user's library.
 class LoadAndPlayScreen : public DemoScreen {
 public:
     LoadAndPlayScreen() : DemoScreen("Song: Load & Play") {}
