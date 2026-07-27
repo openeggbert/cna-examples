@@ -155,6 +155,11 @@
 #include "Demos/Math/Curves/CurveLoopTypeScreen.hpp"
 #include "Demos/Math/Color/ColorConversionsScreen.hpp"
 #include "Demos/Math/Color/PackedVectorGalleryScreen.hpp"
+#include "Demos/Content/Basics/LoadAndCacheScreen.hpp"
+#include "Demos/Content/Basics/ResolutionOrderScreen.hpp"
+#include "Demos/Content/Manifest/ContentManifestScreen.hpp"
+#include "Demos/Content/Xnb/XnbFixturesScreen.hpp"
+#include "Demos/Content/Errors/ContentLoadExceptionScreen.hpp"
 
 #include "Demos/Graphics2D/DrawingBasics/PositionDrawScreen.hpp"
 #include "Demos/Graphics2D/DrawingBasics/DestinationRectangleScreen.hpp"
@@ -861,6 +866,46 @@ inline std::vector<DemoEntry> BuildColorDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildContentBasicsDemos() {
+    using namespace CnaExamples::Demos::Content::BasicsDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<LoadAndCacheScreen>(
+        "Load & Cache", "Timed loads showing the cache, and why identity cannot be compared",
+        {"ContentManager::Load", "ContentManager::Unload", "ContentManager::RootDirectory"}));
+    demos.push_back(MakeDemo<ResolutionOrderScreen>(
+        "Asset Name Resolution", "An asset name is not a filename: .xnb, literal, then .cnj",
+        {"ContentManager::Load", "ContentManager::RootDirectory"}));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildContentManifestDemos() {
+    using namespace CnaExamples::Demos::Content::ManifestDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<ContentManifestScreen>(
+        "Manifest", "Every discoverable asset, plus which .xnb readers this build has",
+        {"ContentManager::GetContentManifest", "ContentManager::RefreshContentManifest",
+         "ContentManifestEntry", "GetXnbReaderUsageSummary"}));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildContentXnbDemos() {
+    using namespace CnaExamples::Demos::Content::XnbDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<XnbFixturesScreen>(
+        "XNB Fixtures", "Real MonoGame-produced .xnb, including an LZX-compressed one",
+        {"ContentManager::Load", "Texture2DReader", "LzxDecoder"}));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildContentErrorsDemos() {
+    using namespace CnaExamples::Demos::Content::ErrorsDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<ContentLoadExceptionScreen>(
+        "Load Failures", "Missing, wrong-type and unsupported content, with real messages",
+        {"ContentLoadException", "ContentManager::Load"}));
+    return demos;
+}
+
 inline std::vector<DemoEntry> BuildDrawingBasicsDemos() {
     using namespace CnaExamples::Demos::Graphics2D::DrawingBasicsDemos;
     std::vector<DemoEntry> demos;
@@ -1177,6 +1222,12 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"Geometry", BuildGeometryDemos()},
             CategoryEntry{"Curves", BuildCurvesDemos()},
             CategoryEntry{"Color & Packed Vectors", BuildColorDemos()},
+        }},
+        AreaEntry{"Content", {
+            CategoryEntry{"ContentManager Basics", BuildContentBasicsDemos()},
+            CategoryEntry{"Manifest", BuildContentManifestDemos()},
+            CategoryEntry{"XNB Format", BuildContentXnbDemos()},
+            CategoryEntry{"Errors", BuildContentErrorsDemos()},
         }},
         AreaEntry{"Input", {
             CategoryEntry{"Keyboard", BuildKeyboardDemos()},

@@ -59,4 +59,42 @@ function(cna_examples_configure_target target_name)
             "$<TARGET_FILE_DIR:${target_name}>/Content"
         VERBATIM
     )
+
+    # ---------------------------------------------------------------------
+    # Borrowed content: copied from ../cna at build time, never committed here.
+    #
+    # The Content area's .xnb demos need real, externally-produced .xnb files,
+    # and CNA consumes that format without ever writing it -- so they cannot be
+    # generated locally the way every other asset in this repo is. The only
+    # available fixtures are MonoGame-produced ones under ../cna/tests/assets,
+    # which are Ms-PL. This repo is MIT and states that it ships no ported
+    # Microsoft content, so they are copied into the build output instead of
+    # being vendored into version control. (One of them, FontCalibri14.xnb,
+    # also embeds a rasterised Calibri glyph atlas -- a proprietary typeface --
+    # and is excluded entirely, below.)
+    #
+    # ../cna is already a hard dependency of this build (add_subdirectory), so
+    # this introduces nothing new. It is still guarded: a missing directory
+    # leaves the demos to report the absence on screen rather than fail to build.
+    # ---------------------------------------------------------------------
+    set(_cna_xnb_fixtures "${CMAKE_CURRENT_SOURCE_DIR}/../cna/tests/assets/xnb")
+    if(EXISTS "${_cna_xnb_fixtures}")
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${_cna_xnb_fixtures}"
+                "$<TARGET_FILE_DIR:${target_name}>/Content/ContentDemo/xnb"
+            # Excluded on licensing grounds, not technical ones -- see above.
+            # The .decompressed.bin goes too: it is the same Calibri glyph atlas
+            # with the LZX container removed, so keeping it would defeat the point.
+            COMMAND ${CMAKE_COMMAND} -E rm -f
+                "$<TARGET_FILE_DIR:${target_name}>/Content/ContentDemo/xnb/monogame/windows/lzx/FontCalibri14.xnb"
+                "$<TARGET_FILE_DIR:${target_name}>/Content/ContentDemo/xnb/monogame/windows/lzx/FontCalibri14.xnb.manifest.json"
+                "$<TARGET_FILE_DIR:${target_name}>/Content/ContentDemo/xnb/monogame/windows/lzx/reference-decompressed/FontCalibri14.decompressed.bin"
+            VERBATIM
+        )
+        message(STATUS "cna-examples: .xnb fixtures will be copied from ${_cna_xnb_fixtures}")
+    else()
+        message(STATUS "cna-examples: no .xnb fixtures at ${_cna_xnb_fixtures}"
+                       " -- the Content area's XNB demos will report them as unavailable")
+    endif()
 endfunction()

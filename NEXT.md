@@ -14,13 +14,14 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **207** across 9 areas, 61 categories |
-| Last full validation | 207/207 render, 0 layout problems, catalog+layout+docs clean |
+| Demo screens | **212** across 10 areas, 65 categories |
+| Last full validation | 212/212 render, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
 | Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
 | Phase C1 (Framework area) | **Done** — 5 categories, 17 screens |
 | Phase C2 (Math area) | **Done** — 5 categories, 16 screens |
-| Phases C3–C5, D, E, F | Not started |
+| Phase C3 (Content area) | **Done, reduced scope** — 4 categories, 5 screens; CNJ category not built |
+| Phases C4, C5, D, E, F | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -122,7 +123,15 @@ state.
    rejects a one-ULP gap at 0.9 because the gap exactly equals the tolerance.
 11. **`Quaternion` has no default constructor** in CNA; seed out-parameters with identity.
 12. **`MathHelper::GetMachineEpsilonFloat()` is private.** `WithinEpsilon` is the public route.
-13. **`AutoScrollToSelection` will fight a manual scroll.** After a drag, it used
+13. **`.xnb` support is off until registered.** A fresh `ContentManager` throws "references an
+   unregistered .xnb content type reader" until
+   `CNA::Internal::Xnb::RegisterAllBuiltInXnbReaders()` is called once. The error names the
+   reader but not the function to call.
+14. **`ContentManager::setGraphicsDevice` is required** before any texture load; passing only
+   the `IServiceProvider` to the constructor is not enough.
+15. **CNA's `ContentManager::Load<T>` returns BY VALUE**, unlike XNA's, so consumer code cannot
+   demonstrate the cache by comparing object identity. Timing is the only external evidence.
+16. **`AutoScrollToSelection` will fight a manual scroll.** After a drag, it used
    to yank the list straight back to the selected entry, so dragging appeared to
    do nothing. `MenuScreen::userScrolled_` holds it off until the selection moves.
 
@@ -158,16 +167,26 @@ python3 tools/check_shots.py build/screenshots --quiet
 
 ## 8. Resume here
 
-**C3 Content** — 5 categories, ~15 screens (ContentManager Basics, CNJ Format, XNB Format,
-Manifest & Custom Readers, Errors). See plan.md §7 Phase C.
+Two candidates, in this order:
 
-C3 is the first area needing the configure-time asset copy agreed in §2: `.xnb` fixtures come
-from `../cna/tests/assets/xnb/` at CMake configure time and are **not** committed here. Add the
-copy to `cmake/ExamplesHelpers.cmake` (or the top-level `CMakeLists.txt`) next to the existing
-`Content/` copy step, and make the demos report "fixture not found" rather than throw when
-`../cna` is absent.
+**(a) Finish C3's CNJ Format category** (~3 screens) — the one deliberate gap in an otherwise
+complete area, and the highest-value leftover. `.cnj` is CNA's own JSON descriptor format; the
+app's own `Content/menufont.cnj` is a working example to build from, and `Content/blank.png`
+plus the atlas show the loose-file side. `RegisterCnjLoader<T>` belongs here too. Everything
+needed is already in the repo — no borrowed assets.
 
-Then C4 Storage → C5 Diagnostics → D → E → F.
+**(b) C4 Storage** — 2 categories, ~6 screens (StorageDevice, StorageContainer). Fully
+implemented in CNA (~473 lines) and completely undemonstrated. XNA's fake-async
+`Begin*`/`End*` pattern, where `Begin` completes synchronously, is the interesting part. Note
+`StorageDevice::SetAppNameEXT`/`GetStorageRootEXT` decide where files really land — a demo that
+writes must not scatter files into the repo (see how `Media/Pictures/SavePicture` uses a temp
+directory).
+
+Then C5 Diagnostics → D → E → F.
+
+**The asset-borrowing mechanism is built and working** (`cmake/ExamplesHelpers.cmake`), so
+Phase E's avatar meshes can reuse the same pattern: copy from `../cna` at build time, guard on
+existence, and have the demo report absence on screen.
 
 Pattern established by C1 and worth repeating:
 
@@ -180,7 +199,11 @@ Pattern established by C1 and worth repeating:
    `g++ -std=c++23 -fsyntax-only $DEFS $INCLUDES /tmp/tu.cpp`, taking `$DEFS`/`$INCLUDES` from
    `build/CMakeFiles/cna_examples.dir/flags.make`. A full rebuild per iteration is far slower.
 4. Sweep the new area alone (`./tools/sweep.sh "Area/"`) before the full sweep.
-5. **If a screen asserts a fact, test the fact.** The Math area's screens state things
+5. **Check that a demo actually did the thing**, not just that it rendered. The Content area's
+   XNB screen catches its own exceptions and prints them, so a total failure to load still
+   produced a clean-looking screenshot and a passing sweep. What caught it was measuring the
+   preview region: no texture drawn meant no load. Two real bugs hid behind that.
+6. **If a screen asserts a fact, test the fact.** The Math area's screens state things
    ("a shear cannot be decomposed", "0.1f + 0.2f != 0.3f"); three such statements were
    confidently wrong. `tools/checks/math_claims.cpp` caught them. Screens that merely display
    live state do not need this; screens that make claims do.

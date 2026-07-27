@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-27)
 
-Nine Areas, **207 demo screens** across 61 categories, all with real content. The numbers below
+Ten Areas, **212 demo screens** across 65 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -45,6 +45,7 @@ this file and `README.md`. Nothing here is counted by hand.
 |---|---:|---:|---:|
 | Framework | — | 5 | 17 |
 | Math | — | 5 | 16 |
+| Content | — | 4 | 5 |
 | Input | — | 5 | 50 |
 | Audio | — | 5 | 10 |
 | Devices | — | 6 | 15 |
@@ -52,7 +53,7 @@ this file and `README.md`. Nothing here is counted by hand.
 | Media | — | 4 | 17 |
 | 2D Graphics | 4 | 13 | 38 |
 | 3D Graphics | 4 | 14 | 30 |
-| **Total** | **9** | **61** | **207** |
+| **Total** | **10** | **65** | **212** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -65,6 +66,7 @@ Per-category breakdown:
 |---|---|
 | Framework | Game Loop (4), Game Components (4), Services & Dispatcher (3), Window (3), Device Manager (3) |
 | Math | Vectors (5), Matrix & Quaternion (4), Geometry (3), Curves (2), Color & Packed Vectors (2) |
+| Content | ContentManager Basics (2), Manifest (1), XNB Format (1), Errors (1) |
 | Input | Keyboard (10), Mouse (10), Gamepad (10), Touch (10), Other (10) |
 | Audio | SoundEffect (2), SoundEffectInstance (3), 3D Audio (2), DynamicSoundEffectInstance (1), Microphone (2) |
 | Devices | Sensors (4), Vibration (1), Camera (1), System & Display (3), Power (1), Desktop Integration (5) |
@@ -366,7 +368,7 @@ screens assert facts rather than merely display state:
 Keeping that checker in the repo is the point: a screen that *asserts* something needs its
 assertion tested, not just its pixels.
 
-#### C3 Content — 5 categories, 15 screens
+#### C3 Content — 4 categories, 5 screens — **DONE (reduced scope, see below)**
 
 | Category | Screens |
 |---|---|
@@ -375,6 +377,47 @@ assertion tested, not just its pixels.
 | XNB Format (4) | Uncompressed `.xnb` texture · LZX-compressed `.xnb` · `FontCalibri14.xnb` rendered · the six wave-format `.xnb` sound effects, each played |
 | Manifest & Custom Readers (2) | Content-manifest introspection: list every discoverable asset · `RegisterTypeReader<T>`/`RegisterCnjLoader<T>` for an app-defined type |
 | Errors (2) | Missing asset / wrong type / corrupt file → the real `ContentLoadException` messages · deliberately-unsupported readers (`.fx` bytecode, `Model` `.xnb`) and what they actually say |
+
+**Shipped as 5 screens across 4 categories, not the projected 15 across 5.** What is there is
+complete and verified; the reduction is recorded rather than hidden.
+
+*Delivered:* ContentManager Basics (Load & Cache, Asset Name Resolution), Manifest, XNB Format,
+Errors.
+
+*Not built, and why:*
+- **CNJ Format (3 screens)** — not started. `.cnj` is CNA's own JSON descriptor format and is a
+  genuine gap; the app's own menu font is stored as one, so the material exists. This is the
+  most valuable remaining Content work.
+- **Custom type readers** — folded away for now; `RegisterTypeReader<T>`/`RegisterCnjLoader<T>`
+  belong with the CNJ screens rather than on their own.
+- The remaining XNB screens (SpriteFont, sound effects, LZX as a separate screen) collapsed into
+  one **XNB Fixtures** screen that cycles an uncompressed texture, a DXT1 cube map and an
+  LZX-compressed texture. Splitting them would have repeated the same load call three times.
+  The SpriteFont fixture could not be shipped at all — it is `FontCalibri14.xnb`, whose glyph
+  atlas is a proprietary typeface.
+
+**Assets are borrowed, not vendored.** `cmake/ExamplesHelpers.cmake` copies
+`../cna/tests/assets/xnb` into the build output at build time and deletes `FontCalibri14.xnb`
+(and its decompressed reference) on the way. Nothing Ms-PL enters this repository's history. A
+checkout without `../cna` builds fine and the XNB screen says the fixtures are unavailable.
+
+**Two findings that changed the demos:**
+
+1. **`.xnb` support is off until you switch it on.** A fresh `ContentManager` throws
+   *"references an unregistered .xnb content type reader 'Texture2DReader'"* on the first load.
+   CNA deliberately does not auto-register its built-in readers; a game calls
+   `CNA::Internal::Xnb::RegisterAllBuiltInXnbReaders()` once at startup. The error message does
+   not name that function, so the screen shows the registration state before and after calling
+   it. This cost a debugging cycle and is exactly the kind of thing the area should teach.
+2. **`ContentManager` needs its `GraphicsDevice` set explicitly** (`setGraphicsDevice`) before
+   any texture load; supplying only the service provider is not enough, matching what CNA's own
+   `.xnb` tests do.
+
+**Verified beyond "it renders":** the uncompressed fixture decodes to a fully white 150x150
+preview (22500/22500 white pixels), the LZX-compressed one decodes to a genuinely coloured image
+(15992 coloured pixels — real block decompression, not a placeholder), and the cube-map fixture
+correctly fails to load as a `Texture2D`, which is the wrong-type case the screen is there to
+show.
 
 #### C4 Storage — 2 categories, 6 screens
 
