@@ -200,6 +200,18 @@ protected:
         return (float)viewport.getHeightProperty() - 44.0f - GlyphExtent(font);
     }
 
+    // Draws a pass/fail verdict block plus its caption, clamped so it can never
+    // run under the Back hint however long the text above it turned out to be.
+    // Screens that check their own claims use this instead of positioning a
+    // swatch by hand -- doing it by hand put three of them off the bottom edge.
+    void DrawVerdict(SpriteBatch& spriteBatch, SpriteFont& font, float y, Color swatchColor,
+                     Color captionColor, const std::string& caption) const {
+        const float limit = LabelBaselineLimit(font);
+        const float clamped = y > limit ? limit : y;
+        FillRect(spriteBatch, Rectangle(40, (int)clamped, 24, 24), swatchColor);
+        spriteBatch.DrawString(font, caption, Vector2(76.0f, clamped), captionColor);
+    }
+
     // Fills a solid rectangle using the ScreenManager's 1x1 blank texture.
     // Demos that need a bar, meter or panel use this instead of each building
     // its own single-pixel Texture2D.

@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-27)
 
-Twelve Areas, **226 demo screens** across 74 categories, all with real content. The numbers below
+Twelve Areas, **229 demo screens** across 75 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -54,8 +54,8 @@ this file and `README.md`. Nothing here is counted by hand.
 | Net | — | 4 | 14 |
 | Media | — | 4 | 17 |
 | 2D Graphics | 4 | 13 | 38 |
-| 3D Graphics | 5 | 15 | 34 |
-| **Total** | **12** | **74** | **226** |
+| 3D Graphics | 5 | 16 | 37 |
+| **Total** | **12** | **75** | **229** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -77,7 +77,7 @@ Per-category breakdown:
 | Net | NetworkSession (5), NetworkGamer (2), GamerServices (5), Leaderboards (2) |
 | Media | Song (6), Video (3), MediaLibrary (4), Pictures (4) |
 | 2D Graphics | Drawing Basics (5), Sort Modes (5), DrawString (4), Begin/End & State (4), Texture2D Basics (3), SaveAs & Reload (2), SpriteFont (4), BlendState (2), SamplerState (2), Viewport & Scissor (3), Render-to-Texture Basics (2), Screen Transition (1), Dispose Safety (1) |
-| 3D Graphics | Vertex Types (3), Primitive Types (2), Buffers (3), Basic Rendering (3), Lighting (3), Fog (1), AlphaTestEffect (2), DualTextureEffect (1), EnvironmentMapEffect (2), SkinnedEffect (1), Custom Shader (2), Depth & Culling (3), Camera & Projection (2), Model (2), Volume & Cube Textures (4) |
+| 3D Graphics | Vertex Types (3), Primitive Types (2), Buffers (3), Basic Rendering (3), Lighting (3), Fog (1), AlphaTestEffect (2), DualTextureEffect (1), EnvironmentMapEffect (2), SkinnedEffect (1), Custom Shader (2), Depth & Culling (3), Camera & Projection (2), Model (2), Volume & Cube Textures (4), Effect Reflection (3) |
 
 ### 2.1 Defects found in the pre-existing state
 
@@ -524,7 +524,7 @@ which is the reverse of what the names suggest.
 | # | Area | Addition | Screens |
 |---|---|---|---:|
 | D1 | Audio | **XACT** category: `AudioEngine` (runtime-generated `.xgs`) · `SoundBank` cue playback · `WaveBank` in-memory vs streaming · `AudioCategory` volume/pause · cue variables and RPCs · XACT error paths | 6 |
-| D2 | 3D Graphics | **PBR & Pipeline** group — *PbrEffect* (base colour/metallic/roughness · normal/occlusion/emissive · `PbrMaterial` · `SkinnedPbrEffect`) and *Render Pipeline* (`RenderQuality` · `TonemappingMode` · `ShadowQuality`) | 7 |
+| D2 | 3D Graphics | **PBR & Pipeline** group — *PbrEffect* (base colour/metallic/roughness · normal/occlusion/emissive maps · `SkinnedPbrEffect`) and one honest screen for the `RenderPipelineSettings` bag. **Rescoped from 7 to ~5 after checking `../cna`:** there is no `PbrMaterial` type, and `RenderPipelineSettings` (`RenderQuality`/`TonemappingMode`/`ShadowQuality`/HDR/bloom/SSAO) is read by **no backend at all** — nothing outside its own `.cpp` references it, and the `GraphicsDevice::GetRenderPipelineSettings()` its own doc comment names does not exist. It stores settings faithfully and nothing consumes them, so it gets one screen saying exactly that rather than three pretending otherwise. `PbrEffect` by contrast is fully wired into EasyGL with a real metallic-roughness BRDF shader. | ~5 |
 | D3 | 3D Graphics | **Model Content** category: real `Model` via `ContentManager` · `ModelMesh`/`ModelMeshPart`/`EffectMaterial` traversal and effect swapping · `SkinnedModelEXT` · `AnimationPlayer` clip playback · `MorphTargetEXT` | 5 |
 | D4 | 3D Graphics | **Effect Reflection** category: enumerate and set `EffectParameter`s live · techniques/passes + `CurrentTechnique` switching · `EffectAnnotation` · `Effect::Clone` independence | 4 |
 | D5 | 3D Graphics | **Textures & Queries** category: `Texture3D` volume + slice/box `SetData` · `TextureCube` faces and `CubeMapFace` · `RenderTargetCube` rendered per face and used as an env map · `OcclusionQuery` occluded vs visible `PixelCount` · the documented "SurfaceFormat is ignored, everything is RGBA8" caveat, shown honestly | 5 |
@@ -606,6 +606,49 @@ reflected hue measurably changes as the object spins (green → dark green → b
 **Not done in D5:** the planned "SurfaceFormat is ignored, everything is RGBA8" screen. That is a
 claim about backend behaviour rather than an API demonstration, and it belongs with D6's surface
 format work where it can be shown across every format at once.
+
+#### D4 Effect Reflection — 1 category, 3 screens — **DONE (reduced scope, see below)**
+
+| Category | Screens |
+|---|---|
+| Effect Reflection (3) | What Is Actually Exposed · Parameter Classes, Types & Values · Clone: What Is and Is Not Copied |
+
+**Shipped as 3 screens, not 4.** The planned "techniques/passes + `CurrentTechnique` switching"
+screen has nothing to switch between: `Effect`'s constructor adds exactly one technique, named
+`"Default"`, and CNA's stock effects add no more. That fact is stated on the first screen instead
+of being spread over a screen that would have demonstrated a choice of one.
+
+**The headline finding: CNA's built-in effects populate none of the reflection API.** Measured
+live from a `BasicEffect` — `Parameters.Count` is 0, `Techniques.Count` is 1, and
+`Parameters["World"]` returns **nullptr**. In XNA those parameters come out of a compiled `.fxb`,
+so the classic port line
+
+    effect.Parameters["WorldViewProj"]->SetValue(m);
+
+compiles here and dereferences a null pointer at runtime. The lookup does not throw — it returns
+a pointer, and callers must check it. CNA's effects keep their state in typed C++ fields and
+property setters (`World`, `VertexColorEnabled`, `setDiffuseColorProperty`) instead. The API is
+not a stub: `EffectParameter` is fully functional standalone, and anything building an effect can
+`Add()` parameters of its own.
+
+**`SetValue(Matrix)` vs `SetValueTranspose(Matrix)` is a silent trap.** They store the same matrix
+transposed relative to each other, and each has its own getter. A mismatched pair returns the
+transpose with no error. The screen proves it with a deliberately asymmetric matrix — a symmetric
+one would hide the bug entirely.
+
+**`Effect::Clone()` returns a raw owning pointer**, a documented deviation (FNA returns a
+GC-managed `Effect`; C++ has no equivalent), so forgetting to delete it leaks silently. Verified
+live that cloned state is copied and then independent, and that the clone gets its own technique
+collection. `ShaderEffect` is the documented exception to the sharing rule: it uniquely owns a
+compiled program, so its `Clone()` recompiles the GLSL rather than sharing — cloning one in a loop
+is not free.
+
+**Layout fix this phase forced.** All three screens initially drew their verdict swatch past
+`LabelBaselineLimit()` — 538px in a 640px window — because the swatch position was computed from
+wherever `DrawLines` happened to finish. `DemoScreen::DrawVerdict()` now clamps it, and the three
+screens were trimmed to fit naturally so the clamp stays a safety net rather than the normal path.
+`tools/check_layout.py` did not catch this: it only inspects literal draw positions in source, and
+these were computed.
 
 ### Phase E — Avatars Area
 

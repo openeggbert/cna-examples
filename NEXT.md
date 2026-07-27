@@ -15,7 +15,7 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **226** across 12 areas, 74 categories |
+| Demo screens | **229** across 12 areas, 75 categories |
 | Last full validation | 222/222 on EASYGL **and** SDL_RENDERER, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
 | Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
@@ -27,7 +27,8 @@ state.
 | Phase F3 (SDL_RENDERER pass) | **Done** — 222/222 on both backends, 3D gated on ThreeD |
 | Phase D1 (Audio/XACT) | **Done, reduced scope** — 1 category, 2 screens |
 | Phase D5 (3D Textures & Queries) | **Done** — 1 category, 4 screens |
-| Phases D2–D4, D6–D8, E, F1, F2 | Not started |
+| Phase D4 (Effect Reflection) | **Done, reduced scope** — 1 category, 3 screens |
+| Phases D2, D3, D6–D8, E, F1, F2 | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -85,6 +86,12 @@ state.
   cause never identified; it did not reproduce in three consecutive identical runs.
 
 ## 4a. Traps in this repo's own workflow
+
+**Never edit `tools/sweep*.sh` while a sweep is running.** bash reads a script incrementally from
+a byte offset, so rewriting the file underneath it makes the running shell resume at the wrong
+place. Doing this hung a sweep at 226/229 with no error -- the process stayed alive, no
+`cna_examples` was running, and the screenshot directory simply stopped growing. `bash -n` on the
+file afterwards was clean, which is what makes it confusing. Wait for the sweep, then edit.
 
 - **Never rebuild while `tools/sweep.sh` is running.** The sweep launches the
   binary ~174 times; replacing it mid-run produced "53 of 174 demos failed" twice,
@@ -202,6 +209,30 @@ state.
    `setVertexColorEnabledProperty`. `World`/`View`/`Projection` are fields too, while
    `EnvironmentMapEffect` *does* use `setWorldProperty`-style accessors -- the two effects are
    genuinely inconsistent, so check the header rather than pattern-matching from a sibling.
+
+31. **CNA's stock effects populate none of the reflection API.** A live `BasicEffect` reports
+   `Parameters.Count == 0`, `Techniques.Count == 1` (the `"Default"` one `Effect`'s constructor
+   adds), and `Parameters["World"] == nullptr`. The XNA idiom
+   `effect.Parameters["X"]->SetValue(v)` therefore compiles and dereferences null at runtime --
+   the lookup returns a pointer and never throws. State lives in typed C++ fields/properties.
+   `EffectParameter` itself is fully functional and needs no device, so it can be exercised and
+   asserted standalone.
+32. **`SetValue(Matrix)` and `SetValueTranspose(Matrix)` are silently mismatched.** Each has its
+   own getter; crossing them returns the transpose with no error. Always test matrix round trips
+   with an ASYMMETRIC matrix -- a symmetric one hides it completely.
+33. **`Effect::Clone()` returns a raw OWNING pointer** (documented deviation from FNA's
+   GC-managed return). Adopt it into a `unique_ptr` immediately. `ShaderEffect::Clone()` uniquely
+   RECOMPILES its GLSL rather than sharing the program, so it is not cheap.
+34. **`check_layout.py` cannot see computed draw positions.** It inspects literal coordinates in
+   source only. Three screens drew their verdict swatch past `LabelBaselineLimit()` (538px in a
+   640px window) and it passed clean. `DemoScreen::DrawVerdict()` now clamps; keep body text to
+   ~12 lines from y=82 (the step is `lineSpacing + 6` = 35px) so the clamp stays a safety net.
+
+35. **The sweeps used to leave stale screenshots behind.** Renaming a category left the old
+   `.png` in `build/screenshots` forever, so `check_shots.py` counted 233 files for 229 demos --
+   and a DELETED screen would have looked like it was still passing. `tools/sweep.sh` and
+   `tools/sweep_backend.sh` now clear `*.png`/`*.log` first, but only on an unfiltered run, since
+   a filtered sweep is not authoritative about what should exist.
 
 ## 6. Commands
 

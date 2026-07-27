@@ -34,6 +34,14 @@ if [[ ! -x "$BUILD/cna_examples" ]]; then
 fi
 
 mkdir -p "$OUT"
+
+# Clear stale output first. A renamed or deleted demo otherwise leaves its old
+# .png behind forever, so check_shots.py counts more screenshots than there are
+# demos and a removed screen looks like it is still passing. Only a full
+# (unfiltered) sweep clears, since a filtered one is not authoritative.
+if [[ -z "$FILTER" ]]; then
+    rm -f "$OUT"/*.png "$OUT"/*.log
+fi
 cd "$BUILD"
 
 mapfile -t DEMOS < <(./cna_examples --list-demos | { [[ -n "$FILTER" ]] && grep -F "$FILTER" || cat; })

@@ -242,6 +242,9 @@
 #include "Demos/Graphics3D/ModelGroup/ModelBoneHierarchyScreen.hpp"
 #include "Demos/Graphics3D/TexturesAndQueries/Texture3DVolumeScreen.hpp"
 #include "Demos/Graphics3D/TexturesAndQueries/TextureCubeFacesScreen.hpp"
+#include "Demos/Graphics3D/EffectReflection/ReflectionSurfaceScreen.hpp"
+#include "Demos/Graphics3D/EffectReflection/EffectParameterScreen.hpp"
+#include "Demos/Graphics3D/EffectReflection/EffectCloneScreen.hpp"
 #include "Demos/Graphics3D/TexturesAndQueries/RenderTargetCubeScreen.hpp"
 #include "Demos/Graphics3D/TexturesAndQueries/OcclusionQueryScreen.hpp"
 
@@ -1345,6 +1348,24 @@ inline std::vector<DemoEntry> BuildTexturesAndQueriesDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildEffectReflectionDemos() {
+    using namespace CnaExamples::Demos::Graphics3D::EffectReflectionDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<ReflectionSurfaceScreen>(
+        "What Is Actually Exposed",
+        "Parameters/Techniques measured live -- and why Parameters[\"World\"] is null here",
+        {"Effect", "EffectParameterCollection", "EffectTechnique"}));
+    demos.push_back(MakeDemo<EffectParameterScreen>(
+        "Parameter Classes, Types & Values",
+        "Class vs Type, and the silent SetValue/SetValueTranspose mismatch",
+        {"EffectParameter", "EffectParameterClass", "EffectParameterType"}));
+    demos.push_back(MakeDemo<EffectCloneScreen>(
+        "Clone: What Is and Is Not Copied",
+        "A raw owning pointer, copied state, and why ShaderEffect clones differ",
+        {"Effect"}));
+    return demos;
+}
+
 // Builds the full Home -> Area -> Category -> Demo data set. This is the
 // single place new areas/categories/demos get registered as they are
 // implemented; see plan.md section 8 for what is intentionally still empty.
@@ -1464,8 +1485,9 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
                 CategoryEntry{"Camera & Projection", Requiring(CNA::GraphicsCapability::ThreeD, BuildCameraAndProjectionDemos())},
                 CategoryEntry{"Model", Requiring(CNA::GraphicsCapability::ThreeD, BuildModelGroupDemos())},
             }},
-            GroupEntry{"Textures & Queries", {
+            GroupEntry{"Textures, Effects & Queries", {
                 CategoryEntry{"Volume & Cube Textures", Requiring(CNA::GraphicsCapability::ThreeD, BuildTexturesAndQueriesDemos())},
+                CategoryEntry{"Effect Reflection", Requiring(CNA::GraphicsCapability::ThreeD, BuildEffectReflectionDemos())},
             }},
         }},
     };
