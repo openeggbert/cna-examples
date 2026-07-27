@@ -14,14 +14,15 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **212** across 10 areas, 65 categories |
-| Last full validation | 212/212 render, 0 layout problems, catalog+layout+docs clean |
+| Demo screens | **214** across 11 areas, 67 categories |
+| Last full validation | 214/214 render, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
 | Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
 | Phase C1 (Framework area) | **Done** — 5 categories, 17 screens |
 | Phase C2 (Math area) | **Done** — 5 categories, 16 screens |
 | Phase C3 (Content area) | **Done, reduced scope** — 4 categories, 5 screens; CNJ category not built |
-| Phases C4, C5, D, E, F | Not started |
+| Phase C4 (Storage area) | **Done, reduced scope** — 2 categories, 2 screens |
+| Phases C5, D, E, F | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -131,7 +132,11 @@ state.
    the `IServiceProvider` to the constructor is not enough.
 15. **CNA's `ContentManager::Load<T>` returns BY VALUE**, unlike XNA's, so consumer code cannot
    demonstrate the cache by comparing object identity. Timing is the only external evidence.
-16. **`AutoScrollToSelection` will fight a manual scroll.** After a drag, it used
+16. **Storage saves land under a real per-OS root**, `~/.local/share/<AppName>/` on Linux via
+   `StorageDevice::SetAppNameEXT`. A demo that writes must never scatter files into the repo;
+   `StorageContainer::ResolvePath` is private, so an app cannot ask where a file physically
+   went -- the sandbox is deliberate.
+17. **`AutoScrollToSelection` will fight a manual scroll.** After a drag, it used
    to yank the list straight back to the selected entry, so dragging appeared to
    do nothing. `MenuScreen::userScrolled_` holds it off until the selection moves.
 
@@ -167,7 +172,7 @@ python3 tools/check_shots.py build/screenshots --quiet
 
 ## 8. Resume here
 
-Two candidates, in this order:
+Three candidates, in this order:
 
 **(a) Finish C3's CNJ Format category** (~3 screens) — the one deliberate gap in an otherwise
 complete area, and the highest-value leftover. `.cnj` is CNA's own JSON descriptor format; the
@@ -175,14 +180,17 @@ app's own `Content/menufont.cnj` is a working example to build from, and `Conten
 plus the atlas show the loose-file side. `RegisterCnjLoader<T>` belongs here too. Everything
 needed is already in the repo — no borrowed assets.
 
-**(b) C4 Storage** — 2 categories, ~6 screens (StorageDevice, StorageContainer). Fully
-implemented in CNA (~473 lines) and completely undemonstrated. XNA's fake-async
-`Begin*`/`End*` pattern, where `Begin` completes synchronously, is the interesting part. Note
-`StorageDevice::SetAppNameEXT`/`GetStorageRootEXT` decide where files really land — a demo that
-writes must not scatter files into the repo (see how `Media/Pictures/SavePicture` uses a temp
-directory).
+**(b) C5 Diagnostics** — 4 categories, ~13 screens (Logging, Platform & Build, Backend &
+Capabilities, Adapter & Display). All of `CNA::Logger`, `Platform`, `DesktopOS`,
+`GraphicsBackendType`, `GraphicsCapability`, `GraphicsAdapter`, `DisplayMode` and
+`PresentationParameters` are undemonstrated. `GraphicsCapability` in particular is worth doing
+before Phase F3, which needs the catalog to gate 3D demos on it.
 
-Then C5 Diagnostics → D → E → F.
+**(c) Extend C4 Storage** — the obvious next screens are container directory operations
+(`CreateDirectory`/`GetDirectoryNames`/`DeleteDirectory`) and container lifetime
+(`Dispose`/`Disposing`/reopen/`DeleteContainer`).
+
+Then D → E → F.
 
 **The asset-borrowing mechanism is built and working** (`cmake/ExamplesHelpers.cmake`), so
 Phase E's avatar meshes can reuse the same pattern: copy from `../cna` at build time, guard on

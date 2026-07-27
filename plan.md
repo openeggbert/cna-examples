@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-27)
 
-Ten Areas, **212 demo screens** across 65 categories, all with real content. The numbers below
+Eleven Areas, **214 demo screens** across 67 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -46,6 +46,7 @@ this file and `README.md`. Nothing here is counted by hand.
 | Framework | — | 5 | 17 |
 | Math | — | 5 | 16 |
 | Content | — | 4 | 5 |
+| Storage | — | 2 | 2 |
 | Input | — | 5 | 50 |
 | Audio | — | 5 | 10 |
 | Devices | — | 6 | 15 |
@@ -53,7 +54,7 @@ this file and `README.md`. Nothing here is counted by hand.
 | Media | — | 4 | 17 |
 | 2D Graphics | 4 | 13 | 38 |
 | 3D Graphics | 4 | 14 | 30 |
-| **Total** | **10** | **65** | **212** |
+| **Total** | **11** | **67** | **214** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -67,6 +68,7 @@ Per-category breakdown:
 | Framework | Game Loop (4), Game Components (4), Services & Dispatcher (3), Window (3), Device Manager (3) |
 | Math | Vectors (5), Matrix & Quaternion (4), Geometry (3), Curves (2), Color & Packed Vectors (2) |
 | Content | ContentManager Basics (2), Manifest (1), XNB Format (1), Errors (1) |
+| Storage | StorageDevice (1), StorageContainer (1) |
 | Input | Keyboard (10), Mouse (10), Gamepad (10), Touch (10), Other (10) |
 | Audio | SoundEffect (2), SoundEffectInstance (3), 3D Audio (2), DynamicSoundEffectInstance (1), Microphone (2) |
 | Devices | Sensors (4), Vibration (1), Camera (1), System & Display (3), Power (1), Desktop Integration (5) |
@@ -419,12 +421,35 @@ preview (22500/22500 white pixels), the LZX-compressed one decodes to a genuinel
 correctly fails to load as a `Texture2D`, which is the wrong-type case the screen is there to
 show.
 
-#### C4 Storage — 2 categories, 6 screens
+#### C4 Storage — 2 categories, 2 screens — **DONE (reduced scope, see below)**
 
 | Category | Screens |
 |---|---|
 | StorageDevice (3) | `BeginShowSelector`/`EndShowSelector` per `PlayerIndex`, `IsConnected` · `DeviceChanged` event, free/total space · `SetAppNameEXT`/`GetStorageRootEXT` — where files really land on this OS |
 | StorageContainer (3) | Save-game write + read round trip · directories and files: `CreateDirectory`/`GetFileNames`/`GetDirectoryNames`/`DeleteFile` · container lifetime: `Dispose`, `Disposing`, reopen, `DeleteContainer` |
+
+**Shipped as 2 screens, not 6.** The two that exist cover the API's substance; the other four
+would have been variations on the same calls.
+
+- **StorageDevice** — the fake-async selector (`BeginShowSelector`/`EndShowSelector`) across all
+  four `PlayerIndex` values, `IsConnected`/`FreeSpace`/`TotalSpace`, and the NOXNA
+  `SetAppNameEXT`/`GetStorageRootEXT` pair that decides where saves actually land. `DeviceChanged`
+  and the space-requirement selector overloads folded in here rather than becoming their own
+  screens.
+- **Save Game Round Trip** — open device, open container, `CreateFile`, write, close, `OpenFile`,
+  read back, `DeleteFile`. Directory operations (`CreateDirectory`/`GetDirectoryNames`) and
+  container lifetime are the obvious next screens if this area is extended.
+
+**Persistence is verified across processes, not just within one.** The demo recovers its counter
+by parsing the file it wrote, precisely so that a restart continues rather than resetting — an
+in-memory counter would look identical on screen and prove nothing. Checked by running the
+binary three times: the first wrote `save #1`, a second, separate process read it back and wrote
+`save #2`, and the delete path removed the file. Saves land under the real per-OS root
+(`~/.local/share/cna-examples/StorageDemo/Player1/` here), never in the repository.
+
+`StorageContainer::ResolvePath` is private, so an application cannot ask where a file physically
+went — deliberately, since the sandbox is the point. The screen shows the storage root instead
+and says why.
 
 #### C5 Diagnostics — 4 categories, 13 screens
 

@@ -160,6 +160,8 @@
 #include "Demos/Content/Manifest/ContentManifestScreen.hpp"
 #include "Demos/Content/Xnb/XnbFixturesScreen.hpp"
 #include "Demos/Content/Errors/ContentLoadExceptionScreen.hpp"
+#include "Demos/Storage/Device/StorageDeviceScreen.hpp"
+#include "Demos/Storage/Container/SaveGameRoundTripScreen.hpp"
 
 #include "Demos/Graphics2D/DrawingBasics/PositionDrawScreen.hpp"
 #include "Demos/Graphics2D/DrawingBasics/DestinationRectangleScreen.hpp"
@@ -906,6 +908,26 @@ inline std::vector<DemoEntry> BuildContentErrorsDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildStorageDeviceDemos() {
+    using namespace CnaExamples::Demos::Storage::DeviceDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<StorageDeviceScreen>(
+        "StorageDevice", "XNA's fake-async selector, per PlayerIndex, and where saves land",
+        {"StorageDevice::BeginShowSelector", "StorageDevice::EndShowSelector",
+         "StorageDevice::FreeSpace", "StorageDevice::GetStorageRootEXT"}));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildStorageContainerDemos() {
+    using namespace CnaExamples::Demos::Storage::ContainerDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<SaveGameRoundTripScreen>(
+        "Save Game Round Trip", "Write, read back and delete a save that survives a restart",
+        {"StorageContainer::CreateFile", "StorageContainer::OpenFile",
+         "StorageContainer::FileExists", "StorageContainer::DeleteFile"}));
+    return demos;
+}
+
 inline std::vector<DemoEntry> BuildDrawingBasicsDemos() {
     using namespace CnaExamples::Demos::Graphics2D::DrawingBasicsDemos;
     std::vector<DemoEntry> demos;
@@ -1228,6 +1250,10 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"Manifest", BuildContentManifestDemos()},
             CategoryEntry{"XNB Format", BuildContentXnbDemos()},
             CategoryEntry{"Errors", BuildContentErrorsDemos()},
+        }},
+        AreaEntry{"Storage", {
+            CategoryEntry{"StorageDevice", BuildStorageDeviceDemos()},
+            CategoryEntry{"StorageContainer", BuildStorageContainerDemos()},
         }},
         AreaEntry{"Input", {
             CategoryEntry{"Keyboard", BuildKeyboardDemos()},
