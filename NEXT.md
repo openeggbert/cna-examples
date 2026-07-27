@@ -15,7 +15,7 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **222** across 12 areas, 73 categories |
+| Demo screens | **226** across 12 areas, 74 categories |
 | Last full validation | 222/222 on EASYGL **and** SDL_RENDERER, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
 | Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
@@ -26,7 +26,8 @@ state.
 | Phase C5 (Diagnostics area) | **Done, reduced scope** — 4 categories, 4 screens |
 | Phase F3 (SDL_RENDERER pass) | **Done** — 222/222 on both backends, 3D gated on ThreeD |
 | Phase D1 (Audio/XACT) | **Done, reduced scope** — 1 category, 2 screens |
-| Phases D2–D8, E, F1, F2 | Not started |
+| Phase D5 (3D Textures & Queries) | **Done** — 1 category, 4 screens |
+| Phases D2–D4, D6–D8, E, F1, F2 | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -183,6 +184,25 @@ state.
    Input) was unreachable from the harness. `InputState::ScriptedKey()` maps each action to the
    key it stands for and `IsNewKeyPress` honours it.
 
+27. **`RenderTargetCube::GetData` silently returns zeros on EASYGL.**
+   `ITextureCubeBackend::GetData` is a no-op by default and EasyGL's render-target cube backend
+   overrides only `SetData`; `TextureCube::GetData` still validates, allocates a
+   **zero-initialised** staging buffer, calls the no-op, and copies the zeros out. No exception.
+   A caller gets plausible transparent-black data and never learns. Do not assume "no throw"
+   means "worked" for any readback -- probe with a sentinel fill, which is the only way to
+   distinguish real pixels / zeroed / untouched.
+28. **A verification swatch beats a screenshot.** Every screen in the Volume & Cube Textures
+   category computes its own pass/fail and draws a 24x24 colour block at x=40, so a sweep can
+   assert correctness with a pixel probe instead of trusting that "it rendered". Cheap to add,
+   and it caught the RenderTargetCube finding immediately. Worth repeating for any new screen
+   that makes a checkable claim.
+29. **`Color` has no default constructor.** `std::vector<Color> v(n);` does not compile --
+   `std::vector<Color> v(n, Color::Black);` does. Costs a compile cycle every time.
+30. **`BasicEffect::VertexColorEnabled` is a public FIELD, not a property setter.** There is no
+   `setVertexColorEnabledProperty`. `World`/`View`/`Projection` are fields too, while
+   `EnvironmentMapEffect` *does* use `setWorldProperty`-style accessors -- the two effects are
+   genuinely inconsistent, so check the header rather than pattern-matching from a sibling.
+
 ## 6. Commands
 
 ```bash
@@ -232,11 +252,11 @@ preference worth stating, because the current bias is deliberate and will otherw
 
 Candidates, in this order:
 
-**(a) Phase D2 onwards** — deepening existing areas (PBR & pipeline, Model content, effect
+**(a) Phase D2/D3/D4/D6/D7/D8** — deepening existing areas (PBR & pipeline, Model content, effect
 reflection, Texture3D/Cube/RenderTargetCube, occlusion queries, 2D surface formats and device
-events, Input EXT screens, Net QoS). **D1 (XACT) is done.** D2–D5 are all 3D and must be wrapped
-in `Requiring(CNA::GraphicsCapability::ThreeD, ...)` like the existing 3D categories, or the
-SDL_RENDERER sweep will abort on them.
+events, Input EXT screens, Net QoS). **D1 (XACT) and D5 (Textures & Queries) are done.** D2-D4 are
+all 3D and must be wrapped in `Requiring(CNA::GraphicsCapability::ThreeD, ...)` like the existing
+3D categories, or the SDL_RENDERER sweep will abort on them.
 
 **(b) Extend C4 Storage** — container directory operations and container lifetime.
 

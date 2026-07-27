@@ -240,6 +240,10 @@
 #include "Demos/Graphics3D/CameraAndProjection/PerspectiveVsOrthographicScreen.hpp"
 #include "Demos/Graphics3D/ModelGroup/ProceduralModelScreen.hpp"
 #include "Demos/Graphics3D/ModelGroup/ModelBoneHierarchyScreen.hpp"
+#include "Demos/Graphics3D/TexturesAndQueries/Texture3DVolumeScreen.hpp"
+#include "Demos/Graphics3D/TexturesAndQueries/TextureCubeFacesScreen.hpp"
+#include "Demos/Graphics3D/TexturesAndQueries/RenderTargetCubeScreen.hpp"
+#include "Demos/Graphics3D/TexturesAndQueries/OcclusionQueryScreen.hpp"
 
 namespace CnaExamples::Navigation {
 
@@ -1319,6 +1323,28 @@ inline std::vector<DemoEntry> BuildModelGroupDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildTexturesAndQueriesDemos() {
+    using namespace CnaExamples::Demos::Graphics3D::TexturesAndQueriesDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<Texture3DVolumeScreen>(
+        "Texture3D Volume & Sub-Box",
+        "A volume texture written whole, then one axis-aligned sub-box, verified by GetData",
+        {"Texture3D", "SurfaceFormat"}));
+    demos.push_back(MakeDemo<TextureCubeFacesScreen>(
+        "TextureCube Six Faces",
+        "Six faces written and read back per CubeMapFace, laid out as the unfolded cross",
+        {"TextureCube", "CubeMapFace"}));
+    demos.push_back(MakeDemo<RenderTargetCubeScreen>(
+        "RenderTargetCube Rendered Faces",
+        "Each cube face bound and rendered separately, then read back",
+        {"RenderTargetCube", "CubeMapFace"}));
+    demos.push_back(MakeDemo<OcclusionQueryScreen>(
+        "OcclusionQuery Occluded vs Visible",
+        "Pixels surviving the depth test, measured behind an occluder and without one",
+        {"OcclusionQuery"}));
+    return demos;
+}
+
 // Builds the full Home -> Area -> Category -> Demo data set. This is the
 // single place new areas/categories/demos get registered as they are
 // implemented; see plan.md section 8 for what is intentionally still empty.
@@ -1437,6 +1463,9 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
                 CategoryEntry{"Depth & Culling", Requiring(CNA::GraphicsCapability::ThreeD, BuildDepthAndCullingDemos())},
                 CategoryEntry{"Camera & Projection", Requiring(CNA::GraphicsCapability::ThreeD, BuildCameraAndProjectionDemos())},
                 CategoryEntry{"Model", Requiring(CNA::GraphicsCapability::ThreeD, BuildModelGroupDemos())},
+            }},
+            GroupEntry{"Textures & Queries", {
+                CategoryEntry{"Volume & Cube Textures", Requiring(CNA::GraphicsCapability::ThreeD, BuildTexturesAndQueriesDemos())},
             }},
         }},
     };

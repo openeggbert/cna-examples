@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-27)
 
-Twelve Areas, **222 demo screens** across 73 categories, all with real content. The numbers below
+Twelve Areas, **226 demo screens** across 74 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -54,8 +54,8 @@ this file and `README.md`. Nothing here is counted by hand.
 | Net | — | 4 | 14 |
 | Media | — | 4 | 17 |
 | 2D Graphics | 4 | 13 | 38 |
-| 3D Graphics | 4 | 14 | 30 |
-| **Total** | **12** | **73** | **222** |
+| 3D Graphics | 5 | 15 | 34 |
+| **Total** | **12** | **74** | **226** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -77,7 +77,7 @@ Per-category breakdown:
 | Net | NetworkSession (5), NetworkGamer (2), GamerServices (5), Leaderboards (2) |
 | Media | Song (6), Video (3), MediaLibrary (4), Pictures (4) |
 | 2D Graphics | Drawing Basics (5), Sort Modes (5), DrawString (4), Begin/End & State (4), Texture2D Basics (3), SaveAs & Reload (2), SpriteFont (4), BlendState (2), SamplerState (2), Viewport & Scissor (3), Render-to-Texture Basics (2), Screen Transition (1), Dispose Safety (1) |
-| 3D Graphics | Vertex Types (3), Primitive Types (2), Buffers (3), Basic Rendering (3), Lighting (3), Fog (1), AlphaTestEffect (2), DualTextureEffect (1), EnvironmentMapEffect (2), SkinnedEffect (1), Custom Shader (2), Depth & Culling (3), Camera & Projection (2), Model (2) |
+| 3D Graphics | Vertex Types (3), Primitive Types (2), Buffers (3), Basic Rendering (3), Lighting (3), Fog (1), AlphaTestEffect (2), DualTextureEffect (1), EnvironmentMapEffect (2), SkinnedEffect (1), Custom Shader (2), Depth & Culling (3), Camera & Projection (2), Model (2), Volume & Cube Textures (4) |
 
 ### 2.1 Defects found in the pre-existing state
 
@@ -570,6 +570,42 @@ state machine, category volume, and the rejection paths for unauthored cue/categ
 reports itself through `IsNewKeyPress` as the key it stands for. Left/Right previously had no menu
 equivalent, so *no* demo binding them — several in Audio and Input — was reachable from the
 harness at all. The cue screen uses them for pause/resume and stop.
+
+#### D5 Textures & Queries — 1 category, 4 screens — **DONE**
+
+| Category | Screens |
+|---|---|
+| Volume & Cube Textures (4) | `Texture3D` volume + sub-box · `TextureCube` six faces · `RenderTargetCube` rendered per face and used as an env map · `OcclusionQuery` occluded vs visible |
+
+Registered as a new **Textures & Queries** group in the 3D Graphics area, wrapped in
+`Requiring(CNA::GraphicsCapability::ThreeD, ...)` like every other 3D category.
+
+**Every screen verifies its own claim and shows the verdict as a coloured swatch**, so the sweep
+asserts correctness by pixel rather than by "it rendered". This was the direct lesson of the XNB
+and XACT screens: a screen that catches its own exceptions looks identical whether it worked or
+not. Measured: the Texture3D round trip checks all 8 192 voxels; the blue channel steps exactly
+32 per slice and the sub-box lands exactly on Z 3–5, both confirmed by sampling the screenshot.
+`TextureCube` verifies all six faces. `OcclusionQuery` confirms the occluded count is strictly
+lower than the unoccluded one — occlusion queries genuinely work on EASYGL.
+
+**`RenderTargetCube::GetData` silently returns zeros on EASYGL — this is a real finding.**
+`ITextureCubeBackend::GetData` is declared a no-op by default and EasyGL's render-target cube
+backend overrides only `SetData`. `TextureCube::GetData` still runs its full validation, allocates
+a **zero-initialised** staging buffer, calls the backend (which does nothing), and copies that
+buffer to the caller. The result is 32×32 transparent-black texels, no exception, no error code —
+plausible-looking data that is silently wrong. The first version of this screen assumed a working
+round trip and reported FAIL; the second assumed the caller's buffer was left untouched, which was
+also wrong. Only a sentinel-fill probe distinguished the three cases. The screen now classifies
+the outcome (real pixels / silently zeroed / untouched / threw) and reports which actually
+happened, so it stays honest if a backend later implements the readback.
+
+Because the readback is unavailable, that screen proves the six faces really differ the way a game
+would actually use them: the cube is fed to `EnvironmentMapEffect` as a reflection source, and the
+reflected hue measurably changes as the object spins (green → dark green → blue across frames).
+
+**Not done in D5:** the planned "SurfaceFormat is ignored, everything is RGBA8" screen. That is a
+claim about backend behaviour rather than an API demonstration, and it belongs with D6's surface
+format work where it can be shown across every format at once.
 
 ### Phase E — Avatars Area
 

@@ -15,7 +15,7 @@ first seven areas were built and verified.
 
 ## Status
 
-**12 areas, 73 categories, 222 demo screens**, every one of them exercising a real
+**12 areas, 74 categories, 226 demo screens**, every one of them exercising a real
 `Microsoft::Xna::Framework` / `CNA::*` API call rather than a mock.
 
 | Area | Categories | Screens |
@@ -31,7 +31,7 @@ first seven areas were built and verified.
 | Net | NetworkSession, NetworkGamer, GamerServices, Leaderboards | 14 |
 | Media | Song, Video, MediaLibrary, Pictures | 17 |
 | 2D Graphics | 4 groups, 13 categories | 38 |
-| 3D Graphics | 4 groups, 14 categories | 30 |
+| 3D Graphics | 5 groups, 15 categories | 34 |
 
 Run `./build/cna_examples --list-demos` for the full, authoritative list.
 
@@ -47,12 +47,19 @@ registrations in `src/Navigation/AreaCatalog.hpp` all agree.
   screen restores the global state it changes: after the resolution demo changes the back buffer
   to 800x600 and leaves, the buffer is measurably back to 960x640. The Math area's on-screen
   claims are additionally asserted by `tools/checks/math_claims.cpp`, which caught three
-  confidently-wrong statements before they shipped.
+  confidently-wrong statements before they shipped. The Content and Audio areas have the same
+  treatment in `tools/checks/cnj_claims.cpp` and `tools/checks/xact_claims.cpp` — necessary
+  because those screens catch their own exceptions, so a total failure still renders a clean
+  screenshot and passes a sweep.
+- **Self-checking screens:** the 3D area's Volume & Cube Textures screens compute their own
+  pass/fail (a `GetData` round trip, an occluded-vs-visible pixel count) and draw the verdict as
+  a coloured swatch, so a sweep can assert correctness by pixel rather than by "it rendered".
+  That is how `RenderTargetCube::GetData` was found to return zeros silently on EASYGL.
 - **Renders correctly and degrades gracefully, but never exercised with the real device:**
   Gamepad, Touch, and Input's joystick/haptics screens (no controller, touchscreen, raw joystick
   or haptic device available); Devices' mobile-only Sensors/Vibration screens; Camera
   (no webcam); MessageBox/FileDialog (need a human).
-- **Backends:** `EASYGL` and `SDL_RENDERER` are both verified — 218/218 demos render on each.
+- **Backends:** `EASYGL` and `SDL_RENDERER` are both verified — 226/226 demos render on each.
   `SDL_RENDERER` is 2D-only by design, so the 3D Graphics area is gated on
   `GraphicsDevice::SupportsCapability(ThreeD)` and those demos explain themselves rather than
   throwing. See `plan.md` §4.
