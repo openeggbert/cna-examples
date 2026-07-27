@@ -15,12 +15,13 @@ first seven areas were built and verified.
 
 ## Status
 
-**8 areas, 56 categories, 191 demo screens**, every one of them exercising a real
+**9 areas, 61 categories, 207 demo screens**, every one of them exercising a real
 `Microsoft::Xna::Framework` / `CNA::*` API call rather than a mock.
 
 | Area | Categories | Screens |
 |---|---|---:|
 | Framework | Game Loop, Game Components, Services & Dispatcher, Window, Device Manager | 17 |
+| Math | Vectors, Matrix & Quaternion, Geometry, Curves, Color & Packed Vectors | 16 |
 | Input | Keyboard, Mouse, Gamepad, Touch, Other | 50 |
 | Audio | SoundEffect, SoundEffectInstance, 3D Audio, DynamicSoundEffectInstance, Microphone | 10 |
 | Devices | Sensors, Vibration, Camera, System & Display, Power, Desktop Integration | 15 |
@@ -41,7 +42,9 @@ registrations in `src/Navigation/AreaCatalog.hpp` all agree.
 - **Verified headlessly (rendering + behaviour, under Xvfb):** the Media and Framework areas,
   via `tools/sweep.sh` and `tools/check_shots.py`. Framework additionally verifies that every
   screen restores the global state it changes: after the resolution demo changes the back buffer
-  to 800x600 and leaves, the buffer is measurably back to 960x640.
+  to 800x600 and leaves, the buffer is measurably back to 960x640. The Math area's on-screen
+  claims are additionally asserted by `tools/checks/math_claims.cpp`, which caught three
+  confidently-wrong statements before they shipped.
 - **Renders correctly and degrades gracefully, but never exercised with the real device:**
   Gamepad, Touch, and Input's joystick/haptics screens (no controller, touchscreen, raw joystick
   or haptic device available); Devices' mobile-only Sensors/Vibration screens; Camera
@@ -151,7 +154,8 @@ cna-examples/
 │   ├── sweep.sh                   Screenshot every demo
 │   ├── check_shots.py             Flag blank or overflowing screenshots
 │   ├── check_layout.py            Flag hardcoded bottom-of-window draw positions
-│   └── check_catalog.py           Screens vs registrations vs docs consistency
+│   ├── check_catalog.py           Screens vs registrations vs docs consistency
+│   └── checks/math_claims.cpp     Asserts the facts the Math demos state on screen
 └── src/
     ├── Program.cpp                 Entry point + CLI
     ├── CnaExamplesGame.hpp         Game subclass; GraphicsDeviceManager + ScreenManager

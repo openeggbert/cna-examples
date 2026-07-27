@@ -14,12 +14,13 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **191** across 8 areas, 56 categories |
-| Last full validation | 191/191 render, 0 layout problems, catalog+layout+docs clean |
+| Demo screens | **207** across 9 areas, 61 categories |
+| Last full validation | 207/207 render, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
 | Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
 | Phase C1 (Framework area) | **Done** — 5 categories, 17 screens |
-| Phases C2–C5, D, E, F | Not started |
+| Phase C2 (Math area) | **Done** — 5 categories, 16 screens |
+| Phases C3–C5, D, E, F | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -111,7 +112,17 @@ state.
 7. **Menu selection happens on pointer RELEASE, not press.** Selecting on press
    makes drag-to-scroll impossible — the finger that lands to start a scroll
    immediately runs whatever it landed on.
-8. **`AutoScrollToSelection` will fight a manual scroll.** After a drag, it used
+8. **`Matrix::Decompose` does not detect shear.** It derives scale from basis-row lengths and
+   returns false only when an axis is ~zero. A sheared matrix returns true with parts that do
+   not rebuild it -- checking the round trip is the only way to notice.
+9. **`0.1f + 0.2f == 0.3f` in single precision.** The famous inequality is a double result.
+   `0.3f + 0.6f != 0.9f` is the float equivalent.
+10. **`MathHelper::WithinEpsilon` is `|a-b| < MachineEpsilonFloat`** (~5.96e-8), a fixed
+   *absolute* tolerance with a strict `<`. It does not generalise across magnitudes, and it
+   rejects a one-ULP gap at 0.9 because the gap exactly equals the tolerance.
+11. **`Quaternion` has no default constructor** in CNA; seed out-parameters with identity.
+12. **`MathHelper::GetMachineEpsilonFloat()` is private.** `WithinEpsilon` is the public route.
+13. **`AutoScrollToSelection` will fight a manual scroll.** After a drag, it used
    to yank the list straight back to the selected entry, so dragging appeared to
    do nothing. `MenuScreen::userScrolled_` holds it off until the selection moves.
 
@@ -147,9 +158,16 @@ python3 tools/check_shots.py build/screenshots --quiet
 
 ## 8. Resume here
 
-**C2 Math** — 5 categories, ~21 screens (Vectors, Matrix & Quaternion, Geometry, Curves,
-Color & Packed Vectors). See plan.md §7 Phase C for the per-screen breakdown. Then C3 Content →
-C4 Storage → C5 Diagnostics → D → E → F.
+**C3 Content** — 5 categories, ~15 screens (ContentManager Basics, CNJ Format, XNB Format,
+Manifest & Custom Readers, Errors). See plan.md §7 Phase C.
+
+C3 is the first area needing the configure-time asset copy agreed in §2: `.xnb` fixtures come
+from `../cna/tests/assets/xnb/` at CMake configure time and are **not** committed here. Add the
+copy to `cmake/ExamplesHelpers.cmake` (or the top-level `CMakeLists.txt`) next to the existing
+`Content/` copy step, and make the demos report "fixture not found" rather than throw when
+`../cna` is absent.
+
+Then C4 Storage → C5 Diagnostics → D → E → F.
 
 Pattern established by C1 and worth repeating:
 
@@ -162,3 +180,7 @@ Pattern established by C1 and worth repeating:
    `g++ -std=c++23 -fsyntax-only $DEFS $INCLUDES /tmp/tu.cpp`, taking `$DEFS`/`$INCLUDES` from
    `build/CMakeFiles/cna_examples.dir/flags.make`. A full rebuild per iteration is far slower.
 4. Sweep the new area alone (`./tools/sweep.sh "Area/"`) before the full sweep.
+5. **If a screen asserts a fact, test the fact.** The Math area's screens state things
+   ("a shear cannot be decomposed", "0.1f + 0.2f != 0.3f"); three such statements were
+   confidently wrong. `tools/checks/math_claims.cpp` caught them. Screens that merely display
+   live state do not need this; screens that make claims do.

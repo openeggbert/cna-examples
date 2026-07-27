@@ -17,6 +17,7 @@ namespace CnaExamples::Demos {
 
 using namespace CnaExamples::GameStateManagement;
 using Microsoft::Xna::Framework::Rectangle;
+using Microsoft::Xna::Framework::Graphics::SpriteEffects;
 
 // Shared base for every leaf demo screen (the 4th navigation level pushed by
 // a CategoryScreen entry). Provides consistent chrome -- a centered title,

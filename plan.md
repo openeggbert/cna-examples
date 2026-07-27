@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-27)
 
-Eight Areas, **191 demo screens** across 56 categories, all with real content. The numbers below
+Nine Areas, **207 demo screens** across 61 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -44,6 +44,7 @@ this file and `README.md`. Nothing here is counted by hand.
 | Area | Groups | Categories | Screens |
 |---|---:|---:|---:|
 | Framework | — | 5 | 17 |
+| Math | — | 5 | 16 |
 | Input | — | 5 | 50 |
 | Audio | — | 5 | 10 |
 | Devices | — | 6 | 15 |
@@ -51,7 +52,7 @@ this file and `README.md`. Nothing here is counted by hand.
 | Media | — | 4 | 17 |
 | 2D Graphics | 4 | 13 | 38 |
 | 3D Graphics | 4 | 14 | 30 |
-| **Total** | **8** | **56** | **191** |
+| **Total** | **9** | **61** | **207** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -63,6 +64,7 @@ Per-category breakdown:
 | Area | Categories (screens) |
 |---|---|
 | Framework | Game Loop (4), Game Components (4), Services & Dispatcher (3), Window (3), Device Manager (3) |
+| Math | Vectors (5), Matrix & Quaternion (4), Geometry (3), Curves (2), Color & Packed Vectors (2) |
 | Input | Keyboard (10), Mouse (10), Gamepad (10), Touch (10), Other (10) |
 | Audio | SoundEffect (2), SoundEffectInstance (3), 3D Audio (2), DynamicSoundEffectInstance (1), Microphone (2) |
 | Devices | Sensors (4), Vibration (1), Camera (1), System & Display (3), Power (1), Desktop Integration (5) |
@@ -323,7 +325,7 @@ Five new Home entries, **72 screens**.
   `Game` startup, long before a screen exists to listen. The screen states this instead of leaving
   a permanently empty line looking broken.
 
-#### C2 Math — 5 categories, 21 screens
+#### C2 Math — 5 categories, 16 screens — **DONE**
 
 | Category | Screens |
 |---|---|
@@ -332,6 +334,37 @@ Five new Home entries, **72 screens**.
 | Geometry (5) | `BoundingBox` vs box/sphere/ray/plane/frustum → `ContainmentType` · `BoundingSphere` `CreateFromPoints`/`CreateMerged`/`Transform` · mouse-picking `Ray` against sphere/box/plane · `Plane::DotCoordinate` + `PlaneIntersectionType` + `BoundingFrustum` planes/corners · frustum culling a cube grid, live drawn-vs-culled count |
 | Curves (3) | `Curve`/`CurveKey` spline with live key editing · `CurveTangent` Flat/Linear/Smooth compared · `CurveLoopType` Constant/Cycle/CycleOffset/Oscillate/Linear |
 | Color & Packed Vectors (4) | `Color` construction, `ToVector3/4`, named-color grid · `Color::Lerp`, `PackedValue`, `FromNonPremultiplied` · all 20 `PackedVector` types, pack/unpack round trip + bit layout · precision loss visualized (`Bgr565`, `Bgra4444`, `HalfSingle`, `NormalizedByte2`, …) |
+
+**Built as 16 screens, not the projected 21.** Five planned screens were dropped as
+duplicates rather than padded out, per the estimate-not-commitment rule:
+
+- *BoundingSphere* and *Plane & Frustum* folded into **Bounding Volumes** and **Frustum
+  Culling** — `CreateFromPoints`/`CreateMerged` and the frustum's own planes are shown there,
+  and separate screens would have repeated the same API with different framing.
+- *Curve evaluation* folded into **Tangents**, which already evaluates a curve continuously;
+  a third curve screen showing only `Evaluate` had nothing left to add.
+- *Color Lerp/Pack* and *PackedVector precision* folded into **Conversions** and the
+  **Gallery**, whose error column already is the precision story.
+
+**Three demo claims were wrong and were corrected before shipping**, found by
+`tools/checks/math_claims.cpp` — a verification program written specifically because these
+screens assert facts rather than merely display state:
+
+1. "A sheared matrix cannot be decomposed" — **false**. CNA's `Matrix::Decompose` (following
+   FNA) derives scale from basis-row lengths and returns `false` only when an axis is ~zero.
+   A shear returns `true` and yields parts that do **not** rebuild the original. The demo now
+   multiplies the parts back together and shows the mismatch, because the return value alone
+   will never reveal it.
+2. "`0.1f + 0.2f != 0.3f`" — **false in single precision**. That famous example is a
+   *double* result; in `float` the rounding coincides and the comparison is exactly equal.
+   The demo now shows both that case and `0.3f + 0.6f`, which genuinely differs.
+3. "`WithinEpsilon` is the fix" — **not for that pair**. `WithinEpsilon` is
+   `|a-b| < MachineEpsilonFloat`, a fixed absolute tolerance of ~5.96e-8; the gap there is
+   exactly one ULP, which equals the tolerance, and the test is a strict `<`. The demo now
+   states the tolerance and why an absolute epsilon does not generalise.
+
+Keeping that checker in the repo is the point: a screen that *asserts* something needs its
+assertion tested, not just its pixels.
 
 #### C3 Content — 5 categories, 15 screens
 
