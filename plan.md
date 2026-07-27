@@ -607,6 +607,21 @@ reflected hue measurably changes as the object spins (green → dark green → b
 claim about backend behaviour rather than an API demonstration, and it belongs with D6's surface
 format work where it can be shown across every format at once.
 
+#### D2 PBR — **BLOCKED (`needs_human`), 0 screens shipped**
+
+A `PbrEffect` metallic/roughness grid was written and then **reverted**: it never rendered
+geometry, and the cause was not found within a reasonable budget. The repo stays at its verified
+state rather than carrying a screen that draws nothing. Full findings, including the five things
+tried that did not fix it and the one remaining untested difference from `../cna`'s own working
+example, are in `NEXT.md` §7.
+
+The short version: `PbrEffect` is genuinely implemented in EasyGL (a real metallic-roughness BRDF
+shader), so this is not a missing-feature dead end. Two real API facts came out of the attempt and
+are worth keeping regardless: tangent vertex types have **no** typed `DrawUserIndexedPrimitives`
+or `VertexBuffer::SetData` overload, so they silently bind the untyped `const void*` overload and
+draw garbage rather than failing; and `VertexPositionNormalTangentTexture::Tangent` is a `Vector4`
+whose W carries glTF bitangent handedness.
+
 #### D4 Effect Reflection — 1 category, 3 screens — **DONE (reduced scope, see below)**
 
 | Category | Screens |

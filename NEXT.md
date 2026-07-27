@@ -28,7 +28,8 @@ state.
 | Phase D1 (Audio/XACT) | **Done, reduced scope** — 1 category, 2 screens |
 | Phase D5 (3D Textures & Queries) | **Done** — 1 category, 4 screens |
 | Phase D4 (Effect Reflection) | **Done, reduced scope** — 1 category, 3 screens |
-| Phases D2, D3, D6–D8, E, F1, F2 | Not started |
+| Phase D2 (PBR) | **Blocked** — see §7, `needs_human` |
+| Phases D3, D6–D8, E, F1, F2 | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -268,7 +269,44 @@ python3 tools/check_shots.py build/screenshots --quiet
 
 ## 7. Blocked / needs_human
 
-*(none)* — nothing in the roadmap is currently blocked on a human decision. The three that could
+**D2 (PbrEffect) — `needs_human`: PbrEffect renders nothing from this app, cause not found.**
+
+A `PbrEffect` metallic/roughness grid screen was written, verified by pixel measurement, and
+**reverted** because it never rendered geometry. The repo is back at the clean 229-demo state; the
+work-in-progress screen and the sphere-helper patch are preserved under the session scratchpad
+(`pbr-wip/`) but are NOT in the tree.
+
+What was established, so none of it needs redoing:
+
+1. **PbrEffect IS implemented in EasyGL.** `EasyGLGraphicsBackend::EnsurePbrProgram()` compiles a
+   real metallic-roughness BRDF (`PbrLight()`, three directional lights, normal/emissive/occlusion
+   maps). This is not an unimplemented-feature dead end.
+2. **Tangent vertex types are second-class across the API.** `GraphicsDevice` has typed
+   `DrawUserIndexedPrimitives` overloads for only four legacy vertex types; a
+   `VertexPositionNormalTangentTexture` array therefore binds the untyped `const void*` overload,
+   which carries NO vertex declaration, so the GPU reinterprets stride-48 data under whatever
+   layout was last bound. It does not throw -- it draws garbage that fills the viewport. That was
+   the first symptom and it was diagnosed by measurement, not by the app failing.
+   `VertexBuffer::SetData` has the same gap; uploading needs `SetDataRaw(data, count, stride)`.
+3. **`Tangent` is a `Vector4`, not a `Vector3`** -- W is the bitangent handedness sign, glTF
+   convention `Bitangent = cross(Normal, Tangent.xyz) * Tangent.W`. For a UV sphere `cross(N,T)`
+   works out to `d(position)/d(phi)`, which points along +V, so W = +1.
+4. **Things tried that did NOT fix it** (all measured, viewport stayed empty): the buffered path
+   with an explicit `VertexDeclaration`; the two-argument `VertexBuffer(device, count)` constructor
+   that `../cna`'s own working example uses; `SetDataRaw` with an explicit stride; flipping the
+   sphere's triangle winding; `RasterizerState::CullNone`; binding a base-colour `Texture2D`
+   (the PBR shader samples albedo, so a null texture was a plausible cause); expanding to a flat
+   non-indexed list drawn with `DrawPrimitives` instead of `DrawIndexedPrimitives`.
+5. **The one untested difference from the known-good path.**
+   `../cna/examples/easygl_pbreffect_golden_test.cpp` renders correctly and differs from the app in
+   exactly one remaining respect: it uses **identity** World/View/Projection with quad vertices
+   already in NDC, whereas the app sets real camera matrices. Start there -- verify whether
+   `PbrEffect`'s `setWorldProperty`/`setViewProperty`/`setProjectionProperty` actually reach the
+   shader, e.g. by drawing one NDC-space triangle with identity matrices first and only then
+   introducing a camera. If the matrices are the problem, that is a CNA bug worth reporting
+   upstream rather than working around here.
+
+Everything else in the roadmap is unblocked. The three that could
 have been were settled up front and are recorded in §2: asset licensing, branch policy, and
 depth-over-breadth.
 
