@@ -1,0 +1,8 @@
+{
+  "cnjVersion": 1,
+  "type": "LootTable",
+  "displayName": "Cave Loot",
+  "hitPoints": 0,
+  "speed": 0.0,
+  "tags": ["gold", "potion", "rope"]
+}

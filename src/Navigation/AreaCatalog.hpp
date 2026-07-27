@@ -160,6 +160,8 @@
 #include "Demos/Content/Manifest/ContentManifestScreen.hpp"
 #include "Demos/Content/Xnb/XnbFixturesScreen.hpp"
 #include "Demos/Content/Errors/ContentLoadExceptionScreen.hpp"
+#include "Demos/Content/Cnj/CnjEnvelopeScreen.hpp"
+#include "Demos/Content/Cnj/CustomCnjLoaderScreen.hpp"
 #include "Demos/Storage/Device/StorageDeviceScreen.hpp"
 #include "Demos/Storage/Container/SaveGameRoundTripScreen.hpp"
 #include "Demos/Diagnostics/Logging/LoggerScreen.hpp"
@@ -992,6 +994,18 @@ inline std::vector<DemoEntry> BuildDiagnosticsAdapterDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildContentCnjDemos() {
+    using namespace CnaExamples::Demos::Content::CnjDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<CnjEnvelopeScreen>(
+        "Envelope", "cnjVersion/type/sourceFile, parsed live -- including an invalid one",
+        {"CnjEnvelope", "ParseCnjEnvelope", "cnjVersion"}));
+    demos.push_back(MakeDemo<CustomCnjLoaderScreen>(
+        "Custom Loaders", "Two .cnj \"type\" names, one C++ struct, no reader class to write",
+        {"ContentManager::RegisterCnjLoader", "CnjLoaderFn", "ContentManager::Load"}));
+    return demos;
+}
+
 inline std::vector<DemoEntry> BuildDrawingBasicsDemos() {
     using namespace CnaExamples::Demos::Graphics2D::DrawingBasicsDemos;
     std::vector<DemoEntry> demos;
@@ -1312,6 +1326,7 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
         AreaEntry{"Content", {
             CategoryEntry{"ContentManager Basics", BuildContentBasicsDemos()},
             CategoryEntry{"Manifest", BuildContentManifestDemos()},
+            CategoryEntry{"CNJ Format", BuildContentCnjDemos()},
             CategoryEntry{"XNB Format", BuildContentXnbDemos()},
             CategoryEntry{"Errors", BuildContentErrorsDemos()},
         }},

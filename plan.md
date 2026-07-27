@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-27)
 
-Twelve Areas, **218 demo screens** across 71 categories, all with real content. The numbers below
+Twelve Areas, **220 demo screens** across 72 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -45,7 +45,7 @@ this file and `README.md`. Nothing here is counted by hand.
 |---|---:|---:|---:|
 | Framework | — | 5 | 17 |
 | Math | — | 5 | 16 |
-| Content | — | 4 | 5 |
+| Content | — | 5 | 7 |
 | Storage | — | 2 | 2 |
 | Diagnostics | — | 4 | 4 |
 | Input | — | 5 | 50 |
@@ -55,7 +55,7 @@ this file and `README.md`. Nothing here is counted by hand.
 | Media | — | 4 | 17 |
 | 2D Graphics | 4 | 13 | 38 |
 | 3D Graphics | 4 | 14 | 30 |
-| **Total** | **12** | **71** | **218** |
+| **Total** | **12** | **72** | **220** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -68,7 +68,7 @@ Per-category breakdown:
 |---|---|
 | Framework | Game Loop (4), Game Components (4), Services & Dispatcher (3), Window (3), Device Manager (3) |
 | Math | Vectors (5), Matrix & Quaternion (4), Geometry (3), Curves (2), Color & Packed Vectors (2) |
-| Content | ContentManager Basics (2), Manifest (1), XNB Format (1), Errors (1) |
+| Content | ContentManager Basics (2), Manifest (1), CNJ Format (2), XNB Format (1), Errors (1) |
 | Storage | StorageDevice (1), StorageContainer (1) |
 | Diagnostics | Logging (1), Platform & Build (1), Backend & Capabilities (1), Adapter & Display (1) |
 | Input | Keyboard (10), Mouse (10), Gamepad (10), Touch (10), Other (10) |
@@ -413,11 +413,17 @@ complete and verified; the reduction is recorded rather than hidden.
 Errors.
 
 *Not built, and why:*
-- **CNJ Format (3 screens)** — not started. `.cnj` is CNA's own JSON descriptor format and is a
-  genuine gap; the app's own menu font is stored as one, so the material exists. This is the
-  most valuable remaining Content work.
-- **Custom type readers** — folded away for now; `RegisterTypeReader<T>`/`RegisterCnjLoader<T>`
-  belong with the CNJ screens rather than on their own.
+- **CNJ Format** — **since built (2 screens, not the projected 3).** `Envelope` parses
+  `cnjVersion`/`type`/`sourceFile` live from three real files including a deliberately invalid
+  one; `Custom Loaders` registers two differently-named `.cnj` types (`EnemyDefinition` and
+  `LootTable`) that both deserialise into one C++ struct, which is the whole point of
+  `RegisterCnjLoader<T>` as distinct from `RegisterTypeReader<T>`, and exercises all three
+  fail-fast registration rules live. A third screen showing only a `.cnj`-described SpriteFont
+  would have repeated what `Asset Name Resolution` already covers.
+  Verified by `tools/checks/cnj_claims.cpp` — 10 claims, all holding — rather than by
+  screenshot, because these screens catch their own exceptions and would render cleanly even
+  if every load failed. The demo assets (`Content/ContentDemo/cnj/*.cnj`) are this app's own,
+  so nothing is borrowed.
 - The remaining XNB screens (SpriteFont, sound effects, LZX as a separate screen) collapsed into
   one **XNB Fixtures** screen that cycles an uncompressed texture, a DXT1 cube map and an
   LZX-compressed texture. Splitting them would have repeated the same load call three times.

@@ -15,13 +15,13 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **218** across 12 areas, 71 categories |
+| Demo screens | **220** across 12 areas, 72 categories |
 | Last full validation | 218/218 on EASYGL **and** SDL_RENDERER, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
 | Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
 | Phase C1 (Framework area) | **Done** — 5 categories, 17 screens |
 | Phase C2 (Math area) | **Done** — 5 categories, 16 screens |
-| Phase C3 (Content area) | **Done, reduced scope** — 4 categories, 5 screens; CNJ category not built |
+| Phase C3 (Content area) | **Done** — 5 categories, 7 screens (CNJ category since added) |
 | Phase C4 (Storage area) | **Done, reduced scope** — 2 categories, 2 screens |
 | Phase C5 (Diagnostics area) | **Done, reduced scope** — 4 categories, 4 screens |
 | Phase F3 (SDL_RENDERER pass) | **Done** — 218/218 on both backends, 3D gated on ThreeD |
@@ -206,22 +206,16 @@ preference worth stating, because the current bias is deliberate and will otherw
 
 ## 8. Resume here
 
-Three candidates, in this order:
+Candidates, in this order:
 
-**(a) Finish C3's CNJ Format category** (~3 screens) — the one deliberate gap in an otherwise
-complete area, and the highest-value leftover. `.cnj` is CNA's own JSON descriptor format; the
-app's own `Content/menufont.cnj` is a working example to build from, and `Content/blank.png`
-plus the atlas show the loose-file side. `RegisterCnjLoader<T>` belongs here too. Everything
-needed is already in the repo — no borrowed assets.
-
-**(b) Phase D** — deepening existing areas (XACT, PBR, Model content, effect reflection,
+**(a) Phase D** — deepening existing areas (XACT, PBR, Model content, effect reflection,
 Texture3D/Cube/RenderTargetCube, occlusion queries). D1's XACT is self-contained: the bank
 generator in `../cna/examples/demo_xact/src/XactFileGen.hpp` is 389 lines with no dependencies
 and can be adapted in place, so no assets need borrowing.
 
-**(c) Extend C4 Storage** — container directory operations and container lifetime.
+**(b) Extend C4 Storage** — container directory operations and container lifetime.
 
-**(d) Phase F2, the Emscripten build** — `~/emsdk` is installed (`emcc` at
+**(c) Phase F2, the Emscripten build** — `~/emsdk` is installed (`emcc` at
 `~/emsdk/upstream/emscripten/emcc`, not on `PATH`; source `~/emsdk/emsdk_env.sh`). Expect to gate
 Net, Camera, FileDialog, SystemTray, Microphone and Storage the way 3D is now gated — the
 `Requiring()` + `SetRequiredCapability` machinery is in place, though a platform gate would need
@@ -238,13 +232,18 @@ Pattern established by C1 and worth repeating:
 1. Read the CNA header first and build against what is actually there — CNA's
    `DisplayOrientation` has no `PortraitDown`, and assuming the XNA/WP7 shape cost a compile
    cycle.
-2. Put anything a demo mutates globally back in `UnloadContent()`, and *verify* the restore
+2. Put anything a demo mutates globally back in `OnDemoUnload()` (NOT `UnloadContent`,
+   which is now `final` on DemoScreen), and *verify* the restore
    rather than trusting it (the back-buffer size is readable straight off the screenshot).
 3. Syntax-check new screens with a throwaway TU before touching `AreaCatalog.hpp`:
    `g++ -std=c++23 -fsyntax-only $DEFS $INCLUDES /tmp/tu.cpp`, taking `$DEFS`/`$INCLUDES` from
    `build/CMakeFiles/cna_examples.dir/flags.make`. A full rebuild per iteration is far slower.
 4. Sweep the new area alone (`./tools/sweep.sh "Area/"`) before the full sweep.
-5. **Check that a demo actually did the thing**, not just that it rendered. The Content area's
+5. **A screen that catches its own exceptions renders cleanly when everything failed.** Both the
+   XNB and CNJ screens do this by design, so a green sweep says nothing about whether they
+   loaded anything. `tools/checks/*.cpp` assert the claims directly; add one for any new area
+   whose screens swallow errors.
+6. **Check that a demo actually did the thing**, not just that it rendered. The Content area's
    XNB screen catches its own exceptions and prints them, so a total failure to load still
    produced a clean-looking screenshot and a passing sweep. What caught it was measuring the
    preview region: no texture drawn meant no load. Two real bugs hid behind that.

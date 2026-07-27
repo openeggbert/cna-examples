@@ -1,0 +1,8 @@
+{
+  "cnjVersion": 1,
+  "type": "EnemyDefinition",
+  "displayName": "Goblin Scout",
+  "hitPoints": 24,
+  "speed": 3.5,
+  "tags": ["melee", "fast"]
+}

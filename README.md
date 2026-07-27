@@ -15,14 +15,14 @@ first seven areas were built and verified.
 
 ## Status
 
-**12 areas, 71 categories, 218 demo screens**, every one of them exercising a real
+**12 areas, 72 categories, 220 demo screens**, every one of them exercising a real
 `Microsoft::Xna::Framework` / `CNA::*` API call rather than a mock.
 
 | Area | Categories | Screens |
 |---|---|---:|
 | Framework | Game Loop, Game Components, Services & Dispatcher, Window, Device Manager | 17 |
 | Math | Vectors, Matrix & Quaternion, Geometry, Curves, Color & Packed Vectors | 16 |
-| Content | ContentManager Basics, Manifest, XNB Format, Errors | 5 |
+| Content | ContentManager Basics, Manifest, CNJ Format, XNB Format, Errors | 7 |
 | Storage | StorageDevice, StorageContainer | 2 |
 | Diagnostics | Logging, Platform & Build, Backend & Capabilities, Adapter & Display | 4 |
 | Input | Keyboard, Mouse, Gamepad, Touch, Other | 50 |
@@ -168,7 +168,9 @@ cna-examples/
 │   ├── check_shots.py             Flag blank or overflowing screenshots
 │   ├── check_layout.py            Flag hardcoded bottom-of-window draw positions
 │   ├── check_catalog.py           Screens vs registrations vs docs consistency
-│   └── checks/math_claims.cpp     Asserts the facts the Math demos state on screen
+│   └── checks/                    Programs asserting what demos claim on screen
+│       ├── math_claims.cpp        (caught three wrong statements before release)
+│       └── cnj_claims.cpp         (.cnj loaders, envelope and fail-fast rules)
 └── src/
     ├── Program.cpp                 Entry point + CLI
     ├── CnaExamplesGame.hpp         Game subclass; GraphicsDeviceManager + ScreenManager
