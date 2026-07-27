@@ -30,7 +30,7 @@ class FriendsAndGamerCardScreen : public DemoScreen {
 public:
     FriendsAndGamerCardScreen() : DemoScreen("GamerServices: Friends & GamerCard") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         gamer_ = (*Gamer::getSignedInGamersProperty())[PlayerIndex::One];
         demoRoster_.push_back(FriendGamer::CreateInternal("AlphaWolf99", "Alpha", true, true, false, false, false, false));
         demoRoster_.push_back(FriendGamer::CreateInternal("NightOwl", "Night Owl", true, false, true, false, false, false));

@@ -36,7 +36,7 @@ class DopplerDistanceScreen : public DemoScreen {
 public:
     DopplerDistanceScreen() : DemoScreen("3D Audio: Doppler & Distance Scale") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         try {
             effect_.emplace(GenerateSineWavePcm16(392.0f, 6.0f), 44100, AudioChannels::Mono);
             instance_ = effect_->CreateInstance();
@@ -47,7 +47,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         if (instance_.has_value()) instance_->Stop(true);
     }
 

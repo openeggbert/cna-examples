@@ -27,12 +27,12 @@ public:
 
     SaveAsJpegRoundTripScreen() : DemoScreen("Texture2D: SaveAsJpeg Round-Trip") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         original_.emplace(CreateGradientTexture(GetScreenManager()->getGraphicsDeviceProperty(), kSize, kSize,
                                                   Color(80, 160, 255, 255), Color(255, 220, 80, 255)));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         original_.reset();
         reloaded_.reset();
     }

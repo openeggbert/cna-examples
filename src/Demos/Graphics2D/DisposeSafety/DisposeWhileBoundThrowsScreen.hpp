@@ -26,11 +26,11 @@ class DisposeWhileBoundThrowsScreen : public DemoScreen {
 public:
     DisposeWhileBoundThrowsScreen() : DemoScreen("RenderTarget2D: Dispose While Bound Throws") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         target_.emplace(GetScreenManager()->getGraphicsDeviceProperty(), 64, 64);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         // Deliberately not calling target_->Dispose() here -- see the class
         // doc comment above: it's confirmed to throw while bound, and this
         // demo's own attempt below may leave the target's disposal state

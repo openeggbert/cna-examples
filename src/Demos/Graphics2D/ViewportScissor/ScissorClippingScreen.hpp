@@ -30,12 +30,12 @@ class ScissorClippingScreen : public DemoScreen {
 public:
     ScissorClippingScreen() : DemoScreen("Viewport: Scissor Clipping") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         texture_.emplace(CreateGradientTexture(GetScreenManager()->getGraphicsDeviceProperty(), 200, 200,
                                                  Color(255, 80, 80, 255), Color(80, 80, 255, 255)));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         device.setScissorRectangleProperty(device.getViewportProperty().getBoundsProperty());
         device.setRasterizerStateProperty(RasterizerState());

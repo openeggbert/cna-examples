@@ -75,7 +75,7 @@ class EnvironmentMapTuningScreen : public DemoScreen {
 public:
     EnvironmentMapTuningScreen() : DemoScreen("EnvironmentMapEffect: Amount & Fresnel") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeNormalTextureMesh(1.0f);
         detail_env_tuning::CreateSixColorEnvironmentMap(device, 8, envMap_);
@@ -86,7 +86,7 @@ public:
         effect_->setFresnelFactorProperty(fresnel_);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         envMap_.reset();
     }

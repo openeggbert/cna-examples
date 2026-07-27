@@ -33,12 +33,12 @@ class AddressModeScreen : public DemoScreen {
 public:
     AddressModeScreen() : DemoScreen("SamplerState: Address Mode") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         small_.emplace(CreateCheckerboardTexture(GetScreenManager()->getGraphicsDeviceProperty(), 8, 8, 2,
                                                    Color(255, 200, 60, 255), Color(60, 90, 255, 255)));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         small_.reset();
     }
 

@@ -30,7 +30,7 @@ class LocalSessionLifecycleScreen : public DemoScreen {
 public:
     LocalSessionLifecycleScreen() : DemoScreen("NetworkSession: Local Lifecycle") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         session_ = NetworkSession::Create(NetworkSessionType::Local, 1, 4);
         session_->GameStarted += [this](System::Object*, const GameStartedEventArgs&) { gameStartedCount_++; };
         session_->GameEnded += [this](System::Object*, const GameEndedEventArgs&) { gameEndedCount_++; };
@@ -41,7 +41,7 @@ public:
         localGamer_ = session_->getLocalGamersProperty()[0];
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         EndSession(session_);
     }
 

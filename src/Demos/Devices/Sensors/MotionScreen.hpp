@@ -27,7 +27,7 @@ class MotionScreen : public DemoScreen {
 public:
     MotionScreen() : DemoScreen("Sensors: Motion (fused)") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         supported_ = Motion::getIsSupportedProperty();
         if (!supported_) return;
         try {
@@ -38,7 +38,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         if (sensor_.has_value()) sensor_->Stop();
     }
 

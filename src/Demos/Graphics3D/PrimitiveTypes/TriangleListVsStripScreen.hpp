@@ -38,7 +38,7 @@ class TriangleListVsStripScreen : public DemoScreen {
 public:
     TriangleListVsStripScreen() : DemoScreen("PrimitiveType: TriangleList vs. TriangleStrip") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         effect_.emplace(GetScreenManager()->getGraphicsDeviceProperty());
         effect_->VertexColorEnabled = true;
 
@@ -65,7 +65,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
     }
 

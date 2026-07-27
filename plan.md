@@ -125,12 +125,36 @@ CNA selects its backend at compile time via `CNA_GRAPHICS_BACKEND`. This app def
 `EASYGL` (CNA's most complete backend) and never hard-codes a backend-specific assumption — it
 uses only public `Microsoft::Xna::Framework` APIs.
 
-Today only `EASYGL` is verified. Phase F4 adds a second verified backend, `SDL_RENDERER`, which
-is deliberately 2D-only: every 3D call throws. That is not a reason to skip it — it is the reason
-to do it. It forces the catalog to gate demos on `GraphicsDevice::SupportsCapability()` rather
-than assuming a full pipeline, which is exactly what a real CNA consumer has to do. The
+`EASYGL` and `SDL_RENDERER` are both verified (Phase F3). `SDL_RENDERER` is
+deliberately 2D-only: every 3D call throws. That was not a reason to skip it — it was the reason
+to do it. It forced the catalog to gate demos on `GraphicsDevice::SupportsCapability()` rather
+than assume a full pipeline, which is exactly what a real CNA consumer has to do. The
 `Diagnostics` area (Phase C5) makes that capability model visible to the user as a demo in its
 own right.
+
+**F3 result.** `tools/sweep_backend.sh build-sdlrenderer` renders **218/218** with zero layout
+problems, and the EasyGL tree still renders 218/218 — no regression from the gating.
+
+Two rounds were needed, and the second is the interesting one:
+
+1. Gating `Update`/`Draw`/`HandleInput` on the capability took the failures from a crash on every
+   3D demo down to **4 of 218**.
+2. Those four still aborted with `SDL_Renderer does not support 3D: CreateVertexBuffer`, because
+   they build their GPU resources in `LoadContent`, which runs long before `Draw`. Gating only
+   the draw path is not enough — the load path is where a 3D demo actually touches the device.
+
+`DemoScreen::LoadContent`/`UnloadContent` are now `final` and gate a new
+`OnDemoLoad`/`OnDemoUnload` pair, so a demo cannot accidentally bypass the check by overriding
+the wrong method. All 139 demo screens were migrated to the new hooks. A `loaded_` flag ensures
+the unload hook runs if and only if the load hook did.
+
+Gating is applied per category at the catalog assembly site (`Requiring()` in `AreaCatalog.hpp`),
+not inside each screen, so a new demo dropped into a gated category inherits the gate instead of
+having to remember it.
+
+A gated demo shows an amber panel naming the missing capability and the active backend, and
+points at `Diagnostics > Backend & Capabilities`. Verified by pixel measurement: 10196 amber
+pixels where the 3D scene would otherwise be.
 
 ## 5. Navigation architecture
 
@@ -518,7 +542,7 @@ New Home entry, 3 categories, **7 screens**, built on `../cna/examples/demo_avat
 |---|---|
 | F1 | **Xvfb screenshot sweep of every screen** via B5's `--demo`/`--screenshot`/`--frames` CLI. The 2D and 3D passes found 11 real defects between them (two of them framework-level bugs in CNA itself, not demo bugs), so this is the highest-yield verification step available. Every defect found is fixed or explicitly recorded. |
 | F2 | **Emscripten (web) build.** Confirm the whole catalog compiles for web and that demos which cannot work there (Net, Camera, FileDialog, SystemTray, Storage paths, Microphone) degrade with an honest "not available on this platform" screen rather than throwing. |
-| F3 | **`SDL_RENDERER` backend pass.** Build the catalog against the 2D-only backend and gate every 3D demo behind `GraphicsDevice::SupportsCapability(GraphicsCapability::ThreeD)` so it reports honestly instead of crashing. |
+| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with all 14 3D Graphics categories gated on `SupportsCapability(ThreeD)`. **218/218 render on both backends.** See below. |
 
 Android hardware verification is **not** part of this cycle — see §10.
 

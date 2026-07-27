@@ -30,7 +30,7 @@ class ClientSizeChangedScreen : public DemoScreen {
 public:
     ClientSizeChangedScreen() : DemoScreen("Window: ClientSizeChanged") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         GameWindow& window = Window();
         originalAllowResizing_ = window.getAllowUserResizingProperty();
         window.setAllowUserResizingProperty(true);
@@ -40,7 +40,7 @@ public:
             [this](System::Object*, const System::EventArgs&) { OnResized(); });
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         GameWindow& window = Window();
         window.ClientSizeChanged.Remove(token_);
         window.setAllowUserResizingProperty(originalAllowResizing_);

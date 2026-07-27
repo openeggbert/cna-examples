@@ -78,7 +78,7 @@ class ReflectiveCubeScreen : public DemoScreen {
 public:
     ReflectiveCubeScreen() : DemoScreen("EnvironmentMapEffect: Reflective Cube") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeNormalTextureMesh(1.0f);
         CreateSixColorEnvironmentMap(device, 8, envMap_);
@@ -88,7 +88,7 @@ public:
         effect_->setDiffuseColorProperty(Vector3(0.3f, 0.3f, 0.3f));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         envMap_.reset();
     }

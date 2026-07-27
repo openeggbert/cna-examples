@@ -26,7 +26,7 @@ class AllGesturesLogScreen : public DemoScreen {
 public:
     AllGesturesLogScreen() : DemoScreen("Touch: All Gestures Log") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         previousGestures_ = TouchPanel::getEnabledGesturesProperty();
         TouchPanel::setEnabledGesturesProperty(
             GestureType::Tap | GestureType::DoubleTap | GestureType::Hold |
@@ -35,7 +35,7 @@ public:
             GestureType::Flick | GestureType::DragComplete);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         TouchPanel::setEnabledGesturesProperty(previousGestures_);
     }
 

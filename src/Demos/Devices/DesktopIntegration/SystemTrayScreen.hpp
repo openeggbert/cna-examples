@@ -24,7 +24,7 @@ class SystemTrayScreen : public DemoScreen {
 public:
     SystemTrayScreen() : DemoScreen("Desktop: SystemTray") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         supported_ = SystemTray::getIsSupportedProperty();
         if (!supported_) return;
         tray_.emplace("cna-examples: SystemTray demo");
@@ -32,7 +32,7 @@ public:
                                       [this]() { OnEntryClicked(); });
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         tray_.reset();
     }
 

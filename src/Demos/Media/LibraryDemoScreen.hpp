@@ -33,7 +33,7 @@ class LibraryDemoScreen : public DemoScreen {
 public:
     explicit LibraryDemoScreen(std::string title) : DemoScreen(std::move(title)) {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         const auto roots = Roots();
         roots_ = std::make_unique<ScopedDemoMediaRoots>(roots.first, roots.second);
         try {
@@ -44,7 +44,7 @@ public:
         OnLibraryLoaded();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         library_.reset();   // must go first: it holds paths resolved from the override
         roots_.reset();
     }

@@ -52,7 +52,10 @@ registrations in `src/Navigation/AreaCatalog.hpp` all agree.
   Gamepad, Touch, and Input's joystick/haptics screens (no controller, touchscreen, raw joystick
   or haptic device available); Devices' mobile-only Sensors/Vibration screens; Camera
   (no webcam); MessageBox/FileDialog (need a human).
-- **Backend:** only `EASYGL` is verified. See `plan.md` §4.
+- **Backends:** `EASYGL` and `SDL_RENDERER` are both verified — 218/218 demos render on each.
+  `SDL_RENDERER` is 2D-only by design, so the 3D Graphics area is gated on
+  `GraphicsDevice::SupportsCapability(ThreeD)` and those demos explain themselves rather than
+  throwing. See `plan.md` §4.
 
 ## Navigating the app
 
@@ -91,6 +94,12 @@ tools/headless.sh --demo "Media/Song/Visualization" --frames 150 --screenshot /t
 tools/sweep.sh                 # screenshot every demo
 tools/sweep.sh Media           # ...or just the ones matching a filter
 tools/check_shots.py build/screenshots   # flag blank/overflowing screens
+
+# A second backend, in its own build tree
+cmake -S . -B build-sdlrenderer -DCNA_GRAPHICS_BACKEND=SDL_RENDERER \
+  -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
+cmake --build build-sdlrenderer -j4 --target cna_examples
+tools/sweep_backend.sh build-sdlrenderer
 ```
 
 ## Platforms
@@ -155,6 +164,7 @@ cna-examples/
 │   ├── gen_media_library.sh       Regenerates Content/MediaLibraryDemo/
 │   ├── headless.sh                Run one demo on a virtual display
 │   ├── sweep.sh                   Screenshot every demo
+│   ├── sweep_backend.sh           ...from a non-default build tree (a second backend)
 │   ├── check_shots.py             Flag blank or overflowing screenshots
 │   ├── check_layout.py            Flag hardcoded bottom-of-window draw positions
 │   ├── check_catalog.py           Screens vs registrations vs docs consistency

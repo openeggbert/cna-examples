@@ -46,7 +46,7 @@ class CustomGlslShaderScreen : public DemoScreen {
 public:
     CustomGlslShaderScreen() : DemoScreen("ShaderEffect: Custom GLSL Shader") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeColorMesh(1.0f, {
             Color(220, 60, 60, 255), Color(60, 220, 90, 255), Color(60, 110, 220, 255),
@@ -79,7 +79,7 @@ void main() {
         effect_.emplace(device, kVertSrc, kFragSrc);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
     }
 

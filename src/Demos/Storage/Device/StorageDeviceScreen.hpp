@@ -29,9 +29,9 @@ class StorageDeviceScreen : public DemoScreen {
 public:
     StorageDeviceScreen() : DemoScreen("Storage: StorageDevice") {}
 
-    void LoadContent() override { Open(); }
+    void OnDemoLoad() override { Open(); }
 
-    void UnloadContent() override { device_.reset(); }
+    void OnDemoUnload() override { device_.reset(); }
 
 protected:
     void OnDemoInput(InputState& input) override {

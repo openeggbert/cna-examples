@@ -27,7 +27,7 @@ class CollectionEventsScreen : public DemoScreen {
 public:
     CollectionEventsScreen() : DemoScreen("Components: Collection Events") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& game = GameRef();
         component_ = std::make_unique<CountingComponent>(game, "watched");
 
@@ -42,7 +42,7 @@ public:
             });
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         auto& components = GameRef().getComponentsProperty();
         // Unsubscribe before the component goes away: these handlers capture
         // `this`, and the collection outlives this screen by a long way.

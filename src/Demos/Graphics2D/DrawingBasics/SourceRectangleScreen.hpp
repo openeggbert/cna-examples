@@ -28,7 +28,7 @@ public:
 
     SourceRectangleScreen() : DemoScreen("SpriteBatch: Source Rectangle") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         std::vector<Color> palette = {
             Color(255, 80, 80, 255),  Color(80, 255, 80, 255),  Color(80, 80, 255, 255),  Color(255, 255, 80, 255),
             Color(255, 80, 255, 255), Color(80, 255, 255, 255), Color(255, 160, 60, 255), Color(160, 60, 255, 255),
@@ -38,7 +38,7 @@ public:
         atlas_.emplace(CreateGridTexture(GetScreenManager()->getGraphicsDeviceProperty(), kCols, kRows, kCellSize, palette));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         atlas_.reset();
     }
 

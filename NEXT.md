@@ -15,7 +15,7 @@ state.
 | | |
 |---|---|
 | Demo screens | **218** across 12 areas, 71 categories |
-| Last full validation | 218/218 render, 0 layout problems, catalog+layout+docs clean |
+| Last full validation | 218/218 on EASYGL **and** SDL_RENDERER, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
 | Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
 | Phase C1 (Framework area) | **Done** — 5 categories, 17 screens |
@@ -23,7 +23,8 @@ state.
 | Phase C3 (Content area) | **Done, reduced scope** — 4 categories, 5 screens; CNJ category not built |
 | Phase C4 (Storage area) | **Done, reduced scope** — 2 categories, 2 screens |
 | Phase C5 (Diagnostics area) | **Done, reduced scope** — 4 categories, 4 screens |
-| Phases D, E, F | Not started |
+| Phase F3 (SDL_RENDERER pass) | **Done** — 218/218 on both backends, 3D gated on ThreeD |
+| Phases D, E, F1, F2 | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -64,7 +65,11 @@ state.
 - **Hardware-unverified demos** (unchanged from before): Gamepad, Touch, Input's
   joystick/haptics screens, Devices' mobile-only Sensors/Vibration, Camera,
   MessageBox/FileDialog. They render and degrade gracefully; nobody has held the device.
-- **Only the `EASYGL` backend is verified.** Phase F3 adds `SDL_RENDERER`.
+- **`EASYGL` and `SDL_RENDERER` are both verified.** Remaining backends (Vulkan, bgfx, WebGPU)
+  are untried here.
+- **`build-sdlrenderer/` is ~777 MB** and `build/` is ~814 MB. Both are gitignored
+  (`build-*/`). Delete `build-sdlrenderer/` if the space is wanted; it rebuilds from ccache
+  fairly quickly.
 - **`Framework/Window/ClientSizeChanged` and `Display Orientation` cannot be exercised
   headlessly.** Both need a window manager to drag the window with. They render and say so on
   screen; their event logs stay empty under Xvfb. Not a defect, but not verified either.
@@ -148,7 +153,13 @@ state.
    take the message FIRST -- the reverse of what the names suggest.
 20. **`--demo` matches on the catalog path with `/` separators**, not the screen's display title.
    `--demo "Diagnostics: Logger"` finds nothing; `--demo "Diagnostics/Logging/Logger"` works.
-21. **`AutoScrollToSelection` will fight a manual scroll.** After a drag, it used
+21. **Gating a demo's draw path is not enough.** 3D demos build vertex buffers in `LoadContent`,
+   which runs long before `Draw`, so a capability check on Update/Draw still let four demos abort
+   with `SDL_Renderer does not support 3D: CreateVertexBuffer`. `DemoScreen::LoadContent` and
+   `UnloadContent` are now `final` and gate `OnDemoLoad`/`OnDemoUnload`; every demo screen uses
+   those hooks. Do NOT reintroduce a `LoadContent() override` in a demo -- it will not compile,
+   which is the point.
+22. **`AutoScrollToSelection` will fight a manual scroll.** After a drag, it used
    to yank the list straight back to the selected entry, so dragging appeared to
    do nothing. `MenuScreen::userScrolled_` holds it off until the selection moves.
 
@@ -165,6 +176,7 @@ python3 tools/check_catalog.py --list        # screens vs registrations vs docs
 python3 tools/check_layout.py                # hardcoded bottom-of-window draw positions
 ./tools/sweep.sh                             # screenshot every demo (virtual display)
 ./tools/sweep.sh Media                       # ...or a filtered subset
+./tools/sweep_backend.sh build-sdlrenderer   # sweep a second backend's build tree
 python3 tools/check_shots.py build/screenshots --quiet
 
 # Search, assertable from a shell (same matcher the search screen uses)
@@ -192,21 +204,20 @@ app's own `Content/menufont.cnj` is a working example to build from, and `Conten
 plus the atlas show the loose-file side. `RegisterCnjLoader<T>` belongs here too. Everything
 needed is already in the repo — no borrowed assets.
 
-**(b) Phase F3, the SDL_RENDERER backend pass** — now unblocked. `Diagnostics/Backend &
-Capabilities/Graphics Capabilities` already queries all eight `GraphicsCapability` values, so
-the signal the catalog needs exists. The work is: configure a second build tree
-(`build-sdlrenderer/`, `-DCNA_GRAPHICS_BACKEND=SDL_RENDERER`, ccache, `-j4`), sweep it, and gate
-every 3D demo on `SupportsCapability(ThreeD)` so it reports honestly instead of throwing. This
-is the highest-value remaining verification work and it exercises a real consumer constraint.
-
-**(c) Phase D** — deepening existing areas (XACT, PBR, Model content, effect reflection,
+**(b) Phase D** — deepening existing areas (XACT, PBR, Model content, effect reflection,
 Texture3D/Cube/RenderTargetCube, occlusion queries). D1's XACT is self-contained: the bank
 generator in `../cna/examples/demo_xact/src/XactFileGen.hpp` is 389 lines with no dependencies
 and can be adapted in place, so no assets need borrowing.
 
-**(d) Extend C4 Storage** — container directory operations and container lifetime.
+**(c) Extend C4 Storage** — container directory operations and container lifetime.
 
-Then E (Avatars, reusing the build-time asset copy already working for `.xnb`) → F1/F2.
+**(d) Phase F2, the Emscripten build** — `~/emsdk` is installed (`emcc` at
+`~/emsdk/upstream/emscripten/emcc`, not on `PATH`; source `~/emsdk/emsdk_env.sh`). Expect to gate
+Net, Camera, FileDialog, SystemTray, Microphone and Storage the way 3D is now gated — the
+`Requiring()` + `SetRequiredCapability` machinery is in place, though a platform gate would need
+a predicate other than `GraphicsCapability`.
+
+Then E (Avatars, reusing the build-time asset copy already working for `.xnb`) → F1.
 
 **The asset-borrowing mechanism is built and working** (`cmake/ExamplesHelpers.cmake`), so
 Phase E's avatar meshes can reuse the same pattern: copy from `../cna` at build time, guard on

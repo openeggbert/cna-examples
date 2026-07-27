@@ -28,7 +28,7 @@ class DiscoverAndJoinScreen : public DemoScreen {
 public:
     DiscoverAndJoinScreen() : DemoScreen("NetworkSession: Discover & Join") {}
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         EndSession(joinedSession_);
     }
 

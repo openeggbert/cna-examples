@@ -25,12 +25,12 @@ class NetworkMachineScreen : public DemoScreen {
 public:
     NetworkMachineScreen() : DemoScreen("NetworkGamer: NetworkMachine") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         session_ = NetworkSession::Create(NetworkSessionType::Local, 1, 4);
         localGamer_ = session_->getLocalGamersProperty()[0];
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         EndSession(session_);
     }
 

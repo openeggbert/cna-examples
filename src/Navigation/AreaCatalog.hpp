@@ -311,6 +311,28 @@ DemoEntry MakeDemo(std::string title, std::string description,
     return entry;
 }
 
+// Marks every demo in a list as needing a graphics capability, so a backend
+// that lacks it shows an explanation instead of running code that throws.
+//
+// Applied per category at the assembly site rather than inside each screen: CNA
+// picks its backend at compile time, whole categories share a requirement, and
+// this way a new demo dropped into a gated category inherits the gate instead
+// of having to remember it.
+inline std::vector<DemoEntry> Requiring(CNA::GraphicsCapability capability,
+                                        std::vector<DemoEntry> demos) {
+    for (auto& demo : demos) {
+        auto inner = demo.create;
+        demo.create = [inner, capability] {
+            auto screen = inner();
+            if (auto* demoScreen = dynamic_cast<Demos::DemoScreen*>(screen.get())) {
+                demoScreen->SetRequiredCapability(capability);
+            }
+            return screen;
+        };
+    }
+    return demos;
+}
+
 // Total demos underneath a Category / Group / Area, for the "(N)" counts shown
 // on the menus above them.
 inline int CountDemos(const CategoryEntry& category) {
@@ -1360,28 +1382,30 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
                 CategoryEntry{"Dispose Safety", BuildDisposeSafetyDemos()},
             }},
         }},
+        // Every category here needs the 3D pipeline, which SDL_RENDERER, DX3
+        // and CANVAS do not have -- see Requiring()'s own comment.
         AreaEntry{"3D Graphics", {}, {
             GroupEntry{"Primitives & Vertex Types", {
-                CategoryEntry{"Vertex Types", BuildVertexTypesDemos()},
-                CategoryEntry{"Primitive Types", BuildPrimitiveTypesDemos()},
-                CategoryEntry{"Buffers", BuildBuffersDemos()},
+                CategoryEntry{"Vertex Types", Requiring(CNA::GraphicsCapability::ThreeD, BuildVertexTypesDemos())},
+                CategoryEntry{"Primitive Types", Requiring(CNA::GraphicsCapability::ThreeD, BuildPrimitiveTypesDemos())},
+                CategoryEntry{"Buffers", Requiring(CNA::GraphicsCapability::ThreeD, BuildBuffersDemos())},
             }},
             GroupEntry{"BasicEffect & Lighting", {
-                CategoryEntry{"Basic Rendering", BuildBasicRenderingDemos()},
-                CategoryEntry{"Lighting", BuildLightingDemos()},
-                CategoryEntry{"Fog", BuildFogDemos()},
+                CategoryEntry{"Basic Rendering", Requiring(CNA::GraphicsCapability::ThreeD, BuildBasicRenderingDemos())},
+                CategoryEntry{"Lighting", Requiring(CNA::GraphicsCapability::ThreeD, BuildLightingDemos())},
+                CategoryEntry{"Fog", Requiring(CNA::GraphicsCapability::ThreeD, BuildFogDemos())},
             }},
             GroupEntry{"Effects Gallery", {
-                CategoryEntry{"AlphaTestEffect", BuildAlphaTestEffectDemos()},
-                CategoryEntry{"DualTextureEffect", BuildDualTextureEffectDemos()},
-                CategoryEntry{"EnvironmentMapEffect", BuildEnvironmentMapEffectDemos()},
-                CategoryEntry{"SkinnedEffect", BuildSkinnedEffectDemos()},
-                CategoryEntry{"Custom Shader", BuildCustomShaderDemos()},
+                CategoryEntry{"AlphaTestEffect", Requiring(CNA::GraphicsCapability::ThreeD, BuildAlphaTestEffectDemos())},
+                CategoryEntry{"DualTextureEffect", Requiring(CNA::GraphicsCapability::ThreeD, BuildDualTextureEffectDemos())},
+                CategoryEntry{"EnvironmentMapEffect", Requiring(CNA::GraphicsCapability::ThreeD, BuildEnvironmentMapEffectDemos())},
+                CategoryEntry{"SkinnedEffect", Requiring(CNA::GraphicsCapability::ThreeD, BuildSkinnedEffectDemos())},
+                CategoryEntry{"Custom Shader", Requiring(CNA::GraphicsCapability::ThreeD, BuildCustomShaderDemos())},
             }},
             GroupEntry{"Device State, Camera & Model", {
-                CategoryEntry{"Depth & Culling", BuildDepthAndCullingDemos()},
-                CategoryEntry{"Camera & Projection", BuildCameraAndProjectionDemos()},
-                CategoryEntry{"Model", BuildModelGroupDemos()},
+                CategoryEntry{"Depth & Culling", Requiring(CNA::GraphicsCapability::ThreeD, BuildDepthAndCullingDemos())},
+                CategoryEntry{"Camera & Projection", Requiring(CNA::GraphicsCapability::ThreeD, BuildCameraAndProjectionDemos())},
+                CategoryEntry{"Model", Requiring(CNA::GraphicsCapability::ThreeD, BuildModelGroupDemos())},
             }},
         }},
     };

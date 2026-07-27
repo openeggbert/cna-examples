@@ -35,12 +35,12 @@ class SaveGameRoundTripScreen : public DemoScreen {
 public:
     SaveGameRoundTripScreen() : DemoScreen("Storage: Save Game Round Trip") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         Open();
         Read();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         // The container holds an open handle to the save directory; drop it
         // before the device it borrows from.
         container_.reset();

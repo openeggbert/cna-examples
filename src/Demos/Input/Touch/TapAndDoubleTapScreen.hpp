@@ -29,12 +29,12 @@ class TapAndDoubleTapScreen : public DemoScreen {
 public:
     TapAndDoubleTapScreen() : DemoScreen("Touch: Tap & DoubleTap Gestures") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         previousGestures_ = TouchPanel::getEnabledGesturesProperty();
         TouchPanel::setEnabledGesturesProperty(GestureType::Tap | GestureType::DoubleTap);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         TouchPanel::setEnabledGesturesProperty(previousGestures_);
     }
 

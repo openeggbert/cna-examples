@@ -27,7 +27,7 @@ class AccelerometerScreen : public DemoScreen {
 public:
     AccelerometerScreen() : DemoScreen("Sensors: Accelerometer") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         supported_ = Accelerometer::getIsSupportedProperty();
         if (!supported_) return;
         try {
@@ -38,7 +38,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         if (sensor_.has_value()) sensor_->Stop();
     }
 

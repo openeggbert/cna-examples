@@ -39,7 +39,7 @@ class CurveTangentsScreen : public DemoScreen {
 public:
     CurveTangentsScreen() : DemoScreen("Curves: Tangents") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         BuildCurves();
     }
 

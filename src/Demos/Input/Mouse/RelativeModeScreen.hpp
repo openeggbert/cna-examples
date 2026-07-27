@@ -26,7 +26,7 @@ class RelativeModeScreen : public DemoScreen {
 public:
     RelativeModeScreen() : DemoScreen("Mouse: Relative Mode (EXT)") {}
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         Mouse::setIsRelativeMouseModeEXTProperty(false);
     }
 

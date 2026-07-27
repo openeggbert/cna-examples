@@ -28,12 +28,12 @@ class TextInputScreen : public DemoScreen {
 public:
     TextInputScreen() : DemoScreen("Keyboard: TextInputEXT") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         TextInputEXT::StartTextInput();
         subscription_ = TextInputEXT::TextInput.Add([this](charcs c) { OnChar(c); });
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         TextInputEXT::TextInput.Remove(subscription_);
         TextInputEXT::StopTextInput();
     }

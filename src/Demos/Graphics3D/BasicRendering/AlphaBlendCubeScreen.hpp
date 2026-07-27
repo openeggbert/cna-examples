@@ -48,7 +48,7 @@ class AlphaBlendCubeScreen : public DemoScreen {
 public:
     AlphaBlendCubeScreen() : DemoScreen("BasicEffect: Alpha Blending") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         backMesh_ = BuildCubeColorMesh(1.0f, {
             Color(60, 220, 90, 255), Color(60, 220, 90, 255), Color(60, 220, 90, 255),
@@ -64,7 +64,7 @@ public:
         frontEffect_->VertexColorEnabled = true;
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         frontEffect_.reset();
         backEffect_.reset();
     }

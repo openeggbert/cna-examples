@@ -25,7 +25,7 @@ class CursorShapesScreen : public DemoScreen {
 public:
     CursorShapesScreen() : DemoScreen("Mouse: Cursor Shapes (EXT)") {}
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         // Leave the system in a normal state for whatever screen is next.
         Mouse::SetCursor(MouseCursor::getArrowProperty());
     }

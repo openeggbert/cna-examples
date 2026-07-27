@@ -28,7 +28,7 @@ class EnabledVisibleScreen : public DemoScreen {
 public:
     EnabledVisibleScreen() : DemoScreen("Components: Enabled & Visible") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& game = GameRef();
         component_ = std::make_unique<OrderLoggingComponent>(game, "toggled", nullptr);
         component_->setDrawOrderProperty(-30);
@@ -41,7 +41,7 @@ public:
         game.getComponentsProperty().Add(component_.get());
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         component_->EnabledChanged.Remove(enabledToken_);
         component_->VisibleChanged.Remove(visibleToken_);
         (void)GameRef().getComponentsProperty().Remove(component_.get());

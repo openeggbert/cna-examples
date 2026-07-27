@@ -27,7 +27,7 @@ public:
 
     ProceduralCreationScreen() : DemoScreen("Texture2D: Procedural Creation") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
 
         // (a) NOXNA CreateFromPixels() -- fed a hand-built RGBA byte buffer.
@@ -47,7 +47,7 @@ public:
         viaSetData_->SetData(colors.data(), (int)colors.size());
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         viaPixels_.reset();
         viaSetData_.reset();
     }

@@ -37,7 +37,7 @@ class LoadAndCacheScreen : public DemoScreen {
 public:
     LoadAndCacheScreen() : DemoScreen("Content: Load & Cache") {}
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         // A private ContentManager, so nothing this screen unloads can disturb
         // the assets the running application still needs.
         privateManager_.reset();

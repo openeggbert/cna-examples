@@ -25,7 +25,7 @@ class ScaleAndEffectsScreen : public DemoScreen {
 public:
     ScaleAndEffectsScreen() : DemoScreen("SpriteBatch: Scale & SpriteEffects") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         std::vector<Color> palette = {
             Color(255, 80, 80, 255), Color(80, 255, 80, 255),
             Color(80, 80, 255, 255), Color(255, 255, 80, 255),
@@ -33,7 +33,7 @@ public:
         marker_.emplace(CreateGridTexture(GetScreenManager()->getGraphicsDeviceProperty(), 2, 2, 16, palette));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         marker_.reset();
     }
 

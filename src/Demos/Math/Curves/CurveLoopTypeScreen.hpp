@@ -43,7 +43,7 @@ class CurveLoopTypeScreen : public DemoScreen {
 public:
     CurveLoopTypeScreen() : DemoScreen("Curves: Pre/Post Loop") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         for (int i = 0; i < kModeCount; ++i) {
             Curve& curve = curves_[i];
             curve.getKeysProperty().Add(CurveKey(0.0f, 0.0f));

@@ -27,14 +27,14 @@ class DragGesturesScreen : public DemoScreen {
 public:
     DragGesturesScreen() : DemoScreen("Touch: Drag Gestures") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         previousGestures_ = TouchPanel::getEnabledGesturesProperty();
         TouchPanel::setEnabledGesturesProperty(
             GestureType::HorizontalDrag | GestureType::VerticalDrag |
             GestureType::FreeDrag | GestureType::DragComplete);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         TouchPanel::setEnabledGesturesProperty(previousGestures_);
     }
 

@@ -28,13 +28,13 @@ class VolumeMuteRepeatShuffleScreen : public DemoScreen {
 public:
     VolumeMuteRepeatShuffleScreen() : DemoScreen("Song: Volume/Mute/Repeat/Shuffle") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         song_.emplace(kToneAWav, "Tone A (440 Hz)");
         MediaPlayer::setIsRepeatingProperty(true);
         MediaPlayer::Play(&*song_);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         MediaPlayer::Stop();
         MediaPlayer::setVolumeProperty(1.0f);
         MediaPlayer::setIsMutedProperty(false);

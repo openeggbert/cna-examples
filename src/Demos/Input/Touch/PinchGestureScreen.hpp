@@ -26,12 +26,12 @@ class PinchGestureScreen : public DemoScreen {
 public:
     PinchGestureScreen() : DemoScreen("Touch: Pinch Gesture") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         previousGestures_ = TouchPanel::getEnabledGesturesProperty();
         TouchPanel::setEnabledGesturesProperty(GestureType::Pinch | GestureType::PinchComplete);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         TouchPanel::setEnabledGesturesProperty(previousGestures_);
     }
 

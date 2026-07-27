@@ -26,11 +26,11 @@ class MasterVolumeAndSettingsScreen : public DemoScreen {
 public:
     MasterVolumeAndSettingsScreen() : DemoScreen("SoundEffect: Static Settings") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         originalMasterVolume_ = SoundEffect::getMasterVolumeProperty();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         SoundEffect::setMasterVolumeProperty(originalMasterVolume_);
     }
 

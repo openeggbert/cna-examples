@@ -30,7 +30,7 @@ class DrawIntoRenderTargetScreen : public DemoScreen {
 public:
     DrawIntoRenderTargetScreen() : DemoScreen("RenderTarget2D: Draw Into & Sample") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         source_.emplace(CreateCheckerboardTexture(device, 64, 64, 8,
                                                     Color(255, 140, 40, 255), Color(40, 140, 255, 255)));
@@ -50,7 +50,7 @@ public:
         device.SetRenderTarget(nullptr);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         source_.reset();
         target_.reset();
     }

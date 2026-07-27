@@ -33,7 +33,7 @@ class CompassScreen : public DemoScreen {
 public:
     CompassScreen() : DemoScreen("Sensors: Compass") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         supported_ = Compass::getIsSupportedProperty();
         if (!supported_) return;
         try {
@@ -46,7 +46,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         if (sensor_.has_value()) {
             sensor_->Calibrate.Remove(calibrateToken_);
             sensor_->Stop();

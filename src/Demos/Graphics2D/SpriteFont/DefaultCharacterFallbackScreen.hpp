@@ -30,7 +30,7 @@ class DefaultCharacterFallbackScreen : public DemoScreen {
 public:
     DefaultCharacterFallbackScreen() : DemoScreen("SpriteFont: DefaultCharacter Fallback") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         SpriteFont& font = GetScreenManager()->getFont();
         originalDefault_ = font.getDefaultCharacterProperty();
 
@@ -46,7 +46,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         GetScreenManager()->getFont().setDefaultCharacterProperty(originalDefault_);
     }
 

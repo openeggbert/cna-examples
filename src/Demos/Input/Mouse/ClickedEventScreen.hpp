@@ -26,11 +26,11 @@ class ClickedEventScreen : public DemoScreen {
 public:
     ClickedEventScreen() : DemoScreen("Mouse: ClickedEXT Event") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         subscription_ = Mouse::ClickedEXT.Add([this](int button) { OnClicked(button); });
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         Mouse::ClickedEXT.Remove(subscription_);
     }
 

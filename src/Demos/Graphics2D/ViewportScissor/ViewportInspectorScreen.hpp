@@ -26,11 +26,11 @@ class ViewportInspectorScreen : public DemoScreen {
 public:
     ViewportInspectorScreen() : DemoScreen("Viewport: Inspector") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         original_ = GetScreenManager()->getGraphicsDeviceProperty().getViewportProperty();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         GetScreenManager()->getGraphicsDeviceProperty().setViewportProperty(original_);
     }
 

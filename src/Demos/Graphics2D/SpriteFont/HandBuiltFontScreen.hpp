@@ -35,7 +35,7 @@ public:
 
     HandBuiltFontScreen() : DemoScreen("SpriteFont: Hand-Built From Scratch") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         std::vector<Color> palette = {
             Color(255, 80, 80, 255), Color(255, 160, 60, 255), Color(255, 220, 60, 255), Color(160, 255, 60, 255),
             Color(60, 255, 120, 255), Color(60, 255, 220, 255), Color(60, 160, 255, 255), Color(120, 60, 255, 255),
@@ -62,7 +62,7 @@ public:
         font_.emplace(atlas, glyphBounds, cropping, characters, kCellSize + 4, 2.0f, kerning, charcs('0'));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         font_.reset();
     }
 

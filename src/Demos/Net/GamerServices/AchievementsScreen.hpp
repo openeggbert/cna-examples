@@ -31,7 +31,7 @@ class AchievementsScreen : public DemoScreen {
 public:
     AchievementsScreen() : DemoScreen("GamerServices: Achievements") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         gamer_ = (*Gamer::getSignedInGamersProperty())[PlayerIndex::One];
     }
 

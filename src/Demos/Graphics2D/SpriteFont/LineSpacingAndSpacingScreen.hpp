@@ -20,13 +20,13 @@ class LineSpacingAndSpacingScreen : public DemoScreen {
 public:
     LineSpacingAndSpacingScreen() : DemoScreen("SpriteFont: LineSpacing & Spacing") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         SpriteFont& font = GetScreenManager()->getFont();
         originalLineSpacing_ = font.getLineSpacingProperty();
         originalSpacing_ = font.getSpacingProperty();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         SpriteFont& font = GetScreenManager()->getFont();
         font.setLineSpacingProperty(originalLineSpacing_);
         font.setSpacingProperty(originalSpacing_);

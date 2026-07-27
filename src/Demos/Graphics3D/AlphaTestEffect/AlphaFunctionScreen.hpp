@@ -75,7 +75,7 @@ class AlphaFunctionScreen : public DemoScreen {
 public:
     AlphaFunctionScreen() : DemoScreen("AlphaTestEffect: AlphaFunction") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildQuadNormalTextureMesh(2.0f, 2.0f);
         texture_.emplace(detail_alpha_function::CreateRadialAlphaTexture(device, 128));
@@ -85,7 +85,7 @@ public:
         effect_->setAlphaFunctionProperty(functions_[index_]);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         texture_.reset();
     }

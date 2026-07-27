@@ -27,14 +27,14 @@ class SignedInGamersScreen : public DemoScreen {
 public:
     SignedInGamersScreen() : DemoScreen("GamerServices: Signed-In Gamers") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         signedInToken_ = SignedInGamer::SignedIn.Add(
             [this](System::Object*, const auto&) { signedInCount_++; });
         signedOutToken_ = SignedInGamer::SignedOut.Add(
             [this](System::Object*, const auto&) { signedOutCount_++; });
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         SignedInGamer::SignedIn.Remove(signedInToken_);
         SignedInGamer::SignedOut.Remove(signedOutToken_);
     }

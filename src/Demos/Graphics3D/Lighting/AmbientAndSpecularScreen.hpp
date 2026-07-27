@@ -39,7 +39,7 @@ class AmbientAndSpecularScreen : public DemoScreen {
 public:
     AmbientAndSpecularScreen() : DemoScreen("BasicEffect: Ambient & Specular") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeNormalTextureMesh(1.0f);
         texture_.emplace(CnaExamples::Demos::Graphics2D::CreateCheckerboardTexture(
@@ -56,7 +56,7 @@ public:
         ApplyLevels();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         texture_.reset();
     }

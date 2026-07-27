@@ -37,7 +37,7 @@ public:
     SavePictureScreen() : LibraryDemoScreen("Pictures: SavePicture") {}
 
 public:
-    void LoadContent() override {
+    void OnDemoLoad() override {
         // The scratch root has to exist before the library indexes it, not after:
         // MediaLibrary snapshots the filesystem in its constructor, so creating
         // the directory later would leave this screen's first run looking at a
@@ -47,7 +47,7 @@ public:
         savedDirExistsAtStart_ =
             std::filesystem::exists(std::filesystem::path(ScratchPictureRoot()) / "Saved Pictures", ec);
 
-        LibraryDemoScreen::LoadContent();
+        LibraryDemoScreen::OnDemoLoad();
     }
 
 protected:

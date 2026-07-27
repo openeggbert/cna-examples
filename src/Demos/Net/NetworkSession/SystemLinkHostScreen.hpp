@@ -27,7 +27,7 @@ class SystemLinkHostScreen : public DemoScreen {
 public:
     SystemLinkHostScreen() : DemoScreen("NetworkSession: SystemLink Host") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         // The 8 requested here is never actually applied -- EndCreate() unconditionally
         // hardcodes MaxGamers to 69 for every Create() overload, a real, faithfully-preserved
         // upstream FNA quirk (its own reference source does the same), not a CNA bug or a typo
@@ -41,7 +41,7 @@ public:
         session_->Update();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         EndSession(session_);
     }
 

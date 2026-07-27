@@ -41,7 +41,7 @@ class LineAndPointScreen : public DemoScreen {
 public:
     LineAndPointScreen() : DemoScreen("PrimitiveType: LineList / LineStrip / PointListEXT") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         effect_.emplace(GetScreenManager()->getGraphicsDeviceProperty());
         effect_->VertexColorEnabled = true;
 
@@ -61,7 +61,7 @@ public:
         for (int i = 0; i < 4; ++i) pointVerts_[i] = VertexPositionColor(corners[i], c);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
     }
 

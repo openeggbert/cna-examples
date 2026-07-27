@@ -31,7 +31,7 @@ class VolumePitchPanScreen : public DemoScreen {
 public:
     VolumePitchPanScreen() : DemoScreen("SoundEffectInstance: Volume/Pitch/Pan") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         try {
             effect_.emplace(GenerateSineWavePcm16(220.0f, 4.0f), 44100, AudioChannels::Mono);
             instance_ = effect_->CreateInstance();
@@ -42,7 +42,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         if (instance_.has_value()) instance_->Stop(true);
     }
 

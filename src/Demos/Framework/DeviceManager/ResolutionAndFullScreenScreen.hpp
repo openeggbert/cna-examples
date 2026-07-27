@@ -27,7 +27,7 @@ class ResolutionAndFullScreenScreen : public DemoScreen {
 public:
     ResolutionAndFullScreenScreen() : DemoScreen("Device Manager: Resolution & FullScreen") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto* gdm = Manager();
         if (gdm == nullptr) return;
         originalWidth_ = (int)gdm->getPreferredBackBufferWidthProperty();
@@ -35,7 +35,7 @@ public:
         originalFullScreen_ = gdm->getIsFullScreenProperty();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         auto* gdm = Manager();
         if (gdm == nullptr) return;
         if (!dirty_) return;

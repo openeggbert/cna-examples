@@ -32,7 +32,7 @@ class LeaderboardWriterScreen : public DemoScreen {
 public:
     LeaderboardWriterScreen() : DemoScreen("Leaderboards: LeaderboardWriter") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         gamer_ = (*Gamer::getSignedInGamersProperty())[PlayerIndex::One];
         entry_ = LeaderboardEntry::CreateInternal(gamer_, 9001, 1);
         entry_.getColumnsProperty().SetValue("wave", 12);

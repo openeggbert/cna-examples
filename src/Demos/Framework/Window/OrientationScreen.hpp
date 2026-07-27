@@ -34,14 +34,14 @@ class OrientationScreen : public DemoScreen {
 public:
     OrientationScreen() : DemoScreen("Window: Display Orientation") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         GameWindow& window = Window();
         lastOrientation_ = window.getCurrentOrientationProperty();
         token_ = window.OrientationChanged.Add(
             [this](System::Object*, const System::EventArgs&) { OnOrientationChanged(); });
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         Window().OrientationChanged.Remove(token_);
     }
 

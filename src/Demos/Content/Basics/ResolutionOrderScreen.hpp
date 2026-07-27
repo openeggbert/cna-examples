@@ -34,7 +34,7 @@ class ResolutionOrderScreen : public DemoScreen {
 public:
     ResolutionOrderScreen() : DemoScreen("Content: Asset Name Resolution") {}
 
-    void UnloadContent() override { privateManager_.reset(); }
+    void OnDemoUnload() override { privateManager_.reset(); }
 
 protected:
     void OnDemoInput(InputState& input) override {

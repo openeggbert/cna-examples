@@ -34,7 +34,7 @@ class CameraCaptureScreen : public DemoScreen {
 public:
     CameraCaptureScreen() : DemoScreen("Camera: Live Capture") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         supported_ = Camera::getIsSupportedProperty();
         available_ = Camera::getAvailableCamerasProperty();
         if (supported_ && !available_.empty()) {
@@ -42,7 +42,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         camera_.reset();
         frameTexture_.reset();
     }

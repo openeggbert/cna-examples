@@ -45,7 +45,7 @@ class InvalidShaderScreen : public DemoScreen {
 public:
     InvalidShaderScreen() : DemoScreen("ShaderEffect: Invalid Shader Handling") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeColorMesh(1.0f, {
             Color(220, 60, 60, 255), Color(60, 220, 90, 255), Color(60, 110, 220, 255),
@@ -78,7 +78,7 @@ void main() {
         badEffect_.emplace(device, kVertSrc, kBrokenFragSrc);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         badEffect_.reset();
         goodEffect_.reset();
     }

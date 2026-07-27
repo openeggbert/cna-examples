@@ -24,7 +24,7 @@ class MultiTargetRoundTripScreen : public DemoScreen {
 public:
     MultiTargetRoundTripScreen() : DemoScreen("RenderTarget2D: Multi-Target Round Trip") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         rt1_.emplace(device, 120, 120);
         rt2_.emplace(device, 120, 120);
@@ -46,7 +46,7 @@ public:
         device.SetRenderTarget(nullptr);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         rt1_.reset();
         rt2_.reset();
     }

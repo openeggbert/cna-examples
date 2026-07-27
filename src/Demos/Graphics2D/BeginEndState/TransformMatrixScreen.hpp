@@ -30,12 +30,12 @@ class TransformMatrixScreen : public DemoScreen {
 public:
     TransformMatrixScreen() : DemoScreen("SpriteBatch: Begin() Transform Matrix") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         marker_.emplace(CreateCheckerboardTexture(GetScreenManager()->getGraphicsDeviceProperty(), 24, 24, 24,
                                                     Color(255, 200, 60, 255), Color(255, 200, 60, 255)));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         marker_.reset();
     }
 

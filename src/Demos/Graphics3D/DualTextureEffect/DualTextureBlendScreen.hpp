@@ -40,7 +40,7 @@ class DualTextureBlendScreen : public DemoScreen {
 public:
     DualTextureBlendScreen() : DemoScreen("DualTextureEffect: 2-Layer Blend") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeTextureMesh(1.0f);
         baseTexture_.emplace(CnaExamples::Demos::Graphics2D::CreateCheckerboardTexture(
@@ -52,7 +52,7 @@ public:
         effect_->setTexture2Property(&*secondTexture_);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         secondTexture_.reset();
         baseTexture_.reset();

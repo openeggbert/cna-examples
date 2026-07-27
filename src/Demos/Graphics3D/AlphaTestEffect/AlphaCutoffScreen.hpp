@@ -70,7 +70,7 @@ class AlphaCutoffScreen : public DemoScreen {
 public:
     AlphaCutoffScreen() : DemoScreen("AlphaTestEffect: Reference Alpha Cutoff") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildQuadNormalTextureMesh(2.0f, 2.0f);
         texture_.emplace(CreateRadialAlphaTexture(device, 128));
@@ -79,7 +79,7 @@ public:
         effect_->setReferenceAlphaProperty(referenceAlpha_);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         texture_.reset();
     }

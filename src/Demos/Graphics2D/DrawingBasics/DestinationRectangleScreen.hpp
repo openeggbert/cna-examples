@@ -23,13 +23,13 @@ class DestinationRectangleScreen : public DemoScreen {
 public:
     DestinationRectangleScreen() : DemoScreen("SpriteBatch: Destination Rectangle") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         icon_.emplace(CreateCheckerboardTexture(
             GetScreenManager()->getGraphicsDeviceProperty(), 16, 16, 4,
             Color(255, 200, 60, 255), Color(60, 90, 255, 255)));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         icon_.reset();
     }
 

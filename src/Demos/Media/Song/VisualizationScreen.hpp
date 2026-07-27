@@ -39,14 +39,14 @@ class VisualizationScreen : public DemoScreen {
 public:
     VisualizationScreen() : DemoScreen("Song: Visualization") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         song_.emplace(kToneAWav, "Tone A (440 Hz)");
         MediaPlayer::setIsRepeatingProperty(true);
         MediaPlayer::Play(&*song_);
         MediaPlayer::setIsVisualizationEnabledProperty(true);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         MediaPlayer::Stop();
         MediaPlayer::setIsRepeatingProperty(false);
         MediaPlayer::setIsVisualizationEnabledProperty(false);

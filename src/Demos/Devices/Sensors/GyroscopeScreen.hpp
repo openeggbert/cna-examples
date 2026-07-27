@@ -26,7 +26,7 @@ class GyroscopeScreen : public DemoScreen {
 public:
     GyroscopeScreen() : DemoScreen("Sensors: Gyroscope") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         supported_ = Gyroscope::getIsSupportedProperty();
         if (!supported_) return;
         try {
@@ -37,7 +37,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         if (sensor_.has_value()) sensor_->Stop();
     }
 

@@ -64,7 +64,7 @@ public:
 
     DistanceFogScreen() : DemoScreen("BasicEffect: Distance Fog") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         const std::array<Color, 6> faceColors = {
             Color(220, 200, 60, 255), Color(220, 200, 60, 255), Color(220, 200, 60, 255),
@@ -88,7 +88,7 @@ public:
         effect_->setFogEndProperty(16.0f);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
     }
 

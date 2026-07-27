@@ -34,14 +34,14 @@ class ImmediateSortScreen : public DemoScreen {
 public:
     ImmediateSortScreen() : DemoScreen("SpriteBatch: SpriteSortMode::Immediate") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         quadA_.emplace(CreateCheckerboardTexture(device, 80, 80, 80, Color(255, 60, 60, 255), Color(255, 60, 60, 255)));
         quadB_.emplace(CreateCheckerboardTexture(device, 80, 80, 80, Color(60, 255, 60, 255), Color(60, 255, 60, 255)));
         quadC_.emplace(CreateCheckerboardTexture(device, 80, 80, 80, Color(60, 60, 255, 255), Color(60, 60, 255, 255)));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         quadA_.reset();
         quadB_.reset();
         quadC_.reset();

@@ -27,11 +27,11 @@ class TitleAndClientBoundsScreen : public DemoScreen {
 public:
     TitleAndClientBoundsScreen() : DemoScreen("Window: Title & ClientBounds") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         originalTitle_ = Window().getTitleProperty();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         // The title belongs to the whole application; leaving this demo's text
         // in the task bar would outlive the demo by the rest of the session.
         Window().setTitleProperty(originalTitle_);

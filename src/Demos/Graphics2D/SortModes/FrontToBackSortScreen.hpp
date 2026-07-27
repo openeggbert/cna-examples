@@ -31,14 +31,14 @@ class FrontToBackSortScreen : public DemoScreen {
 public:
     FrontToBackSortScreen() : DemoScreen("SpriteBatch: SpriteSortMode::FrontToBack") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         red_.emplace(CreateCheckerboardTexture(device, 80, 80, 80, Color(255, 60, 60, 255), Color(255, 60, 60, 255)));
         green_.emplace(CreateCheckerboardTexture(device, 80, 80, 80, Color(60, 255, 60, 255), Color(60, 255, 60, 255)));
         blue_.emplace(CreateCheckerboardTexture(device, 80, 80, 80, Color(60, 60, 255, 255), Color(60, 60, 255, 255)));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         red_.reset();
         green_.reset();
         blue_.reset();

@@ -39,7 +39,7 @@ class DirectionalLightsToggleScreen : public DemoScreen {
 public:
     DirectionalLightsToggleScreen() : DemoScreen("BasicEffect: 3 Directional Lights") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeNormalTextureMesh(1.0f);
         texture_.emplace(CnaExamples::Demos::Graphics2D::CreateCheckerboardTexture(
@@ -59,7 +59,7 @@ public:
         ApplyEnabled();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         texture_.reset();
     }

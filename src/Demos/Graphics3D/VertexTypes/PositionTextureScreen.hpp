@@ -38,7 +38,7 @@ class PositionTextureScreen : public DemoScreen {
 public:
     PositionTextureScreen() : DemoScreen("VertexPositionTexture: Textured Cube") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeTextureMesh(1.0f);
         texture_.emplace(CnaExamples::Demos::Graphics2D::CreateCheckerboardTexture(
@@ -48,7 +48,7 @@ public:
         effect_->setTextureProperty(&*texture_);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         texture_.reset();
     }

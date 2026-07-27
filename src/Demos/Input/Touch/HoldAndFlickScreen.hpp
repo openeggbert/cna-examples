@@ -27,12 +27,12 @@ class HoldAndFlickScreen : public DemoScreen {
 public:
     HoldAndFlickScreen() : DemoScreen("Touch: Hold & Flick Gestures") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         previousGestures_ = TouchPanel::getEnabledGesturesProperty();
         TouchPanel::setEnabledGesturesProperty(GestureType::Hold | GestureType::Flick);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         TouchPanel::setEnabledGesturesProperty(previousGestures_);
     }
 

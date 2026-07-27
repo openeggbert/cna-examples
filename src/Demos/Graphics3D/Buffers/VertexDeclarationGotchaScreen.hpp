@@ -52,7 +52,7 @@ class VertexDeclarationGotchaScreen : public DemoScreen {
 public:
     VertexDeclarationGotchaScreen() : DemoScreen("Buffers: VertexDeclaration Stride Gotcha") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeColorMesh(0.8f, {
             Color(220, 60, 60, 255), Color(60, 220, 90, 255), Color(60, 110, 220, 255),
@@ -62,7 +62,7 @@ public:
         effect_->VertexColorEnabled = true;
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
     }
 

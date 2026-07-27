@@ -28,11 +28,11 @@ class ProfilePresencePrivilegesScreen : public DemoScreen {
 public:
     ProfilePresencePrivilegesScreen() : DemoScreen("GamerServices: Profile/Presence/Privileges") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         gamer_ = (*Gamer::getSignedInGamersProperty())[PlayerIndex::One];
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         if (profile_ != nullptr) {
             profile_->Dispose();
             delete profile_;

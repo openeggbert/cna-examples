@@ -28,13 +28,13 @@ class BlendModeComparisonScreen : public DemoScreen {
 public:
     BlendModeComparisonScreen() : DemoScreen("BlendState: Mode Comparison") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         quadA_.emplace(CreateCheckerboardTexture(device, 100, 100, 100, Color(255, 60, 60, 160), Color(255, 60, 60, 160)));
         quadB_.emplace(CreateCheckerboardTexture(device, 100, 100, 100, Color(60, 120, 255, 160), Color(60, 120, 255, 160)));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         quadA_.reset();
         quadB_.reset();
     }

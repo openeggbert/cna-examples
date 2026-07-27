@@ -39,7 +39,7 @@ class DefaultLightingScreen : public DemoScreen {
 public:
     DefaultLightingScreen() : DemoScreen("BasicEffect: EnableDefaultLighting") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeNormalTextureMesh(1.0f);
         texture_.emplace(CnaExamples::Demos::Graphics2D::CreateCheckerboardTexture(
@@ -50,7 +50,7 @@ public:
         effect_->EnableDefaultLighting();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         texture_.reset();
     }

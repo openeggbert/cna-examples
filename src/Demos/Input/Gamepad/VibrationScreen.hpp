@@ -24,7 +24,7 @@ class VibrationScreen : public DemoScreen {
 public:
     VibrationScreen() : DemoScreen("Gamepad: Vibration") {}
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         GamePad::SetVibration(PlayerIndex::One, 0.0f, 0.0f);
         GamePad::SetTriggerVibrationEXT(PlayerIndex::One, 0.0f, 0.0f);
     }

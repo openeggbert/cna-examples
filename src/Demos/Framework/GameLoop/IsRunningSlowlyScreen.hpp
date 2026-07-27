@@ -32,13 +32,13 @@ class IsRunningSlowlyScreen : public DemoScreen {
 public:
     IsRunningSlowlyScreen() : DemoScreen("Game Loop: IsRunningSlowly") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         Game& game = GameRef();
         originalIsFixed_ = game.getIsFixedTimeStepProperty();
         game.setIsFixedTimeStepProperty(true);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         GameRef().setIsFixedTimeStepProperty(originalIsFixed_);
     }
 

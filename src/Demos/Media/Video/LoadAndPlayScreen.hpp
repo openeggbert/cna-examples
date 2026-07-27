@@ -30,12 +30,12 @@ class LoadAndPlayScreen : public DemoScreen {
 public:
     LoadAndPlayScreen() : DemoScreen("Video: Load & Play") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         video_.emplace(kTestClipMp4, &GetScreenManager()->getGraphicsDeviceProperty());
         player_.Play(&*video_);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         player_.Dispose();
         video_.reset();
     }

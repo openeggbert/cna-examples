@@ -23,7 +23,7 @@ class CaptureScreen : public DemoScreen {
 public:
     CaptureScreen() : DemoScreen("Mouse: Capture (EXT)") {}
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         if (captured_) {
             Mouse::SetCaptureEXT(false);
             captured_ = false;

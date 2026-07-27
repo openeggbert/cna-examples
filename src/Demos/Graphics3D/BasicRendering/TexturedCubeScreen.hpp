@@ -40,7 +40,7 @@ class TexturedCubeScreen : public DemoScreen {
 public:
     TexturedCubeScreen() : DemoScreen("BasicEffect: Live Texture Swap") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeTextureMesh(1.0f);
 
@@ -59,7 +59,7 @@ public:
         effect_->setTextureProperty(&*textures_[0]);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         textures_[0].reset();
         textures_[1].reset();

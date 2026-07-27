@@ -47,7 +47,7 @@ class ModelBoneHierarchyScreen : public DemoScreen {
 public:
     ModelBoneHierarchyScreen() : DemoScreen("Model: ModelBone Hierarchy") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         shoulderMesh_ = BuildCubeColorMesh(0.4f, {
             Color(220, 60, 60, 255), Color(220, 60, 60, 255), Color(220, 60, 60, 255),
@@ -66,7 +66,7 @@ public:
         effect_->VertexColorEnabled = true;
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         elbowBone_.reset();
         shoulderBone_.reset();

@@ -31,7 +31,7 @@ class TargetElapsedTimeScreen : public DemoScreen {
 public:
     TargetElapsedTimeScreen() : DemoScreen("Game Loop: TargetElapsedTime") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         Game& game = GameRef();
         originalTarget_ = game.getTargetElapsedTimeProperty();
         originalIsFixed_ = game.getIsFixedTimeStepProperty();
@@ -40,7 +40,7 @@ public:
         Apply();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         Game& game = GameRef();
         game.setTargetElapsedTimeProperty(originalTarget_);
         game.setIsFixedTimeStepProperty(originalIsFixed_);

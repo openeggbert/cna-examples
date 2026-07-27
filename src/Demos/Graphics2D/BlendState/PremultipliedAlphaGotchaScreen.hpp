@@ -31,7 +31,7 @@ class PremultipliedAlphaGotchaScreen : public DemoScreen {
 public:
     PremultipliedAlphaGotchaScreen() : DemoScreen("BlendState: Premultiplied Alpha") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
 
         const int size = 64;
@@ -63,7 +63,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         premultiplied_.reset();
         naive_.reset();
     }

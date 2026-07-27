@@ -26,7 +26,7 @@ class QueueNavigationScreen : public DemoScreen {
 public:
     QueueNavigationScreen() : DemoScreen("Song: Queue Navigation") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         songA_.emplace(kToneAWav, "Tone A (440 Hz)");
         songB_.emplace(kToneBWav, "Tone B (554 Hz)");
         songC_.emplace(kToneCWav, "Tone C (659 Hz)");
@@ -34,7 +34,7 @@ public:
         MediaPlayer::Play(collection, 0);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         MediaPlayer::Stop();
         songA_.reset();
         songB_.reset();

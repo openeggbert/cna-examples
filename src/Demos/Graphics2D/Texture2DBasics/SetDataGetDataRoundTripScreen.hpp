@@ -25,7 +25,7 @@ public:
 
     SetDataGetDataRoundTripScreen() : DemoScreen("Texture2D: SetData/GetData Round-Trip") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         texture_.emplace(GetScreenManager()->getGraphicsDeviceProperty(), kSize, kSize);
         written_.resize((std::size_t)kSize * (std::size_t)kSize, Color::Black);
         for (int y = 0; y < kSize; ++y) {
@@ -37,7 +37,7 @@ public:
         texture_->SetData(written_.data(), (int)written_.size());
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         texture_.reset();
     }
 

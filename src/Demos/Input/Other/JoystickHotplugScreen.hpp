@@ -26,7 +26,7 @@ class JoystickHotplugScreen : public DemoScreen {
 public:
     JoystickHotplugScreen() : DemoScreen("Other: Joystick Hot-plug Events (EXT)") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         connectedToken_ = Joysticks::ConnectedEXT.Add([this](std::uint32_t id) {
             Log("Connected: id " + std::to_string(id));
         });
@@ -35,7 +35,7 @@ public:
         });
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         Joysticks::ConnectedEXT.Remove(connectedToken_);
         Joysticks::DisconnectedEXT.Remove(disconnectedToken_);
     }

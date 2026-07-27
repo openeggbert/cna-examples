@@ -26,11 +26,11 @@ class GamerRosterScreen : public DemoScreen {
 public:
     GamerRosterScreen() : DemoScreen("NetworkGamer: Roster") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         session_ = NetworkSession::Create(NetworkSessionType::Local, 2, 4);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         EndSession(session_);
     }
 

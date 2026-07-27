@@ -26,7 +26,7 @@ class InputDeviceHotplugScreen : public DemoScreen {
 public:
     InputDeviceHotplugScreen() : DemoScreen("Other: Device Hot-plug Events (EXT)") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         mouseConnected_ = InputDevices::MouseConnectedEXT.Add(
             [this](std::uint32_t id) { Log("Mouse connected: id " + std::to_string(id)); });
         mouseDisconnected_ = InputDevices::MouseDisconnectedEXT.Add(
@@ -37,7 +37,7 @@ public:
             [this](std::uint32_t id) { Log("Keyboard disconnected: id " + std::to_string(id)); });
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         InputDevices::MouseConnectedEXT.Remove(mouseConnected_);
         InputDevices::MouseDisconnectedEXT.Remove(mouseDisconnected_);
         InputDevices::KeyboardConnectedEXT.Remove(keyboardConnected_);

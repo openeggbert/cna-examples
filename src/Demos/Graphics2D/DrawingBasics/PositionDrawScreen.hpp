@@ -23,13 +23,13 @@ class PositionDrawScreen : public DemoScreen {
 public:
     PositionDrawScreen() : DemoScreen("SpriteBatch: Position Draw") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         icon_.emplace(CreateCheckerboardTexture(
             GetScreenManager()->getGraphicsDeviceProperty(), 48, 48, 12,
             Color(255, 200, 60, 255), Color(60, 90, 255, 255)));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         icon_.reset();
     }
 

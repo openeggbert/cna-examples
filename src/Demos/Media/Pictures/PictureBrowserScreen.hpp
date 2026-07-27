@@ -34,9 +34,9 @@ class PictureBrowserScreen : public LibraryDemoScreen {
 public:
     PictureBrowserScreen() : LibraryDemoScreen("Pictures: Browse") {}
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         texture_.reset();
-        LibraryDemoScreen::UnloadContent();
+        LibraryDemoScreen::OnDemoUnload();
     }
 
 protected:

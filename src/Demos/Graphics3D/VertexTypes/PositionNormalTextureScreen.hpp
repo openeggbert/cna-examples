@@ -41,7 +41,7 @@ class PositionNormalTextureScreen : public DemoScreen {
 public:
     PositionNormalTextureScreen() : DemoScreen("VertexPositionNormalTexture: Lit Cube") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeNormalTextureMesh(1.0f);
         texture_.emplace(CnaExamples::Demos::Graphics2D::CreateCheckerboardTexture(
@@ -56,7 +56,7 @@ public:
         effect_->setAmbientLightColorProperty(Vector3(0.15f, 0.15f, 0.15f));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         texture_.reset();
     }

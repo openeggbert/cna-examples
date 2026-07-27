@@ -28,7 +28,7 @@ class VibrateScreen : public DemoScreen {
 public:
     VibrateScreen() : DemoScreen("Vibration: VibrateController") {}
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         VibrateController::getDefaultProperty()->Stop();
     }
 

@@ -68,7 +68,7 @@ class ProceduralModelScreen : public DemoScreen {
 public:
     ProceduralModelScreen() : DemoScreen("Model: Procedural Construction") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
 
         // Model::Draw(world,view,projection) applies a SINGLE shared world
@@ -137,7 +137,7 @@ public:
         model_.emplace(&device, std::vector<ModelBone*>{&*bone_}, std::vector<ModelMesh*>{&*mesh_});
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         model_.reset();
         bone_.reset();
         mesh_.reset();

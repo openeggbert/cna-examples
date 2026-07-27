@@ -29,7 +29,7 @@ class UpdateDrawOrderScreen : public DemoScreen {
 public:
     UpdateDrawOrderScreen() : DemoScreen("Components: Update/Draw Order") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& game = GameRef();
         first_ = std::make_unique<OrderLoggingComponent>(game, "A", &drawLog_);
         second_ = std::make_unique<OrderLoggingComponent>(game, "B", &drawLog_);
@@ -39,7 +39,7 @@ public:
         game.getComponentsProperty().Add(second_.get());
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         auto& components = GameRef().getComponentsProperty();
         (void)components.Remove(first_.get());
         (void)components.Remove(second_.get());

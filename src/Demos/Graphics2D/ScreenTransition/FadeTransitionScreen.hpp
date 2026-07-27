@@ -31,13 +31,13 @@ class FadeTransitionScreen : public DemoScreen {
 public:
     FadeTransitionScreen() : DemoScreen("RenderTarget2D: Fade Transition Effect") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         quad_.emplace(CreateCheckerboardTexture(device, 40, 40, 40, Color(255, 220, 60, 255), Color(255, 220, 60, 255)));
         target_.emplace(device, 400, 300);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         quad_.reset();
         target_.reset();
     }

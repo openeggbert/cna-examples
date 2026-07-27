@@ -38,11 +38,11 @@ class GameServiceContainerScreen : public DemoScreen {
 public:
     GameServiceContainerScreen() : DemoScreen("Services: GameServiceContainer") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         clock_ = std::make_unique<ExampleClock>();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         // The container outlives this screen, so a service pointing at a
         // destroyed object would be a dangling entry for the rest of the session.
         if (registered_) Services().RemoveService<ExampleClock>();

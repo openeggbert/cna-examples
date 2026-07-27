@@ -34,7 +34,7 @@ class StreamingSineWaveScreen : public DemoScreen {
 public:
     StreamingSineWaveScreen() : DemoScreen("DynamicSoundEffectInstance: Streaming") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         try {
             instance_.emplace(44100, AudioChannels::Mono);
             bufferNeededToken_ = instance_->BufferNeeded.Add(
@@ -47,7 +47,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         if (instance_.has_value()) {
             instance_->BufferNeeded.Remove(bufferNeededToken_);
             instance_->Stop(true);

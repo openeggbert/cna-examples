@@ -33,7 +33,7 @@ class SessionPropertiesAndEventsScreen : public DemoScreen {
 public:
     SessionPropertiesAndEventsScreen() : DemoScreen("NetworkSession: Properties & Events") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         NetworkSessionProperties properties;
         properties.Add(7);
         properties.Add(std::nullopt);
@@ -51,7 +51,7 @@ public:
         session_->Update();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         EndSession(session_);
     }
 

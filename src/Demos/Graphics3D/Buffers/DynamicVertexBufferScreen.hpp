@@ -54,7 +54,7 @@ public:
 
     DynamicVertexBufferScreen() : DemoScreen("Buffers: DynamicVertexBuffer Ripple") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         const int vertCount = kGridSize * kGridSize;
         vertices_.resize((std::size_t)vertCount, VertexPositionColor(Vector3::Zero, Color::White));
@@ -80,7 +80,7 @@ public:
         effect_->VertexColorEnabled = true;
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         dvb_.reset();
         ib_.reset();

@@ -42,7 +42,7 @@ class PerspectiveVsOrthographicScreen : public DemoScreen {
 public:
     PerspectiveVsOrthographicScreen() : DemoScreen("Camera: Perspective vs. Orthographic") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildCubeColorMesh(0.5f, {
             Color(220, 60, 60, 255), Color(60, 220, 90, 255), Color(60, 110, 220, 255),
@@ -52,7 +52,7 @@ public:
         effect_->VertexColorEnabled = true;
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
     }
 

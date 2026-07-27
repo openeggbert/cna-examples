@@ -34,7 +34,7 @@ class DeviceEventsScreen : public DemoScreen {
 public:
     DeviceEventsScreen() : DemoScreen("Device Manager: Device Events") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto* gdm = Manager();
         if (gdm == nullptr) return;
 
@@ -55,7 +55,7 @@ public:
             [this](System::Object*, const System::EventArgs&) { Log("DeviceDisposing"); });
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         auto* gdm = Manager();
         if (gdm == nullptr) return;
 

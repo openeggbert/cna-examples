@@ -29,13 +29,13 @@ class PlaybackControlScreen : public DemoScreen {
 public:
     PlaybackControlScreen() : DemoScreen("Video: Playback Control") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         video_.emplace(kTestClipMp4, &GetScreenManager()->getGraphicsDeviceProperty());
         player_.setIsLoopedProperty(true);
         player_.Play(&*video_);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         player_.Dispose();
         video_.reset();
     }

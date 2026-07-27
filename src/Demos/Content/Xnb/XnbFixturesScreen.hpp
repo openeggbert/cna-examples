@@ -45,7 +45,7 @@ class XnbFixturesScreen : public DemoScreen {
 public:
     XnbFixturesScreen() : DemoScreen("Content: XNB Fixtures") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         // Recorded BEFORE registering, so the screen can show the transition
         // rather than only the end state.
         readerRegisteredBefore_ =
@@ -66,7 +66,7 @@ public:
         Load();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         texture_.reset();
         manager_.reset();
     }

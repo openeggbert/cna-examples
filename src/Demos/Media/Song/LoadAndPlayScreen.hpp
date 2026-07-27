@@ -31,11 +31,11 @@ class LoadAndPlayScreen : public DemoScreen {
 public:
     LoadAndPlayScreen() : DemoScreen("Song: Load & Play") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         song_.emplace(kToneAWav, "Tone A (440 Hz)");
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         MediaPlayer::Stop();
         song_.reset();
     }

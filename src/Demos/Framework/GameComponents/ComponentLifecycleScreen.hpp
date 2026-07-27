@@ -31,11 +31,11 @@ class ComponentLifecycleScreen : public DemoScreen {
 public:
     ComponentLifecycleScreen() : DemoScreen("Components: Lifecycle") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         component_ = std::make_unique<CountingComponent>(GameRef(), "counter");
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         RemoveIfPresent();
         component_.reset();
     }

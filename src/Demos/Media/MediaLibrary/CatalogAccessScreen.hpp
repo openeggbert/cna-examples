@@ -46,9 +46,9 @@ class CatalogAccessScreen : public DemoScreen {
 public:
     CatalogAccessScreen() : DemoScreen("MediaLibrary: Catalog Access") {}
 
-    void LoadContent() override { Rebuild(); }
+    void OnDemoLoad() override { Rebuild(); }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         library_.reset();
         roots_.reset();
     }

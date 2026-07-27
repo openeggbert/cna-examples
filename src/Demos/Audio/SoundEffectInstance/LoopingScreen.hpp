@@ -31,7 +31,7 @@ class LoopingScreen : public DemoScreen {
 public:
     LoopingScreen() : DemoScreen("SoundEffectInstance: Looping") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         try {
             effect_.emplace(GenerateSineWavePcm16(523.0f, 0.4f), 44100, AudioChannels::Mono);
             instance_ = effect_->CreateInstance();
@@ -40,7 +40,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         if (instance_.has_value()) instance_->Stop(true);
     }
 

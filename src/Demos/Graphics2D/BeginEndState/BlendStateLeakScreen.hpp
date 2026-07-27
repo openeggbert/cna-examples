@@ -34,12 +34,12 @@ class BlendStateLeakScreen : public DemoScreen {
 public:
     BlendStateLeakScreen() : DemoScreen("SpriteBatch: BlendState Leaks Past End()") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         quad_.emplace(CreateCheckerboardTexture(GetScreenManager()->getGraphicsDeviceProperty(), 40, 40, 40,
                                                   Color(255, 120, 60, 255), Color(255, 120, 60, 255)));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         quad_.reset();
     }
 

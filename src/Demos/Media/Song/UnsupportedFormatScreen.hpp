@@ -31,11 +31,11 @@ class UnsupportedFormatScreen : public DemoScreen {
 public:
     UnsupportedFormatScreen() : DemoScreen("Song: Unsupported Format") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         song_.emplace(kUnsupportedOpus, "Unsupported (real Opus file)");
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         MediaPlayer::Stop();
         song_.reset();
     }

@@ -34,7 +34,7 @@ class ContentLoadExceptionScreen : public DemoScreen {
 public:
     ContentLoadExceptionScreen() : DemoScreen("Content: Load Failures") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         manager_.emplace(&GetScreenManager()->getGameProperty().getServicesProperty());
         manager_->setRootDirectoryProperty("Content");
         // The service provider alone is not enough: CNA's ContentManager needs
@@ -44,7 +44,7 @@ public:
         RunAll();
     }
 
-    void UnloadContent() override { manager_.reset(); }
+    void OnDemoUnload() override { manager_.reset(); }
 
 protected:
     void OnDemoInput(InputState& input) override {

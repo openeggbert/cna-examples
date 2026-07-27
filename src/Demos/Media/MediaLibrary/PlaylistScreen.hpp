@@ -31,11 +31,11 @@ class PlaylistScreen : public LibraryDemoScreen {
 public:
     PlaylistScreen() : LibraryDemoScreen("MediaLibrary: Playlists") {}
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         // MediaPlayer is a process-global singleton; leaving a playlist running
         // after the screen is gone would bleed into the next demo.
         MediaPlayer::Stop();
-        LibraryDemoScreen::UnloadContent();
+        LibraryDemoScreen::OnDemoUnload();
     }
 
 protected:

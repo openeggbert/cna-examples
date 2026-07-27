@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "CNA/GraphicsBackendType.hpp"
+#include "CNA/GraphicsCapability.hpp"
 #include "Microsoft/Xna/Framework/Rectangle.hpp"
 #include "Microsoft/Xna/Framework/Graphics/SpriteEffects.hpp"
 #include "Microsoft/Xna/Framework/Vector2.hpp"
@@ -41,6 +43,19 @@ public:
     void SetApis(std::vector<std::string> apis) { apis_ = std::move(apis); }
     void SetBreadcrumb(std::string breadcrumb) { breadcrumb_ = std::move(breadcrumb); }
 
+    // Marks this demo as needing a graphics capability the running backend may
+    // not have. CNA chooses its backend at compile time, and SDL_RENDERER, DX3
+    // and CANVAS are 2D-only by design -- every 3D call throws on them. A demo
+    // so marked is not run at all on a backend that lacks the capability; it
+    // explains itself instead.
+    //
+    // Set at the catalog assembly site (see Requiring() in AreaCatalog.hpp)
+    // rather than inside each screen, so a whole category can be marked at once
+    // and no demo can forget.
+    void SetRequiredCapability(CNA::GraphicsCapability capability) {
+        requiredCapability_ = capability;
+    }
+
     // Shortens `text` with a trailing ellipsis until it measures no wider than
     // `maxWidth`. Measured with the real font rather than assuming a character
     // width -- the menu font is proportional, so a character count would cut
@@ -58,9 +73,32 @@ public:
         return result + "...";
     }
 
+    // LoadContent/UnloadContent are gated the same way Update and Draw are, and
+    // this is the gate that actually matters: a 3D demo builds its vertex
+    // buffers in LoadContent, so on a 2D-only backend it throws before Draw is
+    // ever reached. Gating only the draw path left four demos still aborting
+    // with "SDL_Renderer does not support 3D: CreateVertexBuffer".
+    //
+    // Demos that need loading therefore override OnDemoLoad/OnDemoUnload rather
+    // than LoadContent/UnloadContent directly. `loaded_` ensures the unload hook
+    // runs if and only if the load hook did.
+    void LoadContent() final {
+        if (!CapabilityAvailable()) return;
+        loaded_ = true;
+        OnDemoLoad();
+    }
+
+    void UnloadContent() final {
+        if (!loaded_) return;
+        loaded_ = false;
+        OnDemoUnload();
+    }
+
     void Update(GameTime& gameTime, bool otherScreenHasFocus, bool coveredByOtherScreen) override {
         GameScreen::Update(gameTime, otherScreenHasFocus, coveredByOtherScreen);
-        if (IsActive()) {
+        // A demo whose capability is missing must not run at all -- its update
+        // would make the very calls the backend throws on.
+        if (IsActive() && CapabilityAvailable()) {
             OnDemoUpdate(gameTime);
         }
     }
@@ -79,7 +117,7 @@ public:
             return;
         }
 
-        OnDemoInput(input);
+        if (CapabilityAvailable()) OnDemoInput(input);
     }
 
     void Draw(const GameTime& gameTime) override {
@@ -104,7 +142,11 @@ public:
                       Vector2(((float)viewport.getWidthProperty() - headingSize.X) / 2.0f, 20.0f),
                       mul(Color(192, 192, 192), alpha));
 
-        OnDemoDraw(gameTime, sb, font);
+        if (CapabilityAvailable()) {
+            OnDemoDraw(gameTime, sb, font);
+        } else {
+            DrawUnavailable(sb, font, alpha);
+        }
 
         DrawApiFooter(sb, font, alpha, viewport.getWidthProperty(), viewport.getHeightProperty());
 
@@ -115,6 +157,10 @@ public:
     }
 
 protected:
+    // Override instead of LoadContent/UnloadContent -- see the note on those.
+    virtual void OnDemoLoad() {}
+    virtual void OnDemoUnload() {}
+
     // Override to poll live device state once per active frame (most Input
     // demos call the real Microsoft::Xna::Framework::Input static APIs
     // directly here, not through the app's own menu-navigation InputState).
@@ -231,6 +277,47 @@ protected:
     }
 
 private:
+    [[nodiscard]] bool CapabilityAvailable() const {
+        if (!requiredCapability_.has_value()) return true;
+        return GetScreenManager()->getGraphicsDeviceProperty().SupportsCapability(
+            requiredCapability_.value());
+    }
+
+    // Shown in place of the demo when the backend cannot run it. Naming the
+    // capability and the backend matters: "this demo does not work here" is not
+    // actionable, "this backend has no 3D pipeline by design" is.
+    void DrawUnavailable(SpriteBatch& spriteBatch, SpriteFont& font, float alpha) const {
+        std::vector<std::string> lines;
+        lines.push_back("Not available on this build.");
+        lines.emplace_back();
+        lines.push_back("Requires GraphicsCapability::" + CapabilityName(requiredCapability_.value()));
+        lines.push_back("Backend:  " + std::string(CNA::getCurrentGraphicsBackendName()) +
+                        "   (chosen at compile time via CNA_GRAPHICS_BACKEND)");
+        lines.emplace_back();
+        lines.push_back("This is the backend behaving as designed, not a failure. SDL_RENDERER,");
+        lines.push_back("DX3 and CANVAS are 2D-only: their 3D entry points throw rather than");
+        lines.push_back("silently drawing nothing.");
+        lines.emplace_back();
+        lines.push_back("The catalog asks GraphicsDevice::SupportsCapability before running a");
+        lines.push_back("demo, which is what a real CNA application has to do too. See");
+        lines.push_back("Diagnostics > Backend & Capabilities for the full list.");
+        DrawLines(spriteBatch, font, Vector2(40.0f, 100.0f), lines, mul(Color(210, 190, 120), alpha));
+    }
+
+    static std::string CapabilityName(CNA::GraphicsCapability capability) {
+        switch (capability) {
+            case CNA::GraphicsCapability::ThreeD:                  return "ThreeD";
+            case CNA::GraphicsCapability::DepthStencilBuffer:      return "DepthStencilBuffer";
+            case CNA::GraphicsCapability::MultiSampleAntiAliasing: return "MultiSampleAntiAliasing";
+            case CNA::GraphicsCapability::MultipleRenderTargets:   return "MultipleRenderTargets";
+            case CNA::GraphicsCapability::AnisotropicFiltering:    return "AnisotropicFiltering";
+            case CNA::GraphicsCapability::WireFrame:               return "WireFrame";
+            case CNA::GraphicsCapability::OcclusionQuery:          return "OcclusionQuery";
+            case CNA::GraphicsCapability::CustomEffects:           return "CustomEffects";
+        }
+        return "(unknown)";
+    }
+
     // Right-aligned on the Back hint's row, so it costs no vertical space at
     // all. Demos already use every pixel between the title and the hint; a
     // footer that pushed content up would have broken the layout of all ~174
@@ -267,6 +354,8 @@ private:
     std::string title_;
     std::string breadcrumb_;
     std::vector<std::string> apis_;
+    std::optional<CNA::GraphicsCapability> requiredCapability_;
+    bool loaded_ = false;
 };
 
 } // namespace CnaExamples::Demos

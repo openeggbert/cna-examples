@@ -50,12 +50,12 @@ class LoggerScreen : public DemoScreen {
 public:
     LoggerScreen() : DemoScreen("Diagnostics: Logger") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         originalLevel_ = Logger::GetMinimumLevel();
         Emit();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         // The minimum level is process-global; leaving it lowered would flood
         // the console for the rest of the session.
         Logger::SetMinimumLevel(originalLevel_);

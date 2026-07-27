@@ -30,7 +30,7 @@ class MicrophoneCaptureScreen : public DemoScreen {
 public:
     MicrophoneCaptureScreen() : DemoScreen("Microphone: Capture") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         mic_ = Microphone::getDefaultProperty();
         if (mic_) {
             bufferReadyToken_ = mic_->BufferReady.Add(
@@ -38,7 +38,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         if (mic_) {
             if (mic_->getStateProperty() == MicrophoneState::Started) mic_->Stop();
             mic_->BufferReady.Remove(bufferReadyToken_);

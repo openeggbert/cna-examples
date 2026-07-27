@@ -22,12 +22,12 @@ class DrawOutsideBeginThrowsScreen : public DemoScreen {
 public:
     DrawOutsideBeginThrowsScreen() : DemoScreen("SpriteBatch: Draw Outside Begin() Throws") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         dummy_.emplace(CreateCheckerboardTexture(GetScreenManager()->getGraphicsDeviceProperty(), 8, 8, 4,
                                                    Color::White, Color::Black));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         dummy_.reset();
     }
 

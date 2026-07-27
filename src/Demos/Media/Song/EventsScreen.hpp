@@ -31,7 +31,7 @@ class EventsScreen : public DemoScreen {
 public:
     EventsScreen() : DemoScreen("Song: MediaPlayer Events") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         songA_.emplace(kToneAWav, "Tone A (440 Hz)");
         songB_.emplace(kToneBWav, "Tone B (554 Hz)");
         activeSongToken_ = MediaPlayer::ActiveSongChanged.Add(
@@ -40,7 +40,7 @@ public:
             [this](System::Object*, const System::EventArgs&) { mediaStateChangedCount_++; });
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         MediaPlayer::ActiveSongChanged.Remove(activeSongToken_);
         MediaPlayer::MediaStateChanged.Remove(stateToken_);
         MediaPlayer::Stop();

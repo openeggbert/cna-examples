@@ -47,7 +47,7 @@ class CullModeScreen : public DemoScreen {
 public:
     CullModeScreen() : DemoScreen("RasterizerState: CullMode") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         mesh_ = BuildQuadNormalTextureMesh(1.6f, 1.6f);
         texture_.emplace(CnaExamples::Demos::Graphics2D::CreateCheckerboardTexture(
@@ -57,7 +57,7 @@ public:
         effect_->setTextureProperty(&*texture_);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         texture_.reset();
     }

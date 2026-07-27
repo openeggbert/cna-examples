@@ -22,12 +22,12 @@ class PropertiesAndDisposeScreen : public DemoScreen {
 public:
     PropertiesAndDisposeScreen() : DemoScreen("Texture2D: Properties & Dispose") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         texture_.emplace(CreateCheckerboardTexture(GetScreenManager()->getGraphicsDeviceProperty(),
                                                      48, 32, 8, Color(255, 200, 60, 255), Color(60, 90, 255, 255)));
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         texture_.reset();
     }
 

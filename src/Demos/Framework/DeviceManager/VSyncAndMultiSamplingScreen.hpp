@@ -31,7 +31,7 @@ class VSyncAndMultiSamplingScreen : public DemoScreen {
 public:
     VSyncAndMultiSamplingScreen() : DemoScreen("Device Manager: VSync & MultiSampling") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& game = GetScreenManager()->getGameProperty();
         originalIsFixed_ = game.getIsFixedTimeStepProperty();
         // Measuring v-sync under a fixed timestep would measure the timestep.
@@ -43,7 +43,7 @@ public:
         }
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         GetScreenManager()->getGameProperty().setIsFixedTimeStepProperty(originalIsFixed_);
         auto* gdm = Manager();
         if (gdm == nullptr || !dirty_) return;

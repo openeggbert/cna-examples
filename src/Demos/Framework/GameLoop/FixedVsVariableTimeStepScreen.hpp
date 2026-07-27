@@ -31,11 +31,11 @@ class FixedVsVariableTimeStepScreen : public DemoScreen {
 public:
     FixedVsVariableTimeStepScreen() : DemoScreen("Game Loop: Fixed vs Variable Time Step") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         originalIsFixed_ = GameRef().getIsFixedTimeStepProperty();
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         // IsFixedTimeStep is global to the Game; leaving it flipped would change
         // how every other demo behaves for the rest of the session.
         GameRef().setIsFixedTimeStepProperty(originalIsFixed_);

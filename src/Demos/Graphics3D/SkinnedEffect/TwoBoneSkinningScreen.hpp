@@ -77,7 +77,7 @@ class TwoBoneSkinningScreen : public DemoScreen {
 public:
     TwoBoneSkinningScreen() : DemoScreen("SkinnedEffect: Two-Bone Bend") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
 
         // Two quads (4 verts each, sharing the hinge edge's 2 verts logically
@@ -108,7 +108,7 @@ public:
         effect_->setWeightsPerVertexProperty(1);
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
         texture_.reset();
         vb_.reset();

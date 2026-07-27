@@ -42,7 +42,7 @@ class DepthStencilComparisonScreen : public DemoScreen {
 public:
     DepthStencilComparisonScreen() : DemoScreen("DepthStencilState: Default vs. None") {}
 
-    void LoadContent() override {
+    void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         nearMesh_ = BuildCubeColorMesh(0.8f, MakeFaceColors(Color(60, 110, 220, 255)));
         farMesh_ = BuildCubeColorMesh(0.8f, MakeFaceColors(Color(220, 70, 70, 255)));
@@ -50,7 +50,7 @@ public:
         effect_->VertexColorEnabled = true;
     }
 
-    void UnloadContent() override {
+    void OnDemoUnload() override {
         effect_.reset();
     }
 
