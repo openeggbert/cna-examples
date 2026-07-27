@@ -1,7 +1,8 @@
 # NEXT — short-term continuity for cna-examples
 
-**Updated:** 2026-07-27
-**Branch:** `feature/examples-phase-bcde` (branched from `develop` @ `d7353e3`)
+**Updated:** 2026-07-27 (end of the autonomous session)
+**Branch:** `feature/examples-phase-bcde`, 7 commits ahead of `develop` @ `d7353e3`, all pushed.
+The working tree is clean and both build trees are green.
 **Authoritative plan:** [`plan.md`](plan.md). Historical record: [`plan20260727.md`](plan20260727.md).
 
 This file is the continuity document: what just happened, what is in flight, what is
@@ -192,7 +193,16 @@ python3 tools/check_shots.py build/screenshots --quiet
 
 ## 7. Blocked / needs_human
 
-*(none currently)*
+*(none)* — nothing in the roadmap is currently blocked on a human decision. The three that could
+have been were settled up front and are recorded in §2: asset licensing, branch policy, and
+depth-over-breadth.
+
+One judgement call worth re-examining if it ever bites: every new area this session shipped
+**fewer screens than projected** (Content 5 of 15, Storage 2 of 6, Diagnostics 4 of 13), because
+the projections counted API surface rather than distinct demonstrations, and splitting a single
+idea across three screens teaches nothing extra. Each omission is itemised in `plan.md`. If the
+project owner actually wants the higher counts — for coverage-metric reasons, say — that is a
+preference worth stating, because the current bias is deliberate and will otherwise continue.
 
 ## 8. Resume here
 
