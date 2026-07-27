@@ -15,8 +15,8 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **220** across 12 areas, 72 categories |
-| Last full validation | 218/218 on EASYGL **and** SDL_RENDERER, 0 layout problems, catalog+layout+docs clean |
+| Demo screens | **222** across 12 areas, 73 categories |
+| Last full validation | 222/222 on EASYGL **and** SDL_RENDERER, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
 | Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
 | Phase C1 (Framework area) | **Done** — 5 categories, 17 screens |
@@ -24,8 +24,9 @@ state.
 | Phase C3 (Content area) | **Done** — 5 categories, 7 screens (CNJ category since added) |
 | Phase C4 (Storage area) | **Done, reduced scope** — 2 categories, 2 screens |
 | Phase C5 (Diagnostics area) | **Done, reduced scope** — 4 categories, 4 screens |
-| Phase F3 (SDL_RENDERER pass) | **Done** — 218/218 on both backends, 3D gated on ThreeD |
-| Phases D, E, F1, F2 | Not started |
+| Phase F3 (SDL_RENDERER pass) | **Done** — 222/222 on both backends, 3D gated on ThreeD |
+| Phase D1 (Audio/XACT) | **Done, reduced scope** — 1 category, 2 screens |
+| Phases D2–D8, E, F1, F2 | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -164,6 +165,24 @@ state.
    to yank the list straight back to the selected entry, so dragging appeared to
    do nothing. `MenuScreen::userScrolled_` holds it off until the selection moves.
 
+23. **A Cue's seven flags are not seven booleans.** Six of them (`IsCreated`, `IsPreparing`,
+   `IsPrepared`, `IsPlaying`, `IsStopping`, `IsStopped`) are one mutually-exclusive state value --
+   exactly one is ever true. A cue from `SoundBank::GetCue` is therefore `IsPrepared` and **never**
+   `IsCreated`; the constructor sets `State::Prepared` directly. `IsPaused` is the one real
+   exception: FACT only sets/clears a PAUSED bit and never touches PLAYING, so a paused cue reads
+   `IsPlaying == true` as well. I assumed the opposite and `tools/checks/xact_claims.cpp` caught it.
+24. **A Cue is single-use.** Once stopped it does not go back to Playing, so each replay needs a
+   fresh `GetCue`. That is XACT's design, not a CNA limitation.
+25. **XACT bank generation lives outside this repo on purpose.** `../cna/examples/demo_xact/src/`
+   is put on the *include path* by `cmake/ExamplesHelpers.cmake` and never copied: it is Ms-PL,
+   this repo is MIT. Guarded by `CNA_EXAMPLES_HAS_XACT_FILEGEN`, so a missing `../cna` yields a
+   screen explaining the absence instead of a build failure. Same policy as the `.xnb` fixtures.
+26. **Scripted keys now cover Left/Right, and reach `IsNewKeyPress`.** Before this, `--keys` only
+   emitted the four menu verbs and only through `IsMenuUp`/`IsMenuDown`/`IsMenuSelect`/
+   `IsMenuCancel` -- so every demo binding raw `Keys::Left`/`Keys::Right` (several in Audio and
+   Input) was unreachable from the harness. `InputState::ScriptedKey()` maps each action to the
+   key it stands for and `IsNewKeyPress` honours it.
+
 ## 6. Commands
 
 ```bash
@@ -180,6 +199,9 @@ python3 tools/check_layout.py                # hardcoded bottom-of-window draw p
 ./tools/sweep_backend.sh build-sdlrenderer   # sweep a second backend's build tree
 python3 tools/check_shots.py build/screenshots --quiet
 
+# Assert on-screen claims directly (screens that swallow exceptions look fine when broken).
+# tools/checks/{math,cnj,xact}_claims.cpp -- build recipe is in each file's header comment.
+
 # Search, assertable from a shell (same matcher the search screen uses)
 ./build/cna_examples --list-demos --search "fromstream"
 
@@ -187,6 +209,8 @@ python3 tools/check_shots.py build/screenshots --quiet
 ./tools/headless.sh --demo "Media/Pictures/Browse" --frames 90 --screenshot /tmp/a.png
 ./tools/headless.sh --demo "Album/Artist/Genre" --keys select,down,select --frames 120
 ./tools/headless.sh --search "occlusion" --frames 70 --screenshot /tmp/s.png
+# left/right now scriptable too (reaches IsNewKeyPress, not just the menu verbs)
+./tools/headless.sh --demo "XACT/Cues" --keys select,left,left,right --frames 140
 # Gestures: press at (480,560), drag to (480,300), release
 ./tools/headless.sh --keys down,select,select --pointer 480,560,300 --frames 200
 ```
@@ -208,10 +232,11 @@ preference worth stating, because the current bias is deliberate and will otherw
 
 Candidates, in this order:
 
-**(a) Phase D** — deepening existing areas (XACT, PBR, Model content, effect reflection,
-Texture3D/Cube/RenderTargetCube, occlusion queries). D1's XACT is self-contained: the bank
-generator in `../cna/examples/demo_xact/src/XactFileGen.hpp` is 389 lines with no dependencies
-and can be adapted in place, so no assets need borrowing.
+**(a) Phase D2 onwards** — deepening existing areas (PBR & pipeline, Model content, effect
+reflection, Texture3D/Cube/RenderTargetCube, occlusion queries, 2D surface formats and device
+events, Input EXT screens, Net QoS). **D1 (XACT) is done.** D2–D5 are all 3D and must be wrapped
+in `Requiring(CNA::GraphicsCapability::ThreeD, ...)` like the existing 3D categories, or the
+SDL_RENDERER sweep will abort on them.
 
 **(b) Extend C4 Storage** — container directory operations and container lifetime.
 

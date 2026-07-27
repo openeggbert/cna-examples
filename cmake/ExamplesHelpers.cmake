@@ -77,6 +77,33 @@ function(cna_examples_configure_target target_name)
     # this introduces nothing new. It is still guarded: a missing directory
     # leaves the demos to report the absence on screen rather than fail to build.
     # ---------------------------------------------------------------------
+    # ---------------------------------------------------------------------
+    # Borrowed source: XactFileGen.hpp, included from ../cna, never copied.
+    #
+    # The Audio area's XACT demos need real .xgs/.xsb/.xwb bank files, and CNA
+    # reads that format without ever writing it -- so, like the .xnb fixtures
+    # below, they cannot be produced locally. ../cna already solved this for its
+    # own demo_xact program with a 389-line, dependency-free generator.
+    #
+    # That header is Ms-PL (it lives in the Ms-PL cna repository) and this repo
+    # is MIT, so it is added to the include path rather than copied into version
+    # control. Compiling against it is no different from linking CNA itself,
+    # which is equally Ms-PL; what matters is that no Ms-PL source enters this
+    # repository's history.
+    #
+    # Guarded: without it the XACT demos compile to a screen explaining why they
+    # are unavailable, instead of failing the build.
+    # ---------------------------------------------------------------------
+    set(_cna_xact_filegen "${CMAKE_CURRENT_SOURCE_DIR}/../cna/examples/demo_xact/src")
+    if(EXISTS "${_cna_xact_filegen}/XactFileGen.hpp")
+        target_include_directories(${target_name} PRIVATE "${_cna_xact_filegen}")
+        target_compile_definitions(${target_name} PRIVATE CNA_EXAMPLES_HAS_XACT_FILEGEN=1)
+        message(STATUS "cna-examples: XACT bank generator found at ${_cna_xact_filegen}")
+    else()
+        message(STATUS "cna-examples: no XactFileGen.hpp at ${_cna_xact_filegen}"
+                       " -- the Audio area's XACT demos will report it as unavailable")
+    endif()
+
     set(_cna_xnb_fixtures "${CMAKE_CURRENT_SOURCE_DIR}/../cna/tests/assets/xnb")
     if(EXISTS "${_cna_xnb_fixtures}")
         add_custom_command(TARGET ${target_name} POST_BUILD

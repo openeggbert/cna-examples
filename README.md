@@ -15,7 +15,7 @@ first seven areas were built and verified.
 
 ## Status
 
-**12 areas, 72 categories, 220 demo screens**, every one of them exercising a real
+**12 areas, 73 categories, 222 demo screens**, every one of them exercising a real
 `Microsoft::Xna::Framework` / `CNA::*` API call rather than a mock.
 
 | Area | Categories | Screens |
@@ -26,7 +26,7 @@ first seven areas were built and verified.
 | Storage | StorageDevice, StorageContainer | 2 |
 | Diagnostics | Logging, Platform & Build, Backend & Capabilities, Adapter & Display | 4 |
 | Input | Keyboard, Mouse, Gamepad, Touch, Other | 50 |
-| Audio | SoundEffect, SoundEffectInstance, 3D Audio, DynamicSoundEffectInstance, Microphone | 10 |
+| Audio | SoundEffect, SoundEffectInstance, 3D Audio, DynamicSoundEffectInstance, Microphone, XACT | 12 |
 | Devices | Sensors, Vibration, Camera, System & Display, Power, Desktop Integration | 15 |
 | Net | NetworkSession, NetworkGamer, GamerServices, Leaderboards | 14 |
 | Media | Song, Video, MediaLibrary, Pictures | 17 |

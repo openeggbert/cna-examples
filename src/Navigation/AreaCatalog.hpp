@@ -73,6 +73,8 @@
 #include "Demos/Audio/DynamicSoundEffectInstance/StreamingSineWaveScreen.hpp"
 #include "Demos/Audio/Microphone/MicrophoneEnumerationScreen.hpp"
 #include "Demos/Audio/Microphone/MicrophoneCaptureScreen.hpp"
+#include "Demos/Audio/Xact/XactEngineScreen.hpp"
+#include "Demos/Audio/Xact/XactCueScreen.hpp"
 
 #include "Demos/Devices/Sensors/AccelerometerScreen.hpp"
 #include "Demos/Devices/Sensors/GyroscopeScreen.hpp"
@@ -537,6 +539,19 @@ inline std::vector<DemoEntry> BuildMicrophoneDemos() {
         "Enumeration", "Microphone::All / Default + per-device properties"));
     demos.push_back(MakeDemo<MicrophoneCaptureScreen>(
         "Capture", "Start/Stop + GetData() + the BufferReady event"));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildXactDemos() {
+    using namespace CnaExamples::Demos::Audio::XactDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<XactEngineScreen>(
+        "Engine & Banks", "AudioEngine + WaveBank + SoundBank, and the order they must open in",
+        {"AudioEngine", "WaveBank", "SoundBank", "AudioEngine::Update"}));
+    demos.push_back(MakeDemo<XactCueScreen>(
+        "Cues & Categories", "A Cue's full seven-flag state machine, and category-wide volume",
+        {"SoundBank::GetCue", "Cue::Play", "AudioCategory::SetVolume",
+         "AudioEngine::GetGlobalVariable"}));
     return demos;
 }
 
@@ -1353,6 +1368,7 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"3D Audio", BuildAudio3DDemos()},
             CategoryEntry{"DynamicSoundEffectInstance", BuildDynamicSoundEffectInstanceDemos()},
             CategoryEntry{"Microphone", BuildMicrophoneDemos()},
+            CategoryEntry{"XACT", BuildXactDemos()},
         }},
         AreaEntry{"Devices", {
             CategoryEntry{"Sensors", BuildSensorsDemos()},

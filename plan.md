@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-27)
 
-Twelve Areas, **220 demo screens** across 72 categories, all with real content. The numbers below
+Twelve Areas, **222 demo screens** across 73 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -49,13 +49,13 @@ this file and `README.md`. Nothing here is counted by hand.
 | Storage | — | 2 | 2 |
 | Diagnostics | — | 4 | 4 |
 | Input | — | 5 | 50 |
-| Audio | — | 5 | 10 |
+| Audio | — | 6 | 12 |
 | Devices | — | 6 | 15 |
 | Net | — | 4 | 14 |
 | Media | — | 4 | 17 |
 | 2D Graphics | 4 | 13 | 38 |
 | 3D Graphics | 4 | 14 | 30 |
-| **Total** | **12** | **72** | **220** |
+| **Total** | **12** | **73** | **222** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -72,7 +72,7 @@ Per-category breakdown:
 | Storage | StorageDevice (1), StorageContainer (1) |
 | Diagnostics | Logging (1), Platform & Build (1), Backend & Capabilities (1), Adapter & Display (1) |
 | Input | Keyboard (10), Mouse (10), Gamepad (10), Touch (10), Other (10) |
-| Audio | SoundEffect (2), SoundEffectInstance (3), 3D Audio (2), DynamicSoundEffectInstance (1), Microphone (2) |
+| Audio | SoundEffect (2), SoundEffectInstance (3), 3D Audio (2), DynamicSoundEffectInstance (1), Microphone (2), XACT (2) |
 | Devices | Sensors (4), Vibration (1), Camera (1), System & Display (3), Power (1), Desktop Integration (5) |
 | Net | NetworkSession (5), NetworkGamer (2), GamerServices (5), Leaderboards (2) |
 | Media | Song (6), Video (3), MediaLibrary (4), Pictures (4) |
@@ -531,6 +531,45 @@ which is the reverse of what the names suggest.
 | D6 | 2D Graphics | **Formats & Device Events** group — *Surface Formats* (every `SurfaceFormat` attempted against this backend · DXT1/3/5 · `Texture2D::FromStream` on PNG/JPG/BMP) and *Device Events* (MSAA on/off · `PresentInterval` with measured frame rate · back-buffer resize → device reset → resource survival) | 6 |
 | D7 | Input | Gamepad gyro/accelerometer/light-bar/trigger-rumble EXT · `TouchPanel` display width/height/orientation · the four APIs the `feature/input` merge exposed (see A2 result): `TouchCollection::FindById`'s Invalid sentinel, `NO_FINGER`, `GamePadButtons::FromButtonArray` | 3 |
 | D8 | Net | `QualityOfService` · the full `SendDataOptions` matrix · simulated network conditions | 3 |
+
+#### D1 XACT — 1 category, 2 screens — **DONE (reduced scope, see below)**
+
+| Category | Screens |
+|---|---|
+| XACT (2) | Engine & Banks — the three authored files and the construction order · Cues & Categories — the seven-flag cue state machine and `AudioCategory` |
+
+**Shipped as 2 screens, not 6.** XACT's substance is the two ideas above; cue variables/RPCs and
+the error paths are variations that would have repeated the same calls without adding a concept.
+
+**The banks are generated at runtime, and no Ms-PL source entered this repository.** XACT needs
+three real binary files (`.xgs`/`.xsb`/`.xwb`), CNA reads that format without ever writing it, and
+no XACT authoring tool exists on Linux — so unlike every other asset here they cannot be produced
+locally. `../cna` already solved this for its own `demo_xact` program with a dependency-free
+generator; `cmake/ExamplesHelpers.cmake` puts that header on the *include path* and never copies
+it, because it is Ms-PL and this repo is MIT. Compiling against it is no different from linking
+CNA itself. Guarded on existence: without `../cna` the screens build and explain their own
+absence. Output goes to `/tmp/cna-examples-xact/`, never into the checked-out tree — the same rule
+Media/Pictures follows. Measured: `Demo.xgs` 136 B, `Sounds.xsb` 318 B, `Waves.xwb` 282 484 B.
+
+**The seven cue flags are not seven independent booleans**, which is the one thing a state grid
+invites you to get wrong. Six of them (`IsCreated`, `IsPreparing`, `IsPrepared`, `IsPlaying`,
+`IsStopping`, `IsStopped`) are a single mutually-exclusive state value — exactly one is ever true —
+so a cue straight out of `SoundBank::GetCue` reads `IsPrepared` and **never** `IsCreated`. This
+plan originally assumed otherwise; `tools/checks/xact_claims.cpp` caught it. `IsPaused` is the
+exception: real FACT only sets and clears a PAUSED bit and never touches PLAYING, so a paused cue
+stays `IsPlaying == true`. Both facts are now asserted and stated on screen.
+
+**Verified by assertion, not by screenshot.** Both screens catch their own exceptions and print
+them, so a total failure to open the engine would still render a clean screenshot and pass a
+sweep — the trap that hid two real bugs in the XNB screen. `tools/checks/xact_claims.cpp` asserts
+all 24 on-screen claims directly against CNA: bank sizes, open order, `ContentVersion == 46`,
+`SpeedOfSound == 343` out of the `.xgs`, all four cues resolving by authored name, the full
+state machine, category volume, and the rejection paths for unauthored cue/category/variable names.
+
+**Supporting harness fix.** `--keys` gained `left` and `right`, and a scripted action now also
+reports itself through `IsNewKeyPress` as the key it stands for. Left/Right previously had no menu
+equivalent, so *no* demo binding them — several in Audio and Input — was reachable from the
+harness at all. The cue screen uses them for pause/resume and stop.
 
 ### Phase E — Avatars Area
 

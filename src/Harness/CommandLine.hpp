@@ -24,7 +24,7 @@ struct Options {
     std::string screenshotPath;             // --screenshot <file.png>
     int frames = 0;                         // --frames <n>; 0 = run until closed
     int keyInterval = 12;                   // --key-interval <n>
-    std::vector<InputState::ScriptedAction> keys;   // --keys up,down,select,cancel
+    std::vector<InputState::ScriptedAction> keys;   // --keys up,down,left,right,select,cancel
     // --pointer x,y1,y2 : press at (x,y1), drag to (x,y2) over kPointerFrames
     // frames, then release. Empty means "no scripted pointer".
     bool pointerScript = false;
@@ -44,8 +44,8 @@ inline const char* kUsage =
     "                          Accepts a full \"Area/Category/Demo\" path or any\n"
     "                          unambiguous substring of one.\n"
     "  --search <text>         open the search screen with this query already typed\n"
-    "  --keys <a,b,c>          scripted menu actions, one per --key-interval frames.\n"
-    "                          Each is up, down, select or cancel.\n"
+    "  --keys <a,b,c>          scripted actions, one per --key-interval frames.\n"
+    "                          up, down, left, right, select, cancel.\n"
     "  --key-interval <n>      frames between scripted actions (default 12)\n"
     "  --frames <n>            exit after n drawn frames (default: run until closed,\n"
     "                          or 90 when --screenshot is given)\n"
@@ -57,6 +57,8 @@ inline const char* kUsage =
 inline bool ParseScriptedAction(const std::string& name, InputState::ScriptedAction& out) {
     if (name == "up")     { out = InputState::ScriptedAction::Up;     return true; }
     if (name == "down")   { out = InputState::ScriptedAction::Down;   return true; }
+    if (name == "left")   { out = InputState::ScriptedAction::Left;   return true; }
+    if (name == "right")  { out = InputState::ScriptedAction::Right;  return true; }
     if (name == "select") { out = InputState::ScriptedAction::Select; return true; }
     if (name == "cancel") { out = InputState::ScriptedAction::Cancel; return true; }
     return false;
@@ -119,7 +121,7 @@ inline Options ParseCommandLine(int argc, char** argv) {
                     InputState::ScriptedAction action;
                     if (!ParseScriptedAction(name, action)) {
                         options.error = "unknown key action '" + name +
-                                        "' (expected up, down, select or cancel)";
+                                        "' (expected up, down, left, right, select or cancel)";
                         return options;
                     }
                     options.keys.push_back(action);

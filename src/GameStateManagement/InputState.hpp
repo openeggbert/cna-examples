@@ -61,7 +61,7 @@ public:
     // exactly the vocabulary MenuScreen and DemoScreen navigate with, so a
     // scripted run can reach any screen in the catalog without an X server, a
     // window manager or synthetic X11 key events.
-    enum class ScriptedAction { None, Up, Down, Select, Cancel };
+    enum class ScriptedAction { None, Up, Down, Left, Right, Select, Cancel };
 
     InputState() = default;
 
@@ -179,8 +179,16 @@ public:
     }
 
     // Helper for checking if a key was newly pressed during this update.
+    //
+    // A scripted action reports itself here as the key it stands for, so a demo
+    // that binds raw keys rather than the menu verbs (Left/Right especially,
+    // which have no menu equivalent) is still reachable from --keys.
     bool IsNewKeyPress(Keys key, std::optional<PlayerIndex> controllingPlayer,
                        PlayerIndex& playerIndex) {
+        if (currentScripted_ != ScriptedAction::None && key == ScriptedKey(currentScripted_)) {
+            playerIndex = controllingPlayer.value_or(PlayerIndex::One);
+            return true;
+        }
         if (controllingPlayer.has_value()) {
             playerIndex = controllingPlayer.value();
             int i = static_cast<int>(playerIndex);
@@ -270,6 +278,20 @@ private:
     std::optional<Vector2> newTapPosition_;
     std::optional<Vector2> newClickPosition_;
     ButtonState previousMouseLeftButton_ = ButtonState::Released;
+    // The keyboard key each scripted action stands for. Keys::None for actions
+    // with no single key equivalent.
+    static Keys ScriptedKey(ScriptedAction action) {
+        switch (action) {
+            case ScriptedAction::Up:     return Keys::Up;
+            case ScriptedAction::Down:   return Keys::Down;
+            case ScriptedAction::Left:   return Keys::Left;
+            case ScriptedAction::Right:  return Keys::Right;
+            case ScriptedAction::Select: return Keys::Space;
+            case ScriptedAction::Cancel: return Keys::Escape;
+            default:                     return Keys::None;
+        }
+    }
+
     std::vector<ScriptedAction> scripted_;
     ScriptedAction currentScripted_ = ScriptedAction::None;
     bool scriptedOnly_ = false;
