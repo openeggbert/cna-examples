@@ -2,10 +2,13 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "Microsoft/Xna/Framework/Rectangle.hpp"
+#include "Microsoft/Xna/Framework/Graphics/SpriteEffects.hpp"
 #include "Microsoft/Xna/Framework/Vector2.hpp"
 
 #include "GameStateManagement/ScreenManager.hpp"
@@ -155,6 +158,40 @@ protected:
     // its own single-pixel Texture2D.
     void FillRect(SpriteBatch& spriteBatch, const Rectangle& rect, Color color) const {
         spriteBatch.Draw(GetScreenManager()->getBlankTexture(), rect, color);
+    }
+
+    // Draws a straight line between two points by stretching and rotating the
+    // 1x1 blank texture. There is no line primitive in SpriteBatch, and the
+    // alternative -- a chain of small FillRect calls -- aliases badly on
+    // shallow diagonals, which is exactly what a vector diagram is made of.
+    void DrawLine(SpriteBatch& spriteBatch, Vector2 from, Vector2 to, Color color,
+                  float thickness = 2.0f) const {
+        const Vector2 delta(to.X - from.X, to.Y - from.Y);
+        const float length = std::sqrt(delta.X * delta.X + delta.Y * delta.Y);
+        if (length < 0.01f) return;
+
+        spriteBatch.Draw(GetScreenManager()->getBlankTexture(),
+                         Rectangle((int)from.X, (int)from.Y, (int)length, (int)thickness),
+                         std::nullopt, color,
+                         std::atan2(delta.Y, delta.X),
+                         Vector2(0.0f, thickness * 0.5f),
+                         SpriteEffects::None, 0.0f);
+    }
+
+    // A line with a solid head at `to`, for showing direction as well as extent.
+    void DrawArrow(SpriteBatch& spriteBatch, Vector2 from, Vector2 to, Color color,
+                   float thickness = 2.0f, float headLength = 12.0f) const {
+        DrawLine(spriteBatch, from, to, color, thickness);
+
+        const Vector2 delta(to.X - from.X, to.Y - from.Y);
+        const float length = std::sqrt(delta.X * delta.X + delta.Y * delta.Y);
+        if (length < headLength) return;
+
+        const Vector2 unit(delta.X / length, delta.Y / length);
+        const Vector2 back(to.X - unit.X * headLength, to.Y - unit.Y * headLength);
+        const Vector2 side(-unit.Y * headLength * 0.4f, unit.X * headLength * 0.4f);
+        DrawLine(spriteBatch, to, Vector2(back.X + side.X, back.Y + side.Y), color, thickness);
+        DrawLine(spriteBatch, to, Vector2(back.X - side.X, back.Y - side.Y), color, thickness);
     }
 
     // Draws a vertical stack of lines starting at `origin`, one per string.

@@ -36,13 +36,14 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-27)
 
-Seven Areas, **174 demo screens** across 50 categories, all with real content. The numbers below
+Eight Areas, **191 demo screens** across 56 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
 
 | Area | Groups | Categories | Screens |
 |---|---:|---:|---:|
+| Framework | — | 5 | 17 |
 | Input | — | 5 | 50 |
 | Audio | — | 5 | 10 |
 | Devices | — | 6 | 15 |
@@ -50,7 +51,7 @@ this file and `README.md`. Nothing here is counted by hand.
 | Media | — | 4 | 17 |
 | 2D Graphics | 4 | 13 | 38 |
 | 3D Graphics | 4 | 14 | 30 |
-| **Total** | **8** | **51** | **174** |
+| **Total** | **8** | **56** | **191** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -61,6 +62,7 @@ Per-category breakdown:
 
 | Area | Categories (screens) |
 |---|---|
+| Framework | Game Loop (4), Game Components (4), Services & Dispatcher (3), Window (3), Device Manager (3) |
 | Input | Keyboard (10), Mouse (10), Gamepad (10), Touch (10), Other (10) |
 | Audio | SoundEffect (2), SoundEffectInstance (3), 3D Audio (2), DynamicSoundEffectInstance (1), Microphone (2) |
 | Devices | Sensors (4), Vibration (1), Camera (1), System & Display (3), Power (1), Desktop Integration (5) |
@@ -293,7 +295,7 @@ folded into D7 rather than treated as new scope here:
 
 Five new Home entries, **72 screens**.
 
-#### C1 Framework — 5 categories, 17 screens
+#### C1 Framework — 5 categories, 17 screens — **DONE**
 
 | Category | Screens |
 |---|---|
@@ -302,6 +304,24 @@ Five new Home entries, **72 screens**.
 | Services & Dispatcher (3) | `GameServiceContainer` add/get/remove, `IGraphicsDeviceService` lookup · `FrameworkDispatcher` — what `Game::Update` pumps for you · `LaunchParameters` from real argv |
 | Window (3) | Title + `ClientBounds` live · `ClientSizeChanged` log, `AllowUserResizing` · `DisplayOrientation`, `SupportedOrientations`, `OrientationChanged` |
 | GraphicsDeviceManager (3) | Resolution + `ToggleFullScreen`/`ApplyChanges` · `SynchronizeWithVerticalRetrace` + `PreferMultiSampling` · `PreparingDeviceSettings`/`DeviceCreated`/`DeviceReset`/`DeviceResetting` |
+
+**Built as planned, 17/17.** Notes worth carrying forward:
+
+- Every screen in this Area mutates process-global state (the timestep, the window title, the
+  back-buffer size, v-sync). Each restores what it touched in `UnloadContent()`. This is verified,
+  not assumed: changing the resolution and leaving produces a measurably 800x600 back buffer while
+  the demo is open and a 960x640 one after, read straight off the captured screenshot.
+- The `GraphicsDeviceManager` is owned privately by the app's `Game` subclass, so the demos reach
+  it the XNA-idiomatic way instead — it registers itself in `Game::Services` as
+  `IGraphicsDeviceManager`, and `Demos/Framework/DeviceManager/GdmAccess.hpp` looks it up there.
+  No app-specific back door was added.
+- `IsRunningSlowly` is demonstrated with a real busy-wait in `Update`, not a sleep: sleeping
+  releases the core and is not what an overrunning game loop does.
+- `DisplayOrientation` in CNA has exactly four values — there is no `PortraitDown` (that was
+  Windows Phone 7, not the XNA 4.0 desktop enum). The demo says so rather than silently omitting it.
+- `DeviceCreated` is subscribed to but can never appear in the log: the device is created during
+  `Game` startup, long before a screen exists to listen. The screen states this instead of leaving
+  a permanently empty line looking broken.
 
 #### C2 Math — 5 categories, 21 screens
 

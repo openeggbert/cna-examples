@@ -15,11 +15,12 @@ first seven areas were built and verified.
 
 ## Status
 
-**7 areas, 50 categories, 174 demo screens**, every one of them exercising a real
+**8 areas, 56 categories, 191 demo screens**, every one of them exercising a real
 `Microsoft::Xna::Framework` / `CNA::*` API call rather than a mock.
 
 | Area | Categories | Screens |
 |---|---|---:|
+| Framework | Game Loop, Game Components, Services & Dispatcher, Window, Device Manager | 17 |
 | Input | Keyboard, Mouse, Gamepad, Touch, Other | 50 |
 | Audio | SoundEffect, SoundEffectInstance, 3D Audio, DynamicSoundEffectInstance, Microphone | 10 |
 | Devices | Sensors, Vibration, Camera, System & Display, Power, Desktop Integration | 15 |
@@ -37,8 +38,10 @@ registrations in `src/Navigation/AreaCatalog.hpp` all agree.
 
 - **Verified against real hardware on the dev machine:** Keyboard, Mouse, most of Input's "Other"
   category, and Audio.
-- **Verified headlessly (rendering + behaviour, under Xvfb):** the whole Media area, via
-  `tools/sweep.sh` and `tools/check_shots.py`.
+- **Verified headlessly (rendering + behaviour, under Xvfb):** the Media and Framework areas,
+  via `tools/sweep.sh` and `tools/check_shots.py`. Framework additionally verifies that every
+  screen restores the global state it changes: after the resolution demo changes the back buffer
+  to 800x600 and leaves, the buffer is measurably back to 960x640.
 - **Renders correctly and degrades gracefully, but never exercised with the real device:**
   Gamepad, Touch, and Input's joystick/haptics screens (no controller, touchscreen, raw joystick
   or haptic device available); Devices' mobile-only Sensors/Vibration screens; Camera
@@ -61,8 +64,11 @@ X11 input — this is what the verification sweeps use:
 
 ```bash
 ./cna_examples --list-demos
+./cna_examples --list-demos --search "fromstream"   # same matcher the search screen uses
 ./cna_examples --demo "Media/Pictures/Browse" --frames 90 --screenshot /tmp/browse.png
 ./cna_examples --demo "Album/Artist/Genre" --keys select,down,select --frames 120
+./cna_examples --search "occlusion" --frames 70     # open search with a query pre-filled
+./cna_examples --keys down,select,select --pointer 480,560,300 --frames 200   # drag gesture
 ```
 
 `--demo` accepts a full `Area/Category/Demo` path or any unambiguous substring. `--keys` scripts
@@ -144,6 +150,7 @@ cna-examples/
 │   ├── headless.sh                Run one demo on a virtual display
 │   ├── sweep.sh                   Screenshot every demo
 │   ├── check_shots.py             Flag blank or overflowing screenshots
+│   ├── check_layout.py            Flag hardcoded bottom-of-window draw positions
 │   └── check_catalog.py           Screens vs registrations vs docs consistency
 └── src/
     ├── Program.cpp                 Entry point + CLI

@@ -14,12 +14,12 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **174** across 7 areas, 51 categories |
-| Last full validation | 174/174 render, 0 layout problems, catalog+docs consistent |
+| Demo screens | **191** across 8 areas, 56 categories |
+| Last full validation | 191/191 render, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
-| Phase B5 (headless driver) | **Done**, pulled forward |
-| Phase B1–B4 | In progress this session |
-| Phases C, D, E, F | Not started |
+| Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
+| Phase C1 (Framework area) | **Done** — 5 categories, 17 screens |
+| Phases C2–C5, D, E, F | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -61,6 +61,12 @@ state.
   joystick/haptics screens, Devices' mobile-only Sensors/Vibration, Camera,
   MessageBox/FileDialog. They render and degrade gracefully; nobody has held the device.
 - **Only the `EASYGL` backend is verified.** Phase F3 adds `SDL_RENDERER`.
+- **`Framework/Window/ClientSizeChanged` and `Display Orientation` cannot be exercised
+  headlessly.** Both need a window manager to drag the window with. They render and say so on
+  screen; their event logs stay empty under Xvfb. Not a defect, but not verified either.
+- **`Framework/Device Manager/VSync & MultiSampling` measures the same rate either way under
+  Xvfb**, because a virtual display has no real refresh rate to synchronise to. The screen states
+  this.
 - A **phantom "select" event** was observed once reaching the window under Xvfb and
   silently toggling a demo's mode before the screenshot. Mitigated: any run with
   `--frames` ignores real input devices entirely (`InputState::SetScriptedOnly`). Root
@@ -141,5 +147,18 @@ python3 tools/check_shots.py build/screenshots --quiet
 
 ## 8. Resume here
 
-Phase B, in order: **B1 search**, B2 drag-to-scroll, B3 breadcrumbs + counts, B4 `apis`
-field. Then C1 Framework → C2 Math → C3 Content → C4 Storage → C5 Diagnostics → D → E → F.
+**C2 Math** — 5 categories, ~21 screens (Vectors, Matrix & Quaternion, Geometry, Curves,
+Color & Packed Vectors). See plan.md §7 Phase C for the per-screen breakdown. Then C3 Content →
+C4 Storage → C5 Diagnostics → D → E → F.
+
+Pattern established by C1 and worth repeating:
+
+1. Read the CNA header first and build against what is actually there — CNA's
+   `DisplayOrientation` has no `PortraitDown`, and assuming the XNA/WP7 shape cost a compile
+   cycle.
+2. Put anything a demo mutates globally back in `UnloadContent()`, and *verify* the restore
+   rather than trusting it (the back-buffer size is readable straight off the screenshot).
+3. Syntax-check new screens with a throwaway TU before touching `AreaCatalog.hpp`:
+   `g++ -std=c++23 -fsyntax-only $DEFS $INCLUDES /tmp/tu.cpp`, taking `$DEFS`/`$INCLUDES` from
+   `build/CMakeFiles/cna_examples.dir/flags.make`. A full rebuild per iteration is far slower.
+4. Sweep the new area alone (`./tools/sweep.sh "Area/"`) before the full sweep.
