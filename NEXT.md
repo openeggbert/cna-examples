@@ -14,15 +14,16 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **214** across 11 areas, 67 categories |
-| Last full validation | 214/214 render, 0 layout problems, catalog+layout+docs clean |
+| Demo screens | **218** across 12 areas, 71 categories |
+| Last full validation | 218/218 render, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
 | Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
 | Phase C1 (Framework area) | **Done** — 5 categories, 17 screens |
 | Phase C2 (Math area) | **Done** — 5 categories, 16 screens |
 | Phase C3 (Content area) | **Done, reduced scope** — 4 categories, 5 screens; CNJ category not built |
 | Phase C4 (Storage area) | **Done, reduced scope** — 2 categories, 2 screens |
-| Phases C5, D, E, F | Not started |
+| Phase C5 (Diagnostics area) | **Done, reduced scope** — 4 categories, 4 screens |
+| Phases D, E, F | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -136,7 +137,18 @@ state.
    `StorageDevice::SetAppNameEXT`. A demo that writes must never scatter files into the repo;
    `StorageContainer::ResolvePath` is private, so an app cannot ask where a file physically
    went -- the sandbox is deliberate.
-17. **`AutoScrollToSelection` will fight a manual scroll.** After a drag, it used
+17. **CNA's logging has TWO filters.** `CNA::Logger` keeps a minimum level, and SDL keeps a
+   separate per-category priority. CNA pushes its level into SDL only inside
+   `SetMinimumLevel` (`SDL_SetLogPriorities`), so before the first such call SDL's own defaults
+   still drop Debug/Trace even though CNA passes them. Measured: 4 of 6 lines reach stderr at
+   startup, 6 of 6 after.
+18. **`Logger::IsEnabled` and `Logger::ToString` are private**, so an application cannot ask
+   whether a level would pass, nor name a level. `GetMinimumLevel` is public; compare against it.
+19. **`Logger::Log(level, message, category)` and `Logger::WarnIf(message, condition)`** both
+   take the message FIRST -- the reverse of what the names suggest.
+20. **`--demo` matches on the catalog path with `/` separators**, not the screen's display title.
+   `--demo "Diagnostics: Logger"` finds nothing; `--demo "Diagnostics/Logging/Logger"` works.
+21. **`AutoScrollToSelection` will fight a manual scroll.** After a drag, it used
    to yank the list straight back to the selected entry, so dragging appeared to
    do nothing. `MenuScreen::userScrolled_` holds it off until the selection moves.
 
@@ -180,17 +192,21 @@ app's own `Content/menufont.cnj` is a working example to build from, and `Conten
 plus the atlas show the loose-file side. `RegisterCnjLoader<T>` belongs here too. Everything
 needed is already in the repo — no borrowed assets.
 
-**(b) C5 Diagnostics** — 4 categories, ~13 screens (Logging, Platform & Build, Backend &
-Capabilities, Adapter & Display). All of `CNA::Logger`, `Platform`, `DesktopOS`,
-`GraphicsBackendType`, `GraphicsCapability`, `GraphicsAdapter`, `DisplayMode` and
-`PresentationParameters` are undemonstrated. `GraphicsCapability` in particular is worth doing
-before Phase F3, which needs the catalog to gate 3D demos on it.
+**(b) Phase F3, the SDL_RENDERER backend pass** — now unblocked. `Diagnostics/Backend &
+Capabilities/Graphics Capabilities` already queries all eight `GraphicsCapability` values, so
+the signal the catalog needs exists. The work is: configure a second build tree
+(`build-sdlrenderer/`, `-DCNA_GRAPHICS_BACKEND=SDL_RENDERER`, ccache, `-j4`), sweep it, and gate
+every 3D demo on `SupportsCapability(ThreeD)` so it reports honestly instead of throwing. This
+is the highest-value remaining verification work and it exercises a real consumer constraint.
 
-**(c) Extend C4 Storage** — the obvious next screens are container directory operations
-(`CreateDirectory`/`GetDirectoryNames`/`DeleteDirectory`) and container lifetime
-(`Dispose`/`Disposing`/reopen/`DeleteContainer`).
+**(c) Phase D** — deepening existing areas (XACT, PBR, Model content, effect reflection,
+Texture3D/Cube/RenderTargetCube, occlusion queries). D1's XACT is self-contained: the bank
+generator in `../cna/examples/demo_xact/src/XactFileGen.hpp` is 389 lines with no dependencies
+and can be adapted in place, so no assets need borrowing.
 
-Then D → E → F.
+**(d) Extend C4 Storage** — container directory operations and container lifetime.
+
+Then E (Avatars, reusing the build-time asset copy already working for `.xnb`) → F1/F2.
 
 **The asset-borrowing mechanism is built and working** (`cmake/ExamplesHelpers.cmake`), so
 Phase E's avatar meshes can reuse the same pattern: copy from `../cna` at build time, guard on

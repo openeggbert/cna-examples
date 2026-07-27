@@ -162,6 +162,10 @@
 #include "Demos/Content/Errors/ContentLoadExceptionScreen.hpp"
 #include "Demos/Storage/Device/StorageDeviceScreen.hpp"
 #include "Demos/Storage/Container/SaveGameRoundTripScreen.hpp"
+#include "Demos/Diagnostics/Logging/LoggerScreen.hpp"
+#include "Demos/Diagnostics/Platform/PlatformInfoScreen.hpp"
+#include "Demos/Diagnostics/Capabilities/GraphicsCapabilityScreen.hpp"
+#include "Demos/Diagnostics/Adapter/GraphicsAdapterScreen.hpp"
 
 #include "Demos/Graphics2D/DrawingBasics/PositionDrawScreen.hpp"
 #include "Demos/Graphics2D/DrawingBasics/DestinationRectangleScreen.hpp"
@@ -928,6 +932,44 @@ inline std::vector<DemoEntry> BuildStorageContainerDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildDiagnosticsLoggingDemos() {
+    using namespace CnaExamples::Demos::Diagnostics::LoggingDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<LoggerScreen>(
+        "Logger", "All seven levels emitted live, and what the filter lets through",
+        {"CNA::Logger::Log", "CNA::Logger::SetMinimumLevel", "CNA::LogLevel", "CNA::LogCategory"}));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildDiagnosticsPlatformDemos() {
+    using namespace CnaExamples::Demos::Diagnostics::PlatformDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<PlatformInfoScreen>(
+        "Platform & Build", "Which platform, backend and optional subsystems this binary has",
+        {"CNA::getCurrentPlatform", "CNA::getCurrentGraphicsBackendName", "CNA_DEVICES"}));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildDiagnosticsCapabilitiesDemos() {
+    using namespace CnaExamples::Demos::Diagnostics::CapabilitiesDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<GraphicsCapabilityScreen>(
+        "Graphics Capabilities", "All eight GraphicsCapability values, queried live",
+        {"GraphicsDevice::SupportsCapability", "CNA::GraphicsCapability",
+         "CNA::GraphicsBackendType"}));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildDiagnosticsAdapterDemos() {
+    using namespace CnaExamples::Demos::Diagnostics::AdapterDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<GraphicsAdapterScreen>(
+        "Adapter & Display Modes", "What could be asked for, next to what the device got",
+        {"GraphicsAdapter::DefaultAdapter", "GraphicsAdapter::SupportedDisplayModes",
+         "DisplayMode", "PresentationParameters"}));
+    return demos;
+}
+
 inline std::vector<DemoEntry> BuildDrawingBasicsDemos() {
     using namespace CnaExamples::Demos::Graphics2D::DrawingBasicsDemos;
     std::vector<DemoEntry> demos;
@@ -1254,6 +1296,12 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
         AreaEntry{"Storage", {
             CategoryEntry{"StorageDevice", BuildStorageDeviceDemos()},
             CategoryEntry{"StorageContainer", BuildStorageContainerDemos()},
+        }},
+        AreaEntry{"Diagnostics", {
+            CategoryEntry{"Logging", BuildDiagnosticsLoggingDemos()},
+            CategoryEntry{"Platform & Build", BuildDiagnosticsPlatformDemos()},
+            CategoryEntry{"Backend & Capabilities", BuildDiagnosticsCapabilitiesDemos()},
+            CategoryEntry{"Adapter & Display", BuildDiagnosticsAdapterDemos()},
         }},
         AreaEntry{"Input", {
             CategoryEntry{"Keyboard", BuildKeyboardDemos()},

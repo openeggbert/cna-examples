@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-27)
 
-Eleven Areas, **214 demo screens** across 67 categories, all with real content. The numbers below
+Twelve Areas, **218 demo screens** across 71 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -47,6 +47,7 @@ this file and `README.md`. Nothing here is counted by hand.
 | Math | — | 5 | 16 |
 | Content | — | 4 | 5 |
 | Storage | — | 2 | 2 |
+| Diagnostics | — | 4 | 4 |
 | Input | — | 5 | 50 |
 | Audio | — | 5 | 10 |
 | Devices | — | 6 | 15 |
@@ -54,7 +55,7 @@ this file and `README.md`. Nothing here is counted by hand.
 | Media | — | 4 | 17 |
 | 2D Graphics | 4 | 13 | 38 |
 | 3D Graphics | 4 | 14 | 30 |
-| **Total** | **11** | **67** | **214** |
+| **Total** | **12** | **71** | **218** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -69,6 +70,7 @@ Per-category breakdown:
 | Math | Vectors (5), Matrix & Quaternion (4), Geometry (3), Curves (2), Color & Packed Vectors (2) |
 | Content | ContentManager Basics (2), Manifest (1), XNB Format (1), Errors (1) |
 | Storage | StorageDevice (1), StorageContainer (1) |
+| Diagnostics | Logging (1), Platform & Build (1), Backend & Capabilities (1), Adapter & Display (1) |
 | Input | Keyboard (10), Mouse (10), Gamepad (10), Touch (10), Other (10) |
 | Audio | SoundEffect (2), SoundEffectInstance (3), 3D Audio (2), DynamicSoundEffectInstance (1), Microphone (2) |
 | Devices | Sensors (4), Vibration (1), Camera (1), System & Display (3), Power (1), Desktop Integration (5) |
@@ -451,7 +453,7 @@ binary three times: the first wrote `save #1`, a second, separate process read i
 went — deliberately, since the sandbox is the point. The screen shows the storage root instead
 and says why.
 
-#### C5 Diagnostics — 4 categories, 13 screens
+#### C5 Diagnostics — 4 categories, 4 screens — **DONE (reduced scope, see below)**
 
 | Category | Screens |
 |---|---|
@@ -459,6 +461,31 @@ and says why.
 | Platform & Build (3) | `CNA::Platform` + `DesktopOS` · which optional features this binary was compiled with (`CNA_DEVICES`, sound, Net, GamerServices) · `CNAException` and the XNA exception family — what throws where |
 | Backend & Capabilities (4) | `GraphicsBackendType` — which backend this binary is · all 8 `GraphicsCapability` values queried live · the same draw with and without a capability check · `GraphicsProfile` Reach vs HiDef and what this backend enforces |
 | Adapter & Display (3) | `GraphicsAdapter::Adapters`/`DefaultAdapter`, descriptions · `CurrentDisplayMode` + `SupportedDisplayModes` per `SurfaceFormat` · live `PresentationParameters` + `GraphicsDeviceStatus` |
+
+**Shipped as 4 screens, one per category, not 13.** Each category's material collapsed naturally
+into a single screen; splitting further would have repeated the same query with different
+framing.
+
+**`Graphics Capabilities` is the screen Phase F3 depends on.** It queries all eight
+`GraphicsCapability` values live. A build against `SDL_RENDERER` will show `ThreeD` unsupported
+there, which is exactly the signal the catalog needs in order to gate its 3D demos instead of
+crashing.
+
+**A claim was corrected during verification.** The Logger screen originally said its output
+"appears on the terminal", with a column reporting which levels "reached SDL". Measuring stderr
+showed only four of six lines arriving at startup. The cause is that there are **two** filters:
+CNA keeps its own minimum level, and SDL keeps a separate per-category priority. CNA pushes its
+level into SDL only inside `SetMinimumLevel` (via `SDL_SetLogPriorities`), so before the first
+such call SDL's own defaults still drop Debug and Trace even though CNA passes them. Confirmed by
+measurement — 4 lines before, 6 after — and the screen now states this rather than the simpler
+untruth.
+
+**Two API constraints found and reported honestly rather than worked around:**
+`CNA::Logger::IsEnabled` and `Logger::ToString` are both private, so an application cannot ask
+whether a level would survive the filter, nor get a level's name. The screen compares against the
+public `GetMinimumLevel` and carries its own name table, and says why. `Logger::Log` also takes
+`(level, message, category)` and `WarnIf` takes `(message, condition)` — message first in both,
+which is the reverse of what the names suggest.
 
 ### Phase D — Deepen existing Areas
 

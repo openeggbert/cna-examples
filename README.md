@@ -15,7 +15,7 @@ first seven areas were built and verified.
 
 ## Status
 
-**11 areas, 67 categories, 214 demo screens**, every one of them exercising a real
+**12 areas, 71 categories, 218 demo screens**, every one of them exercising a real
 `Microsoft::Xna::Framework` / `CNA::*` API call rather than a mock.
 
 | Area | Categories | Screens |
@@ -24,6 +24,7 @@ first seven areas were built and verified.
 | Math | Vectors, Matrix & Quaternion, Geometry, Curves, Color & Packed Vectors | 16 |
 | Content | ContentManager Basics, Manifest, XNB Format, Errors | 5 |
 | Storage | StorageDevice, StorageContainer | 2 |
+| Diagnostics | Logging, Platform & Build, Backend & Capabilities, Adapter & Display | 4 |
 | Input | Keyboard, Mouse, Gamepad, Touch, Other | 50 |
 | Audio | SoundEffect, SoundEffectInstance, 3D Audio, DynamicSoundEffectInstance, Microphone | 10 |
 | Devices | Sensors, Vibration, Camera, System & Display, Power, Desktop Integration | 15 |
