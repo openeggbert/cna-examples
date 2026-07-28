@@ -70,7 +70,7 @@ Per-category breakdown:
 | Framework | Game Loop (4), Game Components (4), Services & Dispatcher (3), Window (3), Device Manager (3) |
 | Math | Vectors (5), Matrix & Quaternion (4), Geometry (3), Curves (2), Color & Packed Vectors (2) |
 | Content | ContentManager Basics (2), Manifest (1), CNJ Format (2), XNB Format (1), Errors (1) |
-| Storage | StorageDevice (1), StorageContainer (1) |
+| Storage | StorageDevice (1), StorageContainer (3) |
 | Diagnostics | Logging (1), Platform & Build (1), Backend & Capabilities (1), Adapter & Display (1) |
 | Input | Keyboard (10), Mouse (10), Gamepad (11), Touch (10), Other (11) |
 | Audio | SoundEffect (2), SoundEffectInstance (3), 3D Audio (2), DynamicSoundEffectInstance (1), Microphone (2), XACT (2) |
@@ -78,7 +78,8 @@ Per-category breakdown:
 | Net | NetworkSession (6), NetworkGamer (2), GamerServices (5), Leaderboards (2) |
 | Media | Song (6), Video (3), MediaLibrary (4), Pictures (4) |
 | 2D Graphics | Drawing Basics (5), Sort Modes (5), DrawString (4), Begin/End & State (4), Texture2D Basics (5), SaveAs & Reload (2), SpriteFont (4), BlendState (2), SamplerState (2), Viewport & Scissor (3), Render-to-Texture Basics (2), Screen Transition (1), Dispose Safety (1) |
-| 3D Graphics | Vertex Types (3), Primitive Types (2), Buffers (3), Basic Rendering (3), Lighting (3), Fog (1), AlphaTestEffect (2), DualTextureEffect (1), EnvironmentMapEffect (2), SkinnedEffect (1), Custom Shader (2), Depth & Culling (3), Camera & Projection (2), Model (2), Volume & Cube Textures (4), Effect Reflection (3) |
+| 3D Graphics | Vertex Types (3), Primitive Types (2), Buffers (3), Basic Rendering (3), Lighting (3), Fog (1), AlphaTestEffect (2), DualTextureEffect (1), EnvironmentMapEffect (2), SkinnedEffect (1), Custom Shader (2), Depth & Culling (3), Camera & Projection (2), Model (6), Volume & Cube Textures (4), Effect Reflection (3), PbrEffect (2) |
+| Avatars | AvatarDescription (2), AvatarRenderer (3), Appearance & Wardrobe EXT (2) |
 
 ### 2.1 Defects found in the pre-existing state
 
@@ -269,7 +270,7 @@ are the content build-out. F is verification.
 
 Original target end state: **13 Areas, ~290 demo screens.**
 
-### 7.0 Status as of 2026-07-28 — 249 screens, A/B/C/D/E/F1 substantially complete
+### 7.0 Status as of 2026-07-28 — 249 screens, A/B/C/D/E/F1/F1b/F3 all done; only F2 remains, blocked upstream
 
 | Phase | Status |
 |---|---|
@@ -278,8 +279,9 @@ Original target end state: **13 Areas, ~290 demo screens.**
 | **D2 PBR** | **Done 2026-07-28** — 2 screens. Root cause (a polymorphic-vertex `sizeof()` mismatch) fixed by repacking into a private packed POD before upload; verified live by pixel probe. `docs/wip-pbr/` removed, superseded. `RenderPipelineSettingsScreen` shipped same-day as a follow-up (`CNA_NOXNA` now enabled, same precedent as `CNA_DEVICES`) |
 | **E Avatars** | **Done** — 7 screens, 3 categories, exactly at plan.md's original target |
 | **F1** defect sweep | **Done** — 2 real defects found and fixed (see its own result section) |
+| **F1b** compiler warnings | **Done 2026-07-28** — `-Wall -Wextra` enabled on the `cna_examples` target only; 13 warnings found (all in this project's own code), all fixed, 0 remaining |
 | **F2** Emscripten | **BLOCKED on a CNA defect** — compiles fully for wasm, fails linking `libCNA.a`. Exact one-line upstream fix now identified, not applied here |
-| **F3** SDL_RENDERER | **Done** — 249/249 on both backends (re-verified after D2's follow-up and D8's diagnosis correction) |
+| **F3** SDL_RENDERER | **Done** — 249/249 on both backends (re-verified after D2's follow-up, D8's diagnosis correction, and the warnings audit) |
 
 **The ~290 target will not be reached by building every planned screen, and that bias was
 consciously reversed mid-session (see NEXT.md §2a): D4 shipped 3 of 4, D6 2 of 6, D7 2 of 3, D8 1 of
@@ -1122,24 +1124,41 @@ down to the bottom edge (`Buffers/VertexDeclaration Stride Gotcha`). Distinguish
 text overflow is done by colour — 75% of its bottom-band ink is coloured geometry, whereas
 overflowing chrome text is greyscale.
 
-### 7.1 Projected end state
+### 7.1 Projected end state vs. final (updated 2026-07-28 — the roadmap is done bar F2)
 
-| Area | Before Phase A | Now | Projected |
-|---|---:|---:|---:|
-| Input | 50 | 50 | 52 |
-| Audio | 10 | 10 | 16 |
-| Devices | 15 | 15 | 15 |
-| Net | 14 | 14 | 17 |
-| Media | 11 | **17** | 17 |
-| 2D Graphics | 38 | 38 | 44 |
-| 3D Graphics | 30 | 30 | 51 |
-| Framework | — | — | 17 |
-| Math | — | — | 21 |
-| Content | — | — | 15 |
-| Storage | — | — | 6 |
-| Diagnostics | — | — | 13 |
-| Avatars | — | — | 7 |
-| **Total** | **168** | **174** | **291** |
+This table used to hold a "Now" column that was a mid-session snapshot (right after Phase A's Media
+rewrite, before any of the C/D/E build-out) and stayed frozen at that point for the rest of the
+document's life even as the catalog kept growing — it is replaced here by the actual final count per
+area, run through `tools/check_catalog.py` rather than hand-counted.
+
+| Area | Before Phase A | Final (2026-07-28) | Projected | Delta vs. projected |
+|---|---:|---:|---:|---:|
+| Input | 50 | 52 | 52 | on target |
+| Audio | 10 | 12 | 16 | −4 (XACT shipped 2 of a planned 6, see D1's result section) |
+| Devices | 15 | 15 | 15 | on target |
+| Net | 14 | 15 | 17 | −2 (D8 shipped 1 of a planned 3, see D8's result section) |
+| Media | 11 | 17 | 17 | on target |
+| 2D Graphics | 38 | 40 | 44 | −4 (D6 shipped 2 of a planned 6, see D6's result section) |
+| 3D Graphics | 30 | 43 | 51 | −8 (D2, D3, D4 and D5 each shipped fewer screens than their own row projected — see each phase's own result section for the exact count and reason; this total delta is not a precise per-phase sum, just the net) |
+| Framework | — | 17 | 17 | on target |
+| Math | — | 16 | 21 | −5 (built under the pre-2026-07-28 depth-over-breadth default, not retroactively revisited — see NEXT.md §2a) |
+| Content | — | 7 | 15 | −8 (same — built under the old default) |
+| Storage | — | 4 | 6 | −2 (2 of the original 6 deliberately deferred, then shipped as the 2026-07-28 C4 extension; the other 2 were judged pure variations, see C4's result section) |
+| Diagnostics | — | 4 | 13 | −9 (built under the old default) |
+| Avatars | — | 7 | 7 | on target |
+| **Total** | **168** | **249** | **291** | **−42** |
+
+**Reading the delta column honestly:** every shortfall above is recorded, with a reason, in its own
+phase's result section — none is a silent gap. Two different causes produced them, and they are not
+equally revisable: Math/Content/Diagnostics were built under the depth-over-breadth default *before*
+the 2026-07-28 "push closer to projected counts" instruction (NEXT.md §2a) and were deliberately not
+reopened once policy changed, since the owner asked to apply the new bias going forward rather than
+retroactively pad already-shipped, already-verified areas. Audio/Net/2D/3D's shortfalls, by
+contrast, were verified as *the plan overcounting real distinct ideas* (variations on an already-
+demonstrated concept, or APIs that turned out not to exist/not to be reachable) — those would not
+close even under the new bias, because adding the extra screens would be padding, not coverage. If
+the project owner wants the pre-2026-07-28 areas revisited under the new bias specifically for
+coverage-metric reasons, that is a legitimate ask but a new one — nothing here assumes it.
 
 ## 8. Project layout
 

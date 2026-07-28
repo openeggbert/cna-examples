@@ -1,8 +1,9 @@
 # NEXT — short-term continuity for cna-examples
 
 **Updated:** 2026-07-28 (autonomous session continuing — D3, E, C4-extend, F1, D2 and all three
-of D2's follow-ups (RenderPipelineSettings, PbrMaterial) + D8's diagnosis correction, and now a
-`-Wall -Wextra` warnings audit, all done)
+of D2's follow-ups (RenderPipelineSettings, PbrMaterial) + D8's diagnosis correction, a
+`-Wall -Wextra` warnings audit, and a bounded SystemLink round-trip feasibility investigation, all
+done. The roadmap is now fully complete except F2, which stays `needs_human`-blocked on `../cna`.)
 **Branch:** `feature/examples-phase-bcde`, ahead of `develop` @ `d7353e3`, all
 pushed. Working tree clean, no jobs in flight, both native build trees green.
 **Authoritative plan:** [`plan.md`](plan.md). Historical record: [`plan20260727.md`](plan20260727.md).
@@ -18,8 +19,8 @@ state.
 | | |
 |---|---|
 | Demo screens | **249** across 13 areas, 79 categories |
-| Last full validation | **249/249 on EASYGL and SDL_RENDERER** (re-run after the `-Wall -Wextra` warnings audit), 249 screenshots each, 0 layout problems, 0 compiler warnings on the cna_examples target, catalog+layout+docs clean |
-| Head commit | `629b72b` |
+| Last full validation | **249/249 on EASYGL and SDL_RENDERER** (re-run after the `-Wall -Wextra` warnings audit; the SystemLink investigation that followed touched only `plan.md`/`NEXT.md`, no rebuild needed), 249 screenshots each, 0 layout problems, 0 compiler warnings on the cna_examples target, catalog+layout+docs clean |
+| Head commit | `def2b6d` |
 
 **Phases, in roadmap order:**
 
@@ -39,11 +40,13 @@ state.
 | D5 3D Textures & Queries | **Done** — 1 category, 4 screens |
 | D6 2D formats & events | **Done, reduced scope** — 2 screens; Device Events already existed |
 | D7 Input EXT | **Done, reduced scope** — 2 screens into existing categories |
-| D8 Net | **Done, reduced scope** — 1 screen; its amber verdict is now DEFINITIVELY diagnosed (2026-07-28), not just "not yet made conclusive" — see #39 and #56 |
+| D8 Net | **Done, reduced scope** — 1 screen; its amber verdict is now DEFINITIVELY diagnosed (2026-07-28), not just "not yet made conclusive" — see #39 and #59 |
 | E Avatars | **Done** — 3 categories, 7 screens, exactly at plan.md's original count |
 | F1 defect sweep | **Done, 2026-07-28** — 2 real defects found and fixed (both cna-examples-side), 1 major upstream `../cna` content defect root-caused and left `needs_human` — see §5 #51 (updated), #53a, #53b and plan.md's F1 writeup |
+| F1b compiler warnings | **Done, 2026-07-28** — `-Wall -Wextra` enabled on the `cna_examples` target only; 13 warnings found (all in this project's own code), all fixed, 0 remaining — see §5 #60 |
 | F2 Emscripten | **BLOCKED on an upstream CNA defect** — exact one-line fix identified, not applied — see §6b and §7 |
 | F3 SDL_RENDERER pass | **Done** — 249/249 on both backends, 3D gated on ThreeD |
+| SystemLink round trip (opportunistic) | **Settled, definitively out of scope, 2026-07-28** — architecturally impossible within one process (single-process `NetworkSession` singleton, a real preserved FNA constraint); not a `needs_human` item, closed for good — see §5 #61 and plan.md §10 |
 
 **Scope kept shrinking, and that was correct.** D4 went 4→3, D6 6→2, D7 3→2, D8 3→1, D3 5→4. Every
 cut was verified as already-covered, non-existent, or (D3's `SkinnedModelEXT`) genuinely out of
@@ -760,8 +763,9 @@ cna-examples defects found and fixed (a `DrawVerdict()`/`DrawLines()` overlap tr
 else; search/breadcrumbs/API-footer integration and TODO/FIXME markers were all checked clean). One
 major upstream finding: the "Stand2" cosmetic issue from Phase E turned out to be a systemic
 `.clip.bin` content defect across ~60 track pairs in nearly the whole avatar animation library —
-root-caused precisely, `needs_human`, not fixed here (see §7). Re-validated 247/247 on both backends
-after the fixes.
+root-caused precisely, `needs_human`, not fixed here (see §7). Re-validated 249/249 on both backends
+after the fixes (247/247 at the point F1 itself finished; the count reached 249 after D2 and its
+follow-ups shipped afterward — see below).
 
 **D2 — PbrEffect is now DONE too (2026-07-28, after F1).** F1's own report noted the fix was local to
 cna-examples, not `../cna` — the owner's "no fixes in `../cna`" instruction didn't apply once the
@@ -809,15 +813,26 @@ location identified, see §7) but deliberately not applied here per the owner's 
 to keep `../cna` untouched this session. **Do NOT start F2** without reading §7 first, and do not
 modify `../cna` without new authorization from the owner.
 
-**Next unblocked work, if this session continues**, per the general autonomous-work mandate (do not
-stop merely because the planned roadmap is done — reassess for further safe, valuable work): the
-compiler-warnings pass is now DONE (was on this list, see §5 item 60). What's left in this spirit: a
-TODO/FIXME/stub sweep across the FULL `src/` tree (F1 only checked the areas added this session; a
-quick literal grep during this session found nothing, but a more thorough pass — weak tests, untested
-paths — hasn't been done), or revisiting Phase E's Stand2 animation-content defect once `../cna` gets
-attention (it is `needs_human`, see §7 — do not attempt to fix `.clip.bin` content from this repo).
-Genuinely diminishing returns from here — the next high-value work most likely requires either
-touching `../cna` (not authorized this session) or new direction from the project owner.
+**SystemLink round trip is now SETTLED too (2026-07-28, last item this session).** plan.md §10's
+"opportunistic pickup, not promised" note is closed for good: a genuine two-process round trip is
+architecturally impossible within this catalog's single-process demo model (`NetworkSession::Create`
+gates on a single process-wide `activeSession_`, confirmed as "a real, preserved FNA constraint" by
+CNA's own test comment). No screen code changed; `plan.md` §10 and `NEXT.md` §5 item 61 carry the
+full citation trail. This was the last item on the session's own "next unblocked work" list — do not
+re-investigate it.
+
+**Every item this session identified as follow-up work is now closed.** A repo-wide literal
+TODO/FIXME/stub grep (run twice, once during F1 scoped to this session's additions, once again
+afterward across the full `src/` tree) found nothing in either pass. The compiler-warnings pass is
+done (§5 item 60). The `Effect::Clone()` raw-pointer leak risk flagged during D4 was spot-checked
+across its only two call sites and both are correctly wrapped in `unique_ptr` — no leak. Genuinely
+nothing further was found without either (a) expanding scope beyond `plan.md`'s own roadmap and
+"out of scope" list (§10), or (b) touching `../cna`, neither of which is authorized without new
+direction from the project owner. **The next actual step is the project owner's, not this
+session's**: review/merge `feature/examples-phase-bcde` into `develop`, and separately decide
+whether to apply the three precisely-diagnosed-but-unapplied `../cna`-side fixes/findings
+recorded in §7 (F2's one-line CMake fix, D2's dormant `VertexElement`-offset inconsistency, and
+the avatar `.clip.bin` content defect) in that repo.
 
 **Before writing any code for a phase**, grep `src/Demos/` for the APIs its plan row claims are
 missing. D6, D7, D8 and D3 all shrank once that was checked (or, for D3, once the architecture was
