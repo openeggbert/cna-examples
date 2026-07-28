@@ -516,6 +516,20 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    (`OcclusionQueryScreen`, `IsRunningSlowlyScreen`) to confirm the renames changed nothing visible.
    `check_catalog.py`/`check_layout.py`/`check_shots.py` all clean. This was the last item on
    NEXT.md's own "next unblocked work" list from the F1 writeup.
+61. **A genuine SystemLink round trip is definitively NOT possible within one process, settled
+   2026-07-28 -- do not re-investigate.** `NetworkSession::Create()`/`BeginCreate()` gates on a
+   single process-wide `activeSession_`: only one real `NetworkSession` can be alive at a time,
+   confirmed as **"a real, preserved FNA constraint"** by CNA's own comment at
+   `../cna/tests/CNA/Internal/Net/ENetBackendTests.cpp:46-52`. The old "blocked by Xvfb
+   input-routing" theory (plan.md §10) was never actually the cause and is now corrected --
+   `--frames`-scripted headless runs need no real interactive input, so that was a red herring.
+   CNA's own tests get a real two-peer wire exchange by pairing one real `NetworkSession` with a raw
+   internal `ENetHostHandle` playing "the other machine," but that type is CNA-internal, not the
+   public `Microsoft::Xna::Framework::Net` surface this catalog demonstrates, so it's not a pattern
+   to reuse in a demo screen. A real round trip needs two OS processes -- a different mechanism than
+   every other screen in this 249-screen catalog, judged out of proportion for one Net screen.
+   plan.md §10 rewritten with the full citation; this closes out the "opportunistic pickup" note
+   F1 never got to. No screen code changed, no rebuild needed.
 
 ## 6. Commands
 

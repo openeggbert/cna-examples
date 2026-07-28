@@ -1215,9 +1215,22 @@ New Content is generated or copied at configure time, never hand-authored as opa
   desktop-unverified, as `plan20260727.md` already recorded.
 - **Remaining hardware gaps carried over from the previous plan:** real gamepad, touchscreen, raw
   joystick, haptic device, physical webcam. Those screens handle absence gracefully and say so.
-- **A genuine two-process SystemLink round trip** for Net — blocked by the same Xvfb
-  input-routing limitation the previous plan documented. B5's headless CLI may unblock this; if
-  it does, it is picked up opportunistically in F1, not promised here.
+- **A genuine SystemLink round trip** for Net — investigated 2026-07-28, definitively NOT
+  achievable within this catalog's single-screen/single-process demo model, and this is a hard
+  architectural fact rather than an Xvfb/input-routing limitation (that old concern is moot: B5's
+  scripted `--frames` path needs no real interactive input, so it was never actually the blocker).
+  `NetworkSession::Create()`/`BeginCreate()` gates on a single process-wide `activeSession_` — only
+  one real `NetworkSession` can be alive in one process at a time. This is confirmed as **"a real,
+  preserved FNA constraint"** by CNA's own test suite
+  (`../cna/tests/CNA/Internal/Net/ENetBackendTests.cpp:46-52`), so it is not something this project
+  could ask to change even if `../cna` were in scope this session. CNA's own tests work around it by
+  pairing one real `NetworkSession` with a raw internal `ENetHostHandle` standing in for "the other
+  machine" (`SystemLinkSessionFixture`, same file) — genuine wire-level UDP traffic, but the "far
+  side" is CNA's own internal implementation type, not the public `Microsoft::Xna::Framework::Net`
+  API surface this catalog exists to demonstrate, so that pattern is not appropriate to reuse in a
+  demo screen. A real two-peer round trip therefore needs two actual OS processes, which is a
+  different mechanism than every other screen in this 249-screen catalog and was judged out of
+  proportion to add for one Net screen. Confirmed out of scope for good, not "maybe later."
 - **Compiled XNA `.fx` bytecode.** Confirmed to always throw in CNA; tracked there, not a
   demo-content gap. C3's Errors category demonstrates the throw.
 - **macOS, iOS and console targets** — gated on CNA's own platform support.
