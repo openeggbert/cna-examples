@@ -310,6 +310,40 @@ python3 tools/check_shots.py build/screenshots --quiet
 ./tools/headless.sh --keys down,select,select --pointer 480,560,300 --frames 200
 ```
 
+## 6b. Phase F2 — the Emscripten build, in progress
+
+**Where it got to:** `emcmake cmake -S . -B build-web` configures cleanly and **every translation
+unit compiles for wasm**. The build fails only at link, on twelve undefined symbols, all of them
+`Microsoft::Xna::Framework::Media::Video` / `VideoPlayer`. CNA does not build its video
+implementation for Emscripten, but the headers still declare it, so the three
+`src/Demos/Media/Video/*Screen.hpp` screens compile and then fail to link.
+
+**Two cna-examples bugs were found and fixed getting that far** (committed):
+
+1. `cmake/ExamplesHelpers.cmake`'s Emscripten branch linked `SDL3::SDL3-static`, a target that
+   does not exist. Neither does `SDL3::SDL3`, from this project's scope: CNA imports SDL3 via
+   `find_package` inside its own `cna_configure_vendored_sdl()` **function**, and IMPORTED targets
+   are directory-scoped, so they are invisible outside `../cna`. Linking `CNA` alone is enough --
+   its link interface carries the static SDL archives. **`../cna-samples` hard-codes
+   `SDL3::SDL3-static` too and will fail identically if anyone builds it for web.**
+2. SDL3 for wasm is already prebuilt at `../cna/.sdl-prebuilt-emscripten/install/lib/*.a` (21 MB),
+   so nothing needs rebuilding -- do not delete that directory.
+
+**Next step:** gate the three Video screens out of the Emscripten build. `Requiring()` takes a
+`GraphicsCapability` and this is a platform condition, so it needs a separate predicate --
+conditional compilation (`#if !defined(__EMSCRIPTEN__)`) around the Video includes and the
+`BuildVideoDemos()` body is the smallest honest fix. Watch out: `tools/check_catalog.py` counts
+screens from the source tree, so the web build will legitimately have 3 fewer than the native 234.
+
+Build command (emsdk is NOT on PATH by default):
+
+```bash
+source ~/emsdk/emsdk_env.sh
+emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
+cmake --build build-web -j4 --target cna_examples
+```
+
 ## 7. Blocked / needs_human
 
 **D2 (PbrEffect) — `needs_human`: PbrEffect renders nothing from this app, cause not found.**

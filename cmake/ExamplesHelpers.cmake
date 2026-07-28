@@ -21,8 +21,14 @@ function(cna_examples_configure_target target_name)
             target_link_libraries(${target_name} PRIVATE CNA SHARP_RUNTIME)
         endif()
     elseif(EMSCRIPTEN)
-        target_link_libraries(${target_name} PRIVATE
-            CNA SDL3::SDL3-static SHARP_RUNTIME)
+        # Deliberately does NOT name an SDL3 target. CNA imports SDL3 via
+        # find_package inside its own cna_configure_vendored_sdl() FUNCTION, and
+        # IMPORTED targets are directory-scoped, so SDL3::SDL3 simply does not
+        # exist in this project's scope -- referencing it (as ../cna-samples
+        # does, via SDL3::SDL3-static) fails at generate time with "target not
+        # found". Linking CNA is enough: its own link interface carries the
+        # static SDL archives through.
+        target_link_libraries(${target_name} PRIVATE CNA SHARP_RUNTIME)
         set_target_properties(${target_name} PROPERTIES SUFFIX ".html")
         target_link_options(${target_name} PRIVATE
             -sALLOW_MEMORY_GROWTH=1
