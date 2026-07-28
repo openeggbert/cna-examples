@@ -575,7 +575,7 @@ which is the reverse of what the names suggest.
 | # | Area | Addition | Screens |
 |---|---|---|---:|
 | D1 | Audio | **XACT** category: `AudioEngine` (runtime-generated `.xgs`) · `SoundBank` cue playback · `WaveBank` in-memory vs streaming · `AudioCategory` volume/pause · cue variables and RPCs · XACT error paths | 6 |
-| D2 | 3D Graphics | **PbrEffect** category (Effects Gallery group): metallic-roughness grid, verified live by pixel probe after a polymorphic-vertex `sizeof()` bug was found and fixed. `RenderPipelineSettings` (`RenderQuality`/`TonemappingMode`/`ShadowQuality`/HDR/bloom/SSAO) remains deliberately out of scope — it is read by **no backend at all**, nothing outside its own `.cpp` references it, and the `GraphicsDevice::GetRenderPipelineSettings()` its own doc comment names does not exist; a small honest follow-up screen if ever wanted, not part of this fix. There is no `PbrMaterial`/`SkinnedPbrEffect` demonstration either — see the D2 result section for the full account. | 1 |
+| D2 | 3D Graphics | **PbrEffect** category (Effects Gallery group): metallic-roughness grid, verified live by pixel probe after a polymorphic-vertex `sizeof()` bug was found and fixed, plus an honest `RenderPipelineSettings` follow-up screen (real, faithful store; read by no backend at all) and a `PbrMaterial` finding folded into the main screen (real, faithful store; bypassed entirely by `PbrEffect` and CNA's own glTF loader, which both set `PbrEffect`'s own texture/factor properties directly instead) — see the D2 result section for the full account. | 2 |
 | D3 | 3D Graphics | **Model Content** category: real `Model` via `ContentManager` · `ModelMesh`/`ModelMeshPart`/`EffectMaterial` traversal and effect swapping · `SkinnedModelEXT` · `AnimationPlayer` clip playback · `MorphTargetEXT` | 4 |
 | D4 | 3D Graphics | **Effect Reflection** category: enumerate and set `EffectParameter`s live · techniques/passes + `CurrentTechnique` switching · `EffectAnnotation` · `Effect::Clone` independence | 4 |
 | D5 | 3D Graphics | **Textures & Queries** category: `Texture3D` volume + slice/box `SetData` · `TextureCube` faces and `CubeMapFace` · `RenderTargetCube` rendered per face and used as an env map · `OcclusionQuery` occluded vs visible `PixelCount` · the documented "SurfaceFormat is ignored, everything is RGBA8" caveat, shown honestly | 5 |
@@ -713,7 +713,26 @@ trip -- then states plainly that changing any of it has zero visible rendering e
 amber (not green/red) verdict swatch in the same honest spirit as D8 Net's amber verdict: this is
 not a pass/fail on correctness, it's a plain statement of what is and isn't wired up.
 
-*(Side note for whoever next touches PBR: the same source grep surfaced `../cna/include/CNA/Graphics/PbrMaterial.hpp`, also `CNA_NOXNA`-gated, which appears to directly contradict this project's own earlier note that "there is no `PbrMaterial` type" -- not investigated further here, out of scope for this follow-up, but worth checking before repeating that claim.)*
+**Follow-up investigation, same day: `PbrMaterial` exists but is the same "unread store" situation,
+not new demo substance.** The prior note flagged `../cna/include/CNA/Graphics/PbrMaterial.hpp` as
+contradicting this project's old "there is no `PbrMaterial` type" claim -- that claim was indeed
+stale, but the type itself changes nothing about scope. `PbrMaterial` is a real, non-stub glTF-style
+settings bag (5 texture slots + 6 scalar factors), but grepping all of `../cna/src`, `../cna/include`,
+`../cna/examples/` and `../cna/tests/` for its use turns up exactly one constructor call outside its
+own `.cpp`: `../cna/examples/noxna_settings_example.cpp`'s own round-trip test (the same file that
+tests `RenderPipelineSettings`). Neither `PbrEffect` nor CNA's real glTF content pipeline ever
+constructs or reads a `PbrMaterial` -- `RuntimeGltfModelTests.cpp`'s
+`LoadsPbrMaterialWithAllFourMapsAndFactorsFromGltf` test (whose NAME suggested otherwise) actually
+asserts against `PbrEffect`'s own texture/factor properties directly
+(`getTextureProperty`/`getMetallicFactorProperty`/etc.), the exact same properties
+`PbrMetallicRoughnessScreen.hpp` already sets -- `PbrMaterial` is bypassed entirely by the one real
+consumer that might have used it. Rather than ship a third, thin screen for a second instance of the
+same non-finding, this is folded into `PbrMetallicRoughnessScreen.hpp` itself: a `PbrMaterial` round
+trip is verified live in `OnDemoLoad` and folded into the screen's existing verdict, with one on-screen
+line stating the finding. No new screen registered; count stays at **249**. Verified: 249/249 on
+EASYGL, `check_catalog.py`/`check_layout.py`/`check_shots.py` all clean; a text-layout collision from
+the added on-screen line (spheres partly hidden behind text) was caught by eye and fixed by trimming
+the surrounding lines rather than by widening the scene viewport.
 
 **Historical record kept for what it teaches:** two real API facts came out of the original attempt
 and hold regardless of the fix above: tangent vertex types have **no** typed

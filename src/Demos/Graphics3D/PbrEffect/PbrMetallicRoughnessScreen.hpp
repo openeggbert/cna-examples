@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "CNA/Graphics/PbrMaterial.hpp"
 #include "Microsoft/Xna/Framework/Graphics/BufferUsage.hpp"
 #include "Microsoft/Xna/Framework/Graphics/DepthStencilState.hpp"
 #include "Microsoft/Xna/Framework/Graphics/IndexBuffer.hpp"
@@ -38,6 +39,7 @@ using Microsoft::Xna::Framework::Graphics::RasterizerState;
 using Microsoft::Xna::Framework::Graphics::VertexBuffer;
 using Microsoft::Xna::Framework::Graphics::VertexPositionNormalTangentTexture;
 using Microsoft::Xna::Framework::Graphics::Viewport;
+using CNA::Graphics::PbrMaterial;
 
 // PbrEffect is CNA's metallic-roughness BRDF -- the glTF/industry-standard
 // material model, and a genuinely different one from BasicEffect's
@@ -87,6 +89,15 @@ using Microsoft::Xna::Framework::Graphics::Viewport;
 // private, NON-polymorphic, tightly-packed POD before upload, and upload
 // THAT at its own real (48-byte) stride -- never the polymorphic struct's
 // raw bytes directly.
+//
+// A SEPARATE finding, made while following up on this screen: CNA::Graphics::PbrMaterial
+// (a glTF-style texture-slot + factor settings bag, also NOXNA) exists and plan.md's
+// original D2 note claiming otherwise was stale. It is the SAME situation as
+// RenderPipelineSettingsScreen.hpp, not new demo substance: PbrEffect (below) and CNA's own
+// glTF loader (RuntimeGltfModelTests.cpp) both set PbrEffect's OWN properties directly
+// (getTextureProperty/getMetallicFactorProperty/etc., exactly as this screen does) --
+// PbrMaterial is never constructed by anything outside its own round-trip test
+// (../cna/examples/noxna_settings_example.cpp). Verified live below rather than assumed.
 class PbrMetallicRoughnessScreen : public DemoScreen {
 public:
     PbrMetallicRoughnessScreen() : DemoScreen("PbrEffect: Metallic & Roughness") {}
@@ -119,6 +130,20 @@ public:
         effect_->setTextureProperty(&*baseColor_);
         effect_->setDiffuseColorProperty(Vector3(0.85f, 0.68f, 0.30f));
 
+        // PbrMaterial round trip -- the only thing about this disconnected type that is
+        // testable (see the class comment above). Non-default values, read back exactly.
+        PbrMaterial mat;
+        const bool defaultsMatch = mat.getAlbedoTexture() == nullptr &&
+                                    mat.getMetallicFactor() == 0.0f &&
+                                    mat.getRoughnessFactor() == 0.5f;
+        mat.setMetallicFactor(0.9f);
+        mat.setRoughnessFactor(0.15f);
+        mat.setAlbedoTexture(&*baseColor_);
+        pbrMaterialHonest_ = defaultsMatch &&
+                              mat.getMetallicFactor() == 0.9f &&
+                              mat.getRoughnessFactor() == 0.15f &&
+                              mat.getAlbedoTexture() == &*baseColor_;
+
         rendered_ = false;
         probedOnce_ = false;
     }
@@ -137,27 +162,30 @@ protected:
     void OnDemoDraw(const GameTime&, SpriteBatch& sb, SpriteFont& font) override {
         const Color tint = mul(Color::White, TransitionAlpha());
         std::vector<std::string> lines;
-        lines.push_back("The metallic-roughness BRDF -- glTF's material model, and a different one");
-        lines.push_back("from BasicEffect's diffuse/specular Blinn-Phong.");
-        lines.push_back("Roughness 0 -> 1 across;  metallic 0 -> 1 down.  Base colour is constant.");
-        lines.push_back("A metal has NO diffuse term and tints its reflection with the base colour,");
-        lines.push_back("so the bottom row darkens where it reflects nothing.");
-        lines.emplace_back();
-        lines.push_back("VertexPositionNormalTangentTexture is polymorphic (a hidden vtable pointer");
-        lines.push_back("inflates its real size past the naive 48 bytes) -- uploading its raw bytes");
-        lines.push_back("corrupts the layout. Fix: repack into a private, packed 48-byte POD first.");
+        lines.push_back("The metallic-roughness BRDF -- glTF's material model, a different one from");
+        lines.push_back("BasicEffect's Blinn-Phong. Roughness 0->1 across; metallic 0->1 down.");
+        lines.push_back("A metal has NO diffuse term, so the bottom row darkens where it reflects nothing.");
+        lines.push_back("VertexPositionNormalTangentTexture is polymorphic (hidden vtable ptr inflates its");
+        lines.push_back("size past the naive 48 bytes) -- fix: repack into a private, packed POD first.");
+        lines.push_back("PbrMaterial (a related NOXNA type) round-trips faithfully but is never read by");
+        lines.push_back("PbrEffect or CNA's glTF loader -- both set PbrEffect's own properties directly.");
         const Vector2 end = DrawLines(sb, font, Vector2(40.0f, 82.0f), lines, tint);
 
         // rendered_ reflects the PREVIOUS frame's probe (the probe itself can only run after
         // this frame's scene is drawn, below) -- stable from frame 2 onward, same
         // establish-then-report order OcclusionQueryScreen uses for its own async result.
+        // pbrMaterialHonest_ is the PbrMaterial round trip from OnDemoLoad -- folded into the
+        // same verdict so a future regression in that store (unlikely, but real) would show.
+        const bool allGood = rendered_ && pbrMaterialHonest_;
         DrawVerdict(sb, font, end.Y + 6.0f,
-                    mul(rendered_ ? Color(40, 200, 90, 255) : Color(220, 60, 60, 255),
+                    mul(allGood ? Color(40, 200, 90, 255) : Color(220, 60, 60, 255),
                         TransitionAlpha()),
                     tint,
-                    rendered_
-                        ? "Verified live: centre-sphere pixels measurably differ from background."
-                        : "Probe found no geometry -- the centre sphere is not rendering.");
+                    !rendered_
+                        ? "Probe found no geometry -- the centre sphere is not rendering."
+                        : !pbrMaterialHonest_
+                              ? "Sphere renders, but PbrMaterial's round trip is no longer faithful."
+                              : "Verified live: sphere renders, PbrMaterial round-trips faithfully (unread).");
 
         sb.End();
         DrawGrid();
@@ -250,6 +278,7 @@ private:
     std::optional<PbrEffect> effect_;
     int triangleCount_ = 0;
     float spin_ = 0.0f;
+    bool pbrMaterialHonest_ = false;
     bool rendered_ = false;
     bool probedOnce_ = false;
 };

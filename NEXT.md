@@ -1,7 +1,7 @@
 # NEXT — short-term continuity for cna-examples
 
-**Updated:** 2026-07-28 (autonomous session continuing — D3, E, C4-extend, F1, D2 and now D2's
-RenderPipelineSettings follow-up + D8's diagnosis correction all done)
+**Updated:** 2026-07-28 (autonomous session continuing — D3, E, C4-extend, F1, D2 and now all three
+of D2's follow-ups (RenderPipelineSettings, PbrMaterial) + D8's diagnosis correction all done)
 **Branch:** `feature/examples-phase-bcde`, ahead of `develop` @ `d7353e3`, all
 pushed. Working tree clean, no jobs in flight, both native build trees green.
 **Authoritative plan:** [`plan.md`](plan.md). Historical record: [`plan20260727.md`](plan20260727.md).
@@ -32,7 +32,7 @@ state.
 | C4 Storage | **Done, extended 2026-07-28** — 2 categories, 4 screens |
 | C5 Diagnostics | **Done, reduced scope** — 4 categories, 4 screens |
 | D1 Audio/XACT | **Done, reduced scope** — 1 category, 2 screens |
-| D2 PBR | **Done, 2026-07-28** — 1 category, 2 screens. Was `needs_human`; fixed once the root cause (a polymorphic-vertex `sizeof()` mismatch) was known. `RenderPipelineSettingsScreen` shipped same-day as the deferred second half of D2's original plan, behind a newly-enabled `CNA_NOXNA` (same precedent as `CNA_DEVICES`) — see §7 |
+| D2 PBR | **Done, 2026-07-28** — 1 category, 2 screens. Was `needs_human`; fixed once the root cause (a polymorphic-vertex `sizeof()` mismatch) was known. `RenderPipelineSettingsScreen` shipped same-day as the deferred second half of D2's original plan, behind a newly-enabled `CNA_NOXNA` (same precedent as `CNA_DEVICES`). A further same-day finding, `PbrMaterial` (also real but unread, bypassed by `PbrEffect` and CNA's own glTF loader alike), was folded into the existing PbrEffect screen rather than becoming a third — see §7 |
 | D3 Model Content | **Done, reduced scope** — 4 screens added to the existing Model category |
 | D4 Effect Reflection | **Done, reduced scope** — 1 category, 3 screens |
 | D5 3D Textures & Queries | **Done** — 1 category, 4 screens |
@@ -452,11 +452,23 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    configured build, silently hides this). `CMakeLists.txt` now force-enables it the same way it
    already force-enables `CNA_DEVICES`. Small, contained blast radius (7 files total in `../cna`),
    full rebuild confirmed no regressions across all 249 screens on both backends.
-58. **`../cna/include/CNA/Graphics/PbrMaterial.hpp` exists, also `CNA_NOXNA`-gated, and appears to
-   directly contradict this project's own earlier D2 note that "there is no `PbrMaterial` type."**
-   Surfaced incidentally while re-verifying `RenderPipelineSettings`' "read by no backend" claim,
-   NOT investigated further (out of scope for that follow-up) -- worth checking before repeating
-   the old claim, and worth investigating properly if PBR is revisited again.
+58. **`../cna/include/CNA/Graphics/PbrMaterial.hpp` exists (the old D2 note claiming otherwise was
+   stale) but is bypassed entirely, not merely unread -- investigated 2026-07-28, resolved.**
+   `PbrMaterial` is a real, non-stub glTF-style settings bag (5 texture slots + 6 scalar factors).
+   Grepping ALL of `../cna/src`, `../cna/include`, `../cna/examples/`, `../cna/tests/` for its use
+   finds exactly one constructor call outside its own `.cpp`: the round-trip test in
+   `../cna/examples/noxna_settings_example.cpp` (same file that tests `RenderPipelineSettings`).
+   The trap: `RuntimeGltfModelTests.cpp`'s test named
+   `LoadsPbrMaterialWithAllFourMapsAndFactorsFromGltf` sounds like it exercises `PbrMaterial`, but
+   reading it shows it asserts against **`PbrEffect`'s own** texture/factor properties directly
+   (`getTextureProperty`/`getMetallicFactorProperty`/etc.) -- the exact same properties
+   `PbrMetallicRoughnessScreen.hpp` already sets. CNA's real glTF content pipeline populates
+   `PbrEffect` directly and never constructs a `PbrMaterial` at all. Folded into
+   `PbrMetallicRoughnessScreen.hpp` as a verified-live round trip plus one on-screen line, rather
+   than a third thin screen for a second instance of the same "real store, zero readers" finding as
+   `RenderPipelineSettings` -- no new screen registered, count stays at 249. A text-layout
+   collision (the added line pushed content into the sphere-grid viewport) was caught by eye and
+   fixed by trimming surrounding lines, not by moving the scene viewport.
 59. **D8 Net's amber verdict was previously misdiagnosed as "not enough local gamers"; the real
    cause is architectural and a second local gamer cannot fix it.**
    `NetworkSession::Update()` (`NetworkSession.cpp`) gates its entire `PacketSend` delivery path
@@ -722,8 +734,18 @@ screen deferred from D2's original scope: `CNA_NOXNA` is now enabled in `CMakeLi
 precedent as `CNA_DEVICES`), and `RenderPipelineSettingsScreen` proves the settings bag is a real,
 faithful store (every property round-trips exactly) that nothing in this backend consumes (verified
 by a fresh full-tree grep of `../cna`, not assumed from the old investigation). Amber verdict, same
-honest spirit as D8's. See §5 item 57 for the `CNA_NOXNA` finding and item 58 for an incidental
-`PbrMaterial` discrepancy worth checking next time PBR is touched.
+honest spirit as D8's. See §5 item 57 for the `CNA_NOXNA` finding.
+
+**D2's `PbrMaterial` finding is now RESOLVED too (2026-07-28, same day, third follow-up).** The
+incidental discrepancy from the `RenderPipelineSettings` follow-up (an old, stale D2 note claiming
+"there is no `PbrMaterial` type") has been investigated properly: `PbrMaterial` is real but is the
+same "faithful store, zero readers" situation as `RenderPipelineSettings` -- neither `PbrEffect` nor
+CNA's real glTF content pipeline ever constructs one; both set `PbrEffect`'s own texture/factor
+properties directly instead. Folded into `PbrMetallicRoughnessScreen.hpp` as a verified round trip
+plus one on-screen line rather than a third thin screen — no new screen registered, count stays at
+**249**. See §5 item 58 for the full citation trail (including the misleadingly-named
+`RuntimeGltfModelTest.LoadsPbrMaterialWithAllFourMapsAndFactorsFromGltf`, which does NOT touch
+`PbrMaterial` despite its name).
 
 **D8 Net's amber verdict is now DEFINITIVELY diagnosed (2026-07-28), not just "not yet made
 conclusive."** The old "two local gamers" follow-up idea was WRONG and has been disproven, not just
@@ -734,26 +756,27 @@ self-contained screen through the public API. See §5 item 59 for the full citat
 `SimulatedConditionsScreen.hpp`'s comments/on-screen text now state this precisely — **do not
 re-attempt "add a second local gamer," it has been tried and conclusively fails.**
 
-**249/249 re-verified on both backends after both follow-ups.**
+**249/249 re-verified on both backends after all three follow-ups (RenderPipelineSettings, PbrMaterial,
+D8 diagnosis).**
 
-**The roadmap is now substantially complete.** Every phase through D2/F1/F3 is DONE, including both
-of D2's and D8's small follow-ups; only F2 (Emscripten) remains, `needs_human`-blocked on a defect
-inside `../cna` itself, precisely diagnosed (exact one-line fix location identified, see §7) but
-deliberately not applied here per the owner's 2026-07-28 instruction to keep `../cna` untouched this
-session. **Do NOT start F2** without reading §7 first, and do not modify `../cna` without new
-authorization from the owner.
+**The roadmap is now substantially complete.** Every phase through D2/F1/F3 is DONE, including all
+three of D2's small follow-ups and D8's diagnosis correction; only F2 (Emscripten) remains,
+`needs_human`-blocked on a defect inside `../cna` itself, precisely diagnosed (exact one-line fix
+location identified, see §7) but deliberately not applied here per the owner's 2026-07-28 instruction
+to keep `../cna` untouched this session. **Do NOT start F2** without reading §7 first, and do not
+modify `../cna` without new authorization from the owner.
 
 **Next unblocked work, if this session continues**, per the general autonomous-work mandate (do not
 stop merely because the planned roadmap is done — reassess for further safe, valuable work): a fresh
 audit pass in the spirit of F1 but broader than "this session's additions" — e.g. a TODO/FIXME/stub
 sweep across the FULL `src/` tree (F1 only checked the areas added this session), a compiler-warnings
-pass (`-Wall -Wextra` if not already the default), investigating the `PbrMaterial` discrepancy noted
-in §5 item 58, or revisiting Phase E's Stand2 animation-content defect once `../cna` gets attention
-(it is `needs_human`, see §7 — do not attempt to fix `.clip.bin` content from this repo).
+pass (`-Wall -Wextra` if not already the default), or revisiting Phase E's Stand2 animation-content
+defect once `../cna` gets attention (it is `needs_human`, see §7 — do not attempt to fix `.clip.bin`
+content from this repo).
 
 **Before writing any code for a phase**, grep `src/Demos/` for the APIs its plan row claims are
 missing. D6, D7, D8 and D3 all shrank once that was checked (or, for D3, once the architecture was
-actually understood) — the plan over-estimates gaps, and the existing 248 screens already cover
+actually understood) — the plan over-estimates gaps, and the existing 249 screens already cover
 more than it assumes.
 
 **Workflow that works here, in order:**
