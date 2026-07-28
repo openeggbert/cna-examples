@@ -146,7 +146,7 @@ private:
         // "fully visible" -- the depth test has nothing to reject against yet.
         if (occluderEnabled_) {
             effect_->World = Matrix::CreateTranslation(Vector3(0.0f, 0.0f, 2.2f));
-            Draw(device, occluder_);
+            DrawMesh(device, occluder_);
         }
 
         // Exactly one query in flight: Begin/End on a query still awaiting its
@@ -159,7 +159,7 @@ private:
         }
 
         effect_->World = Matrix::CreateRotationY(spin_) * Matrix::CreateRotationX(spin_ * 0.4f);
-        Draw(device, target_);
+        DrawMesh(device, target_);
 
         if (starting) {
             query_->End();
@@ -178,7 +178,7 @@ private:
         device.setDepthStencilStateProperty(DepthStencilState::None);
     }
 
-    void Draw(Microsoft::Xna::Framework::Graphics::GraphicsDevice& device,
+    void DrawMesh(Microsoft::Xna::Framework::Graphics::GraphicsDevice& device,
               const CubeColorMesh& mesh) {
         effect_->Apply();
         device.DrawUserIndexedPrimitives(PrimitiveType::TriangleList, mesh.vertices.data(), 0,

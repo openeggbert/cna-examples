@@ -1,7 +1,8 @@
 # NEXT — short-term continuity for cna-examples
 
-**Updated:** 2026-07-28 (autonomous session continuing — D3, E, C4-extend, F1, D2 and now all three
-of D2's follow-ups (RenderPipelineSettings, PbrMaterial) + D8's diagnosis correction all done)
+**Updated:** 2026-07-28 (autonomous session continuing — D3, E, C4-extend, F1, D2 and all three
+of D2's follow-ups (RenderPipelineSettings, PbrMaterial) + D8's diagnosis correction, and now a
+`-Wall -Wextra` warnings audit, all done)
 **Branch:** `feature/examples-phase-bcde`, ahead of `develop` @ `d7353e3`, all
 pushed. Working tree clean, no jobs in flight, both native build trees green.
 **Authoritative plan:** [`plan.md`](plan.md). Historical record: [`plan20260727.md`](plan20260727.md).
@@ -17,8 +18,8 @@ state.
 | | |
 |---|---|
 | Demo screens | **249** across 13 areas, 79 categories |
-| Last full validation | **249/249 on EASYGL and SDL_RENDERER** (re-run after D2's RenderPipelineSettings follow-up and D8's diagnosis correction), 249 screenshots each, 0 layout problems, catalog+layout+docs clean |
-| Head commit | `2b1a770` |
+| Last full validation | **249/249 on EASYGL and SDL_RENDERER** (re-run after the `-Wall -Wextra` warnings audit), 249 screenshots each, 0 layout problems, 0 compiler warnings on the cna_examples target, catalog+layout+docs clean |
+| Head commit | *(this warnings-audit commit)* |
 
 **Phases, in roadmap order:**
 
@@ -488,6 +489,33 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    surface this catalog demonstrates. `SimulatedConditionsScreen.hpp`'s comments and on-screen text
    were rewritten to state this precisely -- this is now a settled limitation, not an open
    follow-up; do not re-attempt "just add a second local gamer."
+60. **`-Wall -Wextra` is now enabled on the `cna_examples` target (2026-07-28), scoped via
+   `target_compile_options` so CNA's own targets stay unaffected.** A from-scratch build with the
+   new flags surfaced exactly 13 warnings, ALL inside this project's own `src/`, zero from `../cna`
+   headers -- this codebase was already clean going in. All 13 fixed, zero cosmetic:
+   - **11x `-Wmissing-field-initializers`** in `AreaCatalog.hpp`'s flat-category `AreaEntry{...}`
+     initializers (Framework/Math/Content/Storage/Diagnostics/Input/Audio/Devices/Net/Avatars/Media)
+     omitted the trailing `groups` field. Semantically inert either way (an omitted aggregate member
+     value-initializes, so `groups` was always an empty vector) -- fixed by adding an explicit `{}`
+     for clarity, not because behavior changed.
+   - **1x `-Wunused-parameter`** in `IsRunningSlowlyScreen::OnDemoDraw` -- the `gameTime` parameter
+     was genuinely unused in that override. Fixed by unnaming it, matching the convention already
+     used by dozens of other `OnDemoDraw` overrides across this codebase (see e.g.
+     `PinchGestureScreen.hpp`).
+   - **1x `-Woverloaded-virtual=`**: `OcclusionQueryScreen` declared a private, non-virtual helper
+     also named `Draw(GraphicsDevice&, const CubeColorMesh&)`, which name-hid the inherited virtual
+     `DemoScreen::Draw(const GameTime&)` from that class's scope (standard C++ hiding rule -- any
+     derived-class function sharing a base virtual's name hides ALL base overloads of that name,
+     regardless of signature, unless `using Base::Draw;` is added). Harmless in practice here (the
+     class never calls the base overload unqualified), but real enough to be worth naming precisely
+     rather than silencing: renamed the private helper to `DrawMesh` instead of adding a `using`
+     declaration, since a same-named-different-signature private helper is the more surprising thing
+     to a reader, not the virtual override.
+   Re-verified 249/249 on both EASYGL and SDL_RENDERER after all three categories of fix, plus a
+   direct before/after screenshot comparison of the two behaviorally-touched screens
+   (`OcclusionQueryScreen`, `IsRunningSlowlyScreen`) to confirm the renames changed nothing visible.
+   `check_catalog.py`/`check_layout.py`/`check_shots.py` all clean. This was the last item on
+   NEXT.md's own "next unblocked work" list from the F1 writeup.
 
 ## 6. Commands
 
@@ -757,22 +785,25 @@ self-contained screen through the public API. See §5 item 59 for the full citat
 re-attempt "add a second local gamer," it has been tried and conclusively fails.**
 
 **249/249 re-verified on both backends after all three follow-ups (RenderPipelineSettings, PbrMaterial,
-D8 diagnosis).**
+D8 diagnosis), and again after the `-Wall -Wextra` warnings audit (§5 item 60).**
 
 **The roadmap is now substantially complete.** Every phase through D2/F1/F3 is DONE, including all
-three of D2's small follow-ups and D8's diagnosis correction; only F2 (Emscripten) remains,
+three of D2's small follow-ups, D8's diagnosis correction, and a full compiler-warnings audit (0
+warnings on the `cna_examples` target, was 13, see §5 item 60); only F2 (Emscripten) remains,
 `needs_human`-blocked on a defect inside `../cna` itself, precisely diagnosed (exact one-line fix
 location identified, see §7) but deliberately not applied here per the owner's 2026-07-28 instruction
 to keep `../cna` untouched this session. **Do NOT start F2** without reading §7 first, and do not
 modify `../cna` without new authorization from the owner.
 
 **Next unblocked work, if this session continues**, per the general autonomous-work mandate (do not
-stop merely because the planned roadmap is done — reassess for further safe, valuable work): a fresh
-audit pass in the spirit of F1 but broader than "this session's additions" — e.g. a TODO/FIXME/stub
-sweep across the FULL `src/` tree (F1 only checked the areas added this session), a compiler-warnings
-pass (`-Wall -Wextra` if not already the default), or revisiting Phase E's Stand2 animation-content
-defect once `../cna` gets attention (it is `needs_human`, see §7 — do not attempt to fix `.clip.bin`
-content from this repo).
+stop merely because the planned roadmap is done — reassess for further safe, valuable work): the
+compiler-warnings pass is now DONE (was on this list, see §5 item 60). What's left in this spirit: a
+TODO/FIXME/stub sweep across the FULL `src/` tree (F1 only checked the areas added this session; a
+quick literal grep during this session found nothing, but a more thorough pass — weak tests, untested
+paths — hasn't been done), or revisiting Phase E's Stand2 animation-content defect once `../cna` gets
+attention (it is `needs_human`, see §7 — do not attempt to fix `.clip.bin` content from this repo).
+Genuinely diminishing returns from here — the next high-value work most likely requires either
+touching `../cna` (not authorized this session) or new direction from the project owner.
 
 **Before writing any code for a phase**, grep `src/Demos/` for the APIs its plan row claims are
 missing. D6, D7, D8 and D3 all shrank once that was checked (or, for D3, once the architecture was

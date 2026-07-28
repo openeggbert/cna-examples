@@ -1515,38 +1515,38 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"Services & Dispatcher", BuildServicesDemos()},
             CategoryEntry{"Window", BuildWindowDemos()},
             CategoryEntry{"Device Manager", BuildDeviceManagerDemos()},
-        }},
+        }, {}},
         AreaEntry{"Math", {
             CategoryEntry{"Vectors", BuildMathVectorsDemos()},
             CategoryEntry{"Matrix & Quaternion", BuildMatrixQuaternionDemos()},
             CategoryEntry{"Geometry", BuildGeometryDemos()},
             CategoryEntry{"Curves", BuildCurvesDemos()},
             CategoryEntry{"Color & Packed Vectors", BuildColorDemos()},
-        }},
+        }, {}},
         AreaEntry{"Content", {
             CategoryEntry{"ContentManager Basics", BuildContentBasicsDemos()},
             CategoryEntry{"Manifest", BuildContentManifestDemos()},
             CategoryEntry{"CNJ Format", BuildContentCnjDemos()},
             CategoryEntry{"XNB Format", BuildContentXnbDemos()},
             CategoryEntry{"Errors", BuildContentErrorsDemos()},
-        }},
+        }, {}},
         AreaEntry{"Storage", {
             CategoryEntry{"StorageDevice", BuildStorageDeviceDemos()},
             CategoryEntry{"StorageContainer", BuildStorageContainerDemos()},
-        }},
+        }, {}},
         AreaEntry{"Diagnostics", {
             CategoryEntry{"Logging", BuildDiagnosticsLoggingDemos()},
             CategoryEntry{"Platform & Build", BuildDiagnosticsPlatformDemos()},
             CategoryEntry{"Backend & Capabilities", BuildDiagnosticsCapabilitiesDemos()},
             CategoryEntry{"Adapter & Display", BuildDiagnosticsAdapterDemos()},
-        }},
+        }, {}},
         AreaEntry{"Input", {
             CategoryEntry{"Keyboard", BuildKeyboardDemos()},
             CategoryEntry{"Mouse", BuildMouseDemos()},
             CategoryEntry{"Gamepad", BuildGamepadDemos()},
             CategoryEntry{"Touch", BuildTouchDemos()},
             CategoryEntry{"Other", BuildOtherDemos()},
-        }},
+        }, {}},
         AreaEntry{"Audio", {
             CategoryEntry{"SoundEffect", BuildSoundEffectDemos()},
             CategoryEntry{"SoundEffectInstance", BuildSoundEffectInstanceDemos()},
@@ -1554,7 +1554,7 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"DynamicSoundEffectInstance", BuildDynamicSoundEffectInstanceDemos()},
             CategoryEntry{"Microphone", BuildMicrophoneDemos()},
             CategoryEntry{"XACT", BuildXactDemos()},
-        }},
+        }, {}},
         AreaEntry{"Devices", {
             CategoryEntry{"Sensors", BuildSensorsDemos()},
             CategoryEntry{"Vibration", BuildVibrationDemos()},
@@ -1562,13 +1562,13 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"System & Display", BuildSystemAndDisplayDemos()},
             CategoryEntry{"Power", BuildPowerDemos()},
             CategoryEntry{"Desktop Integration", BuildDesktopIntegrationDemos()},
-        }},
+        }, {}},
         AreaEntry{"Net", {
             CategoryEntry{"NetworkSession", BuildNetworkSessionDemos()},
             CategoryEntry{"NetworkGamer", BuildNetworkGamerDemos()},
             CategoryEntry{"GamerServices", BuildGamerServicesDemos()},
             CategoryEntry{"Leaderboards", BuildLeaderboardsDemos()},
-        }},
+        }, {}},
         // AvatarDescription is pure C++ (no GraphicsDevice calls) and is left ungated so it still
         // shows on 2D-only backends. AvatarRenderer/Wardrobe both real-render through
         // SkinnedEffect and need the 3D pipeline, so those two are gated like every 3D category.
@@ -1576,13 +1576,13 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"AvatarDescription", BuildAvatarDescriptionDemos()},
             CategoryEntry{"AvatarRenderer", Requiring(CNA::GraphicsCapability::ThreeD, BuildAvatarRendererDemos())},
             CategoryEntry{"Appearance & Wardrobe EXT", Requiring(CNA::GraphicsCapability::ThreeD, BuildAvatarWardrobeDemos())},
-        }},
+        }, {}},
         AreaEntry{"Media", {
             CategoryEntry{"Song", BuildSongDemos()},
             CategoryEntry{"Video", BuildVideoDemos()},
             CategoryEntry{"MediaLibrary", BuildMediaLibraryDemos()},
             CategoryEntry{"Pictures", BuildPictureDemos()},
-        }},
+        }, {}},
         AreaEntry{"2D Graphics", {}, {
             GroupEntry{"SpriteBatch", {
                 CategoryEntry{"Drawing Basics", BuildDrawingBasicsDemos()},

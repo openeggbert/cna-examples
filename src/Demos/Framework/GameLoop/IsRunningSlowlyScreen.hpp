@@ -67,7 +67,7 @@ protected:
         lastIsRunningSlowly_ = gameTime.getIsRunningSlowlyProperty();
     }
 
-    void OnDemoDraw(const GameTime& gameTime, SpriteBatch& sb, SpriteFont& font) override {
+    void OnDemoDraw(const GameTime&, SpriteBatch& sb, SpriteFont& font) override {
         Game& game = GameRef();
         const double budgetMs = game.getTargetElapsedTimeProperty().getTotalMillisecondsProperty();
 

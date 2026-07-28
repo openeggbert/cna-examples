@@ -67,4 +67,10 @@ target_include_directories(cna_examples PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
+# Scoped to this target only -- CNA's own targets (added above via
+# add_subdirectory) are not ours to warn about or fix here.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(cna_examples PRIVATE -Wall -Wextra)
+endif()
+
 cna_examples_configure_target(cna_examples)
