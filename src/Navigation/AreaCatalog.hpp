@@ -263,6 +263,13 @@
 #include "Demos/Graphics3D/EffectReflection/EffectCloneScreen.hpp"
 #include "Demos/Graphics3D/TexturesAndQueries/RenderTargetCubeScreen.hpp"
 #include "Demos/Graphics3D/TexturesAndQueries/OcclusionQueryScreen.hpp"
+#include "Demos/Avatars/Description/AvatarDescriptionScreen.hpp"
+#include "Demos/Avatars/Description/AvatarNameTablesScreen.hpp"
+#include "Demos/Avatars/Renderer/AvatarFaithfulDrawScreen.hpp"
+#include "Demos/Avatars/Renderer/AvatarRealRenderScreen.hpp"
+#include "Demos/Avatars/Renderer/AvatarAnimationPresetCycleScreen.hpp"
+#include "Demos/Avatars/Wardrobe/AvatarAppearanceTintScreen.hpp"
+#include "Demos/Avatars/Wardrobe/AvatarWardrobeHotswapScreen.hpp"
 
 namespace CnaExamples::Navigation {
 
@@ -1425,6 +1432,52 @@ inline std::vector<DemoEntry> BuildEffectReflectionDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildAvatarDescriptionDemos() {
+    using namespace CnaExamples::Demos::Avatars::DescriptionDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<AvatarDescriptionScreen>(
+        "CreateRandom & IsValid",
+        "Despite the name, CreateRandom() never randomizes anything -- verified, not assumed",
+        {"AvatarDescription"}));
+    demos.push_back(MakeDemo<AvatarNameTablesScreen>(
+        "Preset & BodyType Name Tables",
+        "31 unique AvatarAnimationPreset clip names and both AvatarBodyType content names",
+        {"AvatarAnimationPreset", "AvatarBodyType"}));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildAvatarRendererDemos() {
+    using namespace CnaExamples::Demos::Avatars::RendererDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<AvatarFaithfulDrawScreen>(
+        "The Faithful (No-Op) XNA Surface",
+        "The real off-Xbox Draw() is a genuine no-op -- State, BindPose and ParentBones probed live",
+        {"AvatarRenderer", "AvatarRendererState"}));
+    demos.push_back(MakeDemo<AvatarRealRenderScreen>(
+        "Real Render (Male & Female)",
+        "EnableRealRenderingEXT + DrawRealEXT, both bodies side by side, backbuffer-probed",
+        {"AvatarRenderer", "SkinnedModelEXT"}));
+    demos.push_back(MakeDemo<AvatarAnimationPresetCycleScreen>(
+        "Animation Preset Cycling",
+        "Only 21 of 31 presets exist on a given body -- the other gender's 10 throw, verified first",
+        {"AvatarAnimationPreset", "SkinnedModelEXT"}));
+    return demos;
+}
+
+inline std::vector<DemoEntry> BuildAvatarWardrobeDemos() {
+    using namespace CnaExamples::Demos::Avatars::WardrobeDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<AvatarAppearanceTintScreen>(
+        "Per-Slot Tinting (AvatarAppearanceEXT)",
+        "Shirt/pants/hair tint alternated live, torso pixel probed to confirm it actually changed",
+        {"AvatarAppearanceEXT"}));
+    demos.push_back(MakeDemo<AvatarWardrobeHotswapScreen>(
+        "Hot-Swap (AttachPartEXT/RemovePartEXT)",
+        "Baked-in hair <-> Cap <-> Ponytail, part count verified to stay exactly 5 every swap",
+        {"SkinnedModelEXT"}));
+    return demos;
+}
+
 // Builds the full Home -> Area -> Category -> Demo data set. This is the
 // single place new areas/categories/demos get registered as they are
 // implemented; see plan.md section 8 for what is intentionally still empty.
@@ -1489,6 +1542,14 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
             CategoryEntry{"NetworkGamer", BuildNetworkGamerDemos()},
             CategoryEntry{"GamerServices", BuildGamerServicesDemos()},
             CategoryEntry{"Leaderboards", BuildLeaderboardsDemos()},
+        }},
+        // AvatarDescription is pure C++ (no GraphicsDevice calls) and is left ungated so it still
+        // shows on 2D-only backends. AvatarRenderer/Wardrobe both real-render through
+        // SkinnedEffect and need the 3D pipeline, so those two are gated like every 3D category.
+        AreaEntry{"Avatars", {
+            CategoryEntry{"AvatarDescription", BuildAvatarDescriptionDemos()},
+            CategoryEntry{"AvatarRenderer", Requiring(CNA::GraphicsCapability::ThreeD, BuildAvatarRendererDemos())},
+            CategoryEntry{"Appearance & Wardrobe EXT", Requiring(CNA::GraphicsCapability::ThreeD, BuildAvatarWardrobeDemos())},
         }},
         AreaEntry{"Media", {
             CategoryEntry{"Song", BuildSongDemos()},

@@ -1,7 +1,7 @@
 # NEXT — short-term continuity for cna-examples
 
-**Updated:** 2026-07-28 (autonomous session continuing — D3 just completed, E/F1/C4-extend queued next)
-**Branch:** `feature/examples-phase-bcde`, **20 commits** ahead of `develop` @ `d7353e3`, all
+**Updated:** 2026-07-28 (autonomous session continuing — D3 and E both done, F1/C4-extend queued next)
+**Branch:** `feature/examples-phase-bcde`, ahead of `develop` @ `d7353e3`, all
 pushed. Working tree clean, no jobs in flight, both native build trees green.
 **Authoritative plan:** [`plan.md`](plan.md). Historical record: [`plan20260727.md`](plan20260727.md).
 
@@ -15,9 +15,9 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **238** across 12 areas, 75 categories |
-| Last full validation | **238/238 on EASYGL and SDL_RENDERER**, 238 screenshots each, 0 layout problems, catalog+layout+docs clean |
-| Head commit | `f8f4ad0` |
+| Demo screens | **245** across 13 areas, 78 categories |
+| Last full validation | **245/245 on EASYGL and SDL_RENDERER**, 245 screenshots each, 0 layout problems, catalog+layout+docs clean |
+| Head commit | (this Phase E commit, see git log — update after committing) |
 
 **Phases, in roadmap order:**
 
@@ -38,10 +38,10 @@ state.
 | D6 2D formats & events | **Done, reduced scope** — 2 screens; Device Events already existed |
 | D7 Input EXT | **Done, reduced scope** — 2 screens into existing categories |
 | D8 Net | **Done, reduced scope** — 1 screen; its verdict is amber on purpose, see #39 |
-| E Avatars | **Not started** — needs avatar meshes; same borrow pattern |
+| E Avatars | **Done** — 3 categories, 7 screens, exactly at plan.md's original count |
 | F1 defect sweep | **Not started** |
-| F2 Emscripten | **BLOCKED on an upstream CNA defect** — see §6b and §7 |
-| F3 SDL_RENDERER pass | **Done** — 238/238 on both backends, 3D gated on ThreeD |
+| F2 Emscripten | **BLOCKED on an upstream CNA defect** — exact one-line fix identified, not applied — see §6b and §7 |
+| F3 SDL_RENDERER pass | **Done** — 245/245 on both backends, 3D gated on ThreeD |
 
 **Scope kept shrinking, and that was correct.** D4 went 4→3, D6 6→2, D7 3→2, D8 3→1, D3 5→4. Every
 cut was verified as already-covered, non-existent, or (D3's `SkinnedModelEXT`) genuinely out of
@@ -344,6 +344,52 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    constructible/clonable by hand, but `EffectMaterial::OnApply()` (read from source) is an empty
    function body -- applying one binds no parameters and changes no GPU state.
 
+46. **`AttachPartEXT`/`RemovePartEXT` are `SkinnedModelEXT` methods, not Avatar methods** -- D3
+   deliberately left `SkinnedModelEXT` alone on this basis and Phase E confirms the judgement was
+   right. `AvatarRenderer::EnableRealRenderingEXT(device, shared_ptr<SkinnedModelEXT>)` is the only
+   bridge between the two: the real, GPU-skinned render path is layered entirely on top of
+   `SkinnedModelEXT`, completely separate from the faithful (never-renders) `Draw()`/`State`/
+   `BindPose`/`ParentBones` surface real XNA exposes.
+47. **`AvatarRenderer::getParentBonesProperty()` is populated unconditionally from a real, hardcoded
+   71-entry table at construction** -- it does NOT come back empty the way a first read of the
+   getter alone suggests (nothing in the getter itself populates anything; the constructor does).
+   `getBindPoseProperty()` is sized identically at construction but stays default/identity content
+   and is unreachable anyway, since it throws `InvalidOperationException` unconditionally (`State`
+   never becomes `Ready`). The two "real skeletal data" members behave oppositely from each other.
+   Caught by a live screenshot after the screen's own first-draft assumption (mirroring
+   `getBindPoseProperty()`'s behavior) turned out wrong -- source-reading the getter alone was not
+   enough; the constructor is where the real answer lives.
+48. **A single loaded `SkinnedModelEXT` only ever has 21 of the 31 `AvatarAnimationPreset` clip
+   names in its `Clips` map** (11 gender-neutral + its own gender's 10) -- the other gender's 10 are
+   simply absent, and `ComputeBoneTransformsEXT`/`DrawRealEXT` throw `ArgumentException` for them.
+   "All 31 presets auto-cycled on one avatar" (plan.md's original Phase E wording) was never
+   achievable; verify every clip name against `ComputeBoneTransformsEXT` before ever drawing with
+   it, rather than discovering the throw live.
+49. **`SkinnedModelEXT::GetOwnedPartCountForTesting()`/`GetOwnedVertexBufferCountForTesting()`/etc.
+   are real, `NOXNA`-marked testing accessors on the type itself**, not hidden behind a test-only
+   friend or a separate header -- a demo screen can assert `AttachPartEXT`'s replace-by-name
+   contract (constant part count across repeated swaps) directly, no GPU pixel probe required. Used
+   in the Wardrobe Hot-Swap screen to confirm the base avatar's 5 parts (Body/Hair/Pants/Shirt/
+   Shoes) stay exactly 5 across every baked-in/Cap/Ponytail cycle.
+50. **`DemoScreen::DrawVerdict()`'s caption is NOT ellipsized the way `DrawLines()`'s text is** --
+   it calls `spriteBatch.DrawString()` directly with no width bound. A caption written the same
+   length as a `DrawLines()` line (which auto-truncates) runs straight off the right edge with no
+   warning; `tools/check_shots.py`'s `right(Npx)` flag is what catches it, not a compile or runtime
+   error. Every existing verdict caption in this codebase happens to be short enough to avoid this
+   -- keep new ones under roughly 55-60 characters (`"PASS: meshes loaded; Effects self-maintenance
+   verified"`, 56 chars, is a safe reference length) rather than assuming `DrawVerdict()` wraps or
+   truncates like `DrawLines()` does.
+51. **Unresolved finding, recorded rather than chased down**: at least one avatar animation clip
+   (observed on `"Stand2"`) renders with the avatar's head invisible/out of frame during
+   `DrawRealEXT`, while `"Stand0"` (identical code path, identical camera) frames correctly.
+   Confirmed by pixel-scanning a screenshot column (not by eye), and confirmed NOT a
+   camera-distance problem: pulling the camera back from 3.0 to 4.4 world units made no difference.
+   Since the same `CNAAvatarBody` part's torso/arms/legs render fine in the same frame, this points
+   at a per-clip head/neck bone transform issue in that clip's data or in
+   `ComputeBoneTransformsEXT`'s per-bone hierarchy math -- worth a closer look if this area is
+   revisited, starting from a direct dump of the computed world-bone matrix for the head bone
+   across both clips.
+
 ## 6. Commands
 
 ```bash
@@ -594,25 +640,29 @@ order; each is self-contained and ends in a commit.
 Skeletal Animation (AnimationPlayer), Morph Targets — see `plan.md`'s own D3 writeup and NEXT.md
 §5 items 43–45 for the findings). It needed **no** borrowed asset in the end — everything is
 synthesized procedurally via CNA's own `.cnj` content format, the same technique the CNA test suite
-uses. `SkinnedModelEXT` was deliberately NOT put here; it belongs to Phase E (Avatar-only type).
+uses. `SkinnedModelEXT` was deliberately NOT put here; it went to Phase E instead (Avatar-only type).
 
-**(a) Phase E — Avatars.** The largest remaining gap now. Borrow pattern (`../cna/examples/`
-has eight `demo_avatar*` programs to model it on; check what those actually do before planning
-screen count) — this one DOES need real avatar mesh/wardrobe assets from `../cna`, unlike D3.
-`SkinnedModelEXT`'s `AttachPartEXT`/`RemovePartEXT` (wardrobe hot-swap) belong here.
+**Phase E — Avatars is DONE** (3 categories, 7 screens: AvatarDescription's `CreateRandom & IsValid`
++ `Preset & BodyType Name Tables`; AvatarRenderer's `The Faithful (No-Op) XNA Surface` + `Real
+Render (Male & Female)` + `Animation Preset Cycling`; Wardrobe's `Per-Slot Tinting
+(AvatarAppearanceEXT)` + `Hot-Swap (AttachPartEXT/RemovePartEXT)` — see `plan.md`'s own Phase E
+writeup and NEXT.md §5 items 46–51 for the findings, including one unresolved cosmetic issue, #51,
+recorded rather than chased down). It DOES need real avatar mesh/wardrobe assets, borrowed from
+`../cna/examples/demo_avatar/Content/` the same way as `.xnb`/XACT/D3.
 
-**(b) Phase F1 — defect sweep** over everything built this session.
+**(a) Phase F1 — defect sweep** over everything built this session.
 
-**(c) Extend C4 Storage** — container directory operations and container lifetime, the two screens
+**(b) Extend C4 Storage** — container directory operations and container lifetime, the two screens
 C4 deliberately left out.
 
 **Do NOT start** D2 or F2 without reading §7 first: both are blocked, D2 on an unexplained
-rendering failure and F2 on a defect in CNA itself. Per §2a, investigate deeper and write up
-findings only — do not modify `../cna` this session.
+rendering failure (root cause now identified, see §7, but not applied) and F2 on a defect in CNA
+itself (exact fix location now identified, see §7, but not applied). Per §2a, investigate deeper
+and write up findings only — do not modify `../cna` this session.
 
 **Before writing any code for a phase**, grep `src/Demos/` for the APIs its plan row claims are
 missing. D6, D7, D8 and D3 all shrank once that was checked (or, for D3, once the architecture was
-actually understood) — the plan over-estimates gaps, and the existing 238 screens already cover
+actually understood) — the plan over-estimates gaps, and the existing 245 screens already cover
 more than it assumes.
 
 **Workflow that works here, in order:**

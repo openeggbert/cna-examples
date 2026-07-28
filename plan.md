@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-28)
 
-Twelve Areas, **238 demo screens** across 75 categories, all with real content. The numbers below
+Thirteen Areas, **245 demo screens** across 78 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -53,9 +53,10 @@ this file and `README.md`. Nothing here is counted by hand.
 | Devices | — | 6 | 15 |
 | Net | — | 4 | 15 |
 | Media | — | 4 | 17 |
+| Avatars | — | 3 | 7 |
 | 2D Graphics | 4 | 13 | 40 |
 | 3D Graphics | 5 | 16 | 41 |
-| **Total** | **12** | **75** | **238** |
+| **Total** | **13** | **78** | **245** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -133,7 +134,7 @@ than assume a full pipeline, which is exactly what a real CNA consumer has to do
 own right.
 
 **F3 result.** *(Figures below are as-of F3, when the catalog held 218 screens. It has since grown
-to 238, and both backends were re-verified at 238/238 — see §7.0.)*
+to 245, and both backends were re-verified at 245/245 — see §7.0.)*
 `tools/sweep_backend.sh build-sdlrenderer` renders **218/218** with zero layout
 problems, and the EasyGL tree still renders 218/218 — no regression from the gating.
 
@@ -268,24 +269,27 @@ are the content build-out. F is verification.
 
 Original target end state: **13 Areas, ~290 demo screens.**
 
-### 7.0 Status as of 2026-07-28 — 238 screens, A/B/C/D substantially complete
+### 7.0 Status as of 2026-07-28 — 245 screens, A/B/C/D/E substantially complete
 
 | Phase | Status |
 |---|---|
 | A, B, C1–C5 | **Done** (C4/C5 at reduced scope) |
 | D1 XACT · D3 Model Content · D4 Effect Reflection · D5 Textures & Queries · D6 Formats · D7 Input EXT · D8 Net | **Done**, all at reduced scope — see each phase's result section |
-| **D2 PBR** | **BLOCKED, `needs_human`** — screen written, never rendered, reverted. WIP preserved at [`docs/wip-pbr/`](docs/wip-pbr/) |
-| **E Avatars** | **Not started** |
+| **D2 PBR** | **BLOCKED, `needs_human`** — screen written, never rendered, reverted. Root cause since identified (a polymorphic-vertex `sizeof()` mismatch, not the camera matrices) but not yet applied/reverified live. WIP preserved at [`docs/wip-pbr/`](docs/wip-pbr/) |
+| **E Avatars** | **Done** — 7 screens, 3 categories, exactly at plan.md's original target |
 | **F1** defect sweep | **Not started** |
-| **F2** Emscripten | **BLOCKED on a CNA defect** — compiles fully for wasm, fails linking `libCNA.a` |
-| **F3** SDL_RENDERER | **Done** — 238/238 on both backends |
+| **F2** Emscripten | **BLOCKED on a CNA defect** — compiles fully for wasm, fails linking `libCNA.a`. Exact one-line upstream fix now identified, not applied here |
+| **F3** SDL_RENDERER | **Done** — 245/245 on both backends |
 
-**The ~290 target will not be reached by building every planned screen, and should not be.**
-D4 shipped 3 of 4, D6 2 of 6, D7 2 of 3, D8 1 of 3 — every cut verified as already covered
-elsewhere in the catalog or as an API that does not exist (there is no `PbrMaterial` type;
-`RenderPipelineSettings` is read by no backend). The catalog is worth more at 238 honest screens
-than at 290 with duplicates. **Before building any remaining phase, grep `src/Demos/` for the APIs
-its row claims are missing** — three phases in a row shrank by half once that was done.
+**The ~290 target will not be reached by building every planned screen, and that bias was
+consciously reversed mid-session (see NEXT.md §2a): D4 shipped 3 of 4, D6 2 of 6, D7 2 of 3, D8 1 of
+3 under the old depth-over-breadth default, each cut verified as already covered elsewhere in the
+catalog or as an API that does not exist. Phase E (built after the reversal) shipped exactly its
+planned 7 rather than cutting further, even though one of its ideas (`AvatarExpression`) also had
+nothing visual to show on its own — it was folded into a richer screen instead of dropped.**
+**Before building any remaining phase, grep `src/Demos/` for the APIs its row claims are missing**
+— three phases in a row shrank by half once that was done, and D3/E both found real, un-duplicated
+gaps once they actually checked.
 
 ### Phase A — Correct what already exists
 
@@ -826,23 +830,81 @@ garbage texture, and the swatch asserts that.
 `PresentInterval`/VSync and the DeviceReset event. Adding a D6 "Device Events" group would have
 duplicated them. **D6 is therefore complete at 2 screens rather than 6.**
 
-### Phase E — Avatars Area
+### Phase E — Avatars Area — 3 categories, 7 screens — **DONE**
 
-New Home entry, 3 categories, **7 screens**, built on `../cna/examples/demo_avatar/Content/`.
+New top-level Home entry (not a category folded into an existing area), built on real avatar
+content borrowed from `../cna/examples/demo_avatar/Content/` at build time via the same
+copy-at-configure, guard-on-existence pattern the `.xnb`/XACT fixtures already use (see
+`cmake/ExamplesHelpers.cmake` — copied to `Content/AvatarDemo/`, nothing Ms-PL enters this repo's
+git history). A missing `../cna` checkout makes every real-rendering screen catch a
+`ContentLoadException` and report the absence on screen rather than crash.
 
 | Category | Screens |
 |---|---|
-| AvatarDescription (2) | `CreateRandom`, `BodyType`, description bytes, `IsValid` · `AvatarAnimationPreset` and `AvatarBodyType` name tables |
-| AvatarRenderer (3) | Real male/female avatar rendered · all 31 animation presets auto-cycled · `AvatarExpression` eye/eyebrow/mouth |
-| Appearance & Wardrobe EXT (2) | `AvatarAppearanceEXT` per-slot tinting (skin/hair/shirt/pants/shoes) · `AttachPartEXT`/`RemovePartEXT` hot-swap |
+| AvatarDescription (2) | `CreateRandom & IsValid` · `Preset & BodyType Name Tables` |
+| AvatarRenderer (3) | `The Faithful (No-Op) XNA Surface` · `Real Render (Male & Female)` · `Animation Preset Cycling` |
+| Appearance & Wardrobe EXT (2) | `Per-Slot Tinting (AvatarAppearanceEXT)` · `Hot-Swap (AttachPartEXT/RemovePartEXT)` |
+
+**Shipped exactly at plan.md's original 7, following ../cna's own reference programs
+(`demo_avatar`, `demo_avatar_wardrobe_hotswap`) for the proven call sequences rather than guessing
+from headers alone** — the same lesson every prior phase re-learned. `AvatarDescription` is left
+**ungated** (pure C++, no `GraphicsDevice` call), so it still shows on 2D-only backends;
+`AvatarRenderer`/`Appearance & Wardrobe EXT` both real-render through `SkinnedEffect` and are
+gated on `GraphicsCapability::ThreeD` like every other 3D category. Verified 245/245 on both
+EASYGL and SDL_RENDERER, including confirming the gated categories report "Not available on this
+build" cleanly on SDL_RENDERER while `AvatarDescription` keeps working there.
+
+**Corrected scope, one real cut, one real addition.**
+- `AttachPartEXT`/`RemovePartEXT` are NOT Avatar APIs — they live on `Graphics::SkinnedModelEXT`
+  (D3 deliberately left this type alone, judging it Avatar-only; that judgement call is now
+  confirmed correct).
+- The planned "`AvatarExpression` eye/eyebrow/mouth" screen doesn't exist as such: `AvatarExpression`
+  is only consumed by the faithful (non-EXT) `Draw(bones, expression)` overload, which is a
+  genuine no-op — there is nothing visual to show. Folded into `The Faithful (No-Op) XNA Surface`
+  instead, alongside `Draw()`'s own no-op behavior, `State`'s permanent `Unavailable`, and
+  `BindPose`/`ParentBones` — richer coverage of the same idea rather than a screen with nothing to
+  demonstrate.
+- "All 31 animation presets auto-cycled" as originally planned is **not what the content
+  supports**, and the screen says so rather than silently only using 21: a single loaded
+  `SkinnedModelEXT` bakes in only its own gender's 10 clips plus the 11 neutral ones (21 total);
+  the other gender's 10 preset names are absent from its `Clips` map and throw
+  `ArgumentException` from `ComputeBoneTransformsEXT`. Verified directly against all 31 before
+  ever attempting a draw, then auto-cycles the 21 that actually exist.
+
+**Findings:**
+1. **`AvatarRenderer::getParentBonesProperty()` is NOT empty, contradicting this screen's own
+   first-draft assumption** — caught by a live screenshot, not by reading the header alone. The
+   constructor initializes `parentBoneIds_` from a real, hardcoded 71-entry table
+   (`AvatarRenderer.cpp`'s own anonymous namespace), so it returns all 71 real parent-bone indices
+   unconditionally. `BindPose` by contrast IS sized to 71 at construction but stays default/identity
+   and is unreachable anyway (`getBindPoseProperty()` always throws `InvalidOperationException`,
+   since nothing ever sets `State` to `Ready`) — the two "real skeletal data" getters behave
+   differently from each other in a way the doc comments alone don't make obvious.
+2. **`SkinnedModelEXT::GetOwnedPartCountForTesting()` (a `NOXNA` testing accessor) makes
+   `AttachPartEXT`'s replace-by-name claim independently checkable without a GPU or a pixel probe**:
+   the base avatar owns exactly 5 parts (Body/Hair/Pants/Shirt/Shoes), and the Hot-Swap screen
+   confirms this stays exactly 5 across every baked-in/Cap/Ponytail swap, proving neither a leak
+   nor a drop rather than trusting the header comment.
+3. **`AvatarAppearanceEXT` tinting reaches real rendered pixels**, confirmed with a live backbuffer
+   probe (`GraphicsDevice::GetBackBufferData`, the same route `tools/headless.sh --screenshot`
+   itself uses) at a fixed torso coordinate before and after switching appearances — not just that
+   the struct's setters/getters round-trip.
+4. **Unresolved, recorded rather than chased down**: on the Animation Preset Cycling screen, at
+   least one clip (`Stand2`) renders with the avatar's head invisible/out of frame, while `Stand0`
+   (identical code path, identical camera) frames correctly. Confirmed NOT a camera-distance
+   problem (pulling the camera back from 3.0 to 4.4 world units made no difference) and NOT a
+   whole-part failure (the same `CNAAvatarBody` part's torso/arms/legs render fine) — points at a
+   per-clip head/neck bone transform issue in that clip's data or in
+   `ComputeBoneTransformsEXT`'s hierarchy math. Does not affect this screen's own verified claim
+   (the valid/invalid preset split, and `DrawRealEXT` not throwing).
 
 ### Phase F — Verification
 
 | # | Work |
 |---|---|
 | F1 | **Not started.** **Xvfb screenshot sweep of every screen** via B5's `--demo`/`--screenshot`/`--frames` CLI. The 2D and 3D passes found 11 real defects between them (two of them framework-level bugs in CNA itself, not demo bugs), so this is the highest-yield verification step available. Every defect found is fixed or explicitly recorded. |
-| F2 | **BLOCKED on a CNA defect.** `emcmake` configures and **every translation unit compiles for wasm**; two real cna-examples bugs were found and fixed getting there (the web branch linked `SDL3::SDL3-static`, a target that never existed in this scope, and the three Media/Video screens needed a platform gate). The link then fails inside CNA's own archive: `libCNA.a(VideoContentTypeReader.cpp.o)` references `Media::Video`, whose implementation CNA does not build for Emscripten. Any web consumer of CNA hits this. See `NEXT.md` §6b/§7. |
-| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with every 3D Graphics category gated on `SupportsCapability(ThreeD)`. **238/238 render on both backends**, 238 screenshots each, 0 layout problems. See below. |
+| F2 | **BLOCKED on a CNA defect.** `emcmake` configures and **every translation unit compiles for wasm**; two real cna-examples bugs were found and fixed getting there (the web branch linked `SDL3::SDL3-static`, a target that never existed in this scope, and the three Media/Video screens needed a platform gate). The link then fails inside CNA's own archive: `libCNA.a(VideoContentTypeReader.cpp.o)` references `Media::Video`, whose implementation CNA does not build for Emscripten. Any web consumer of CNA hits this. The exact one-line fix location in `../cna/cmake/CnaLibrary.cmake` has since been identified but not applied (belongs in that repo). See `NEXT.md` §6b/§7. |
+| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with every 3D Graphics category gated on `SupportsCapability(ThreeD)`. **245/245 render on both backends**, 245 screenshots each, 0 layout problems. See below. |
 
 Android hardware verification is **not** part of this cycle — see §10.
 
