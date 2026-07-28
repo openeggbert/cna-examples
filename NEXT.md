@@ -18,7 +18,7 @@ state.
 |---|---|
 | Demo screens | **249** across 13 areas, 79 categories |
 | Last full validation | **249/249 on EASYGL and SDL_RENDERER** (re-run after D2's RenderPipelineSettings follow-up and D8's diagnosis correction), 249 screenshots each, 0 layout problems, catalog+layout+docs clean |
-| Head commit | `b5e9a1c` |
+| Head commit | `2b1a770` |
 
 **Phases, in roadmap order:**
 
