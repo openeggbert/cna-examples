@@ -25,16 +25,23 @@ using Microsoft::Xna::Framework::Net::SendDataOptions;
 
 // SimulatedLatency and SimulatedPacketLoss are the two knobs for testing a
 // netcode path without a bad network, and in CNA they are worth a screen for a
-// reason that is easy to miss: THEY ACTUALLY DO SOMETHING HERE.
+// reason that is easy to miss: THEY ACTUALLY DO SOMETHING -- on the real ENet
+// transport (see below for the one crucial caveat about which session type
+// actually reaches it).
 //
 // In FNA both are plain, inert auto-properties -- you can set them, read them
 // back, and nothing anywhere consumes the value. CNA implements them for real:
 // ENetBackend holds delayed AppData in a per-session delivery queue and
 // probabilistically drops packets at exactly the configured rate. Code written
 // against FNA that "tested" its packet-loss handling by setting this property
-// was testing nothing; the same code against CNA genuinely loses packets.
+// was testing nothing; the same code against CNA genuinely loses packets --
+// but only over a REAL connection, which this screen cannot establish, and
+// that is the actual, fully-diagnosed reason its verdict stays amber (see
+// RunMeasurement()'s comment, corrected 2026-07-28 -- an earlier version of
+// this screen blamed "not enough local gamers," which turned out to be wrong).
 //
-// Two limits on that, both deliberate and both stated in CNA's own docs:
+// Two limits on the real (SystemLink) path, both deliberate and both stated
+// in CNA's own docs:
 //
 //   * Scoped to APPDATA ONLY. The session-management protocol (join, leave,
 //     state change) and a host's relay hop between two OTHER peers are
@@ -42,10 +49,15 @@ using Microsoft::Xna::Framework::Net::SendDataOptions;
 //     is the point, since you want to test the game's packets, not kill the
 //     lobby.
 //   * 0.0 and 1.0 are handled DETERMINISTICALLY, without touching the RNG. That
-//     is what makes this screen able to assert a result rather than describe a
-//     tendency: at 1.0 exactly zero packets arrive, every run.
+//     is what makes a real measurement able to assert a result rather than
+//     describe a tendency: at 1.0 exactly zero packets arrive, every run --
+//     confirmed directly in CNA's own test suite
+//     (ENetBackendTests.cpp's SimulatedPacketLossOfOneDropsAllAppDataDeterministically
+//     and ZeroSimulatedLatencyAndPacketLossDeliverAppDataImmediately), which is
+//     why this screen trusts the mechanism exists even though it can't reach it
+//     itself.
 //
-// The measurement below sends the same burst twice through a local session --
+// The measurement below sends the same burst twice through a Local session --
 // once at 0% loss, once at 100% -- and checks the counts.
 class SimulatedConditionsScreen : public DemoScreen {
 public:
@@ -80,23 +92,19 @@ protected:
         }
 
         lines.push_back("In FNA both of these are inert auto-properties -- settable, readable, and");
-        lines.push_back("consumed by nothing. CNA implements them for real, so netcode tested");
-        lines.push_back("against FNA's versions was tested against nothing at all.");
+        lines.push_back("consumed by nothing. CNA implements them for real -- but only over the real");
+        lines.push_back("SystemLink transport (proven live in CNA's own ENetBackendTests.cpp).");
         lines.emplace_back();
-        lines.push_back("Local gamers in the session: " + std::to_string(localCount_) +
-                        ".  The same burst of " + std::to_string(kBurst) + " packets, sent twice:");
-        lines.push_back("  SimulatedPacketLoss = 0.0   received " + std::to_string(receivedClean_) +
-                        " / " + std::to_string(kBurst));
-        lines.push_back("  SimulatedPacketLoss = 1.0   received " + std::to_string(receivedLossy_) +
-                        " / " + std::to_string(kBurst));
-        lines.push_back("  SimulatedLatency now        " +
-                        std::to_string((int)latencyMs_) + " ms");
+        lines.push_back("This screen deliberately uses Local: SystemLink needs a 2nd real process to");
+        lines.push_back("answer UDP discovery (see Discover & Join). On Local, PacketSend is an");
+        lines.push_back("UNCONDITIONAL no-op (NetworkSession::Update, gated on RealNetworkingEnabled)");
+        lines.push_back("-- confirmed by reading the source, not just observed: 0/8 arrives, always.");
         lines.emplace_back();
-        lines.push_back("0.0/1.0 are deterministic, no RNG touched -- so this screen can assert a");
-        lines.push_back("result, not just a tendency. Both are scoped to APPDATA ONLY: join/leave/");
-        lines.push_back("state traffic and a relay hop for other peers are unaffected, so 100%");
-        lines.push_back("loss doesn't tear the session down. Session state: " +
-                        std::string(SessionStateName(session_->getSessionStateProperty())));
+        lines.push_back("Local gamers: " + std::to_string(localCount_) + ".  Burst of " +
+                        std::to_string(kBurst) + ", sent twice:  0% loss -> " +
+                        std::to_string(receivedClean_) + "/" + std::to_string(kBurst) +
+                        "   100% loss -> " + std::to_string(receivedLossy_) + "/" + std::to_string(kBurst));
+        lines.push_back("Session state: " + std::string(SessionStateName(session_->getSessionStateProperty())));
         const Vector2 end = DrawLines(sb, font, Vector2(40.0f, 82.0f), lines, tint);
 
         DrawVerdict(sb, font, end.Y + 6.0f,
@@ -114,10 +122,7 @@ private:
     std::string VerdictText() const {
         if (!measured_) return "No local gamer in the session -- nothing measurable.";
         if (conclusive_) return "Verified: 100% loss dropped every packet, 0% dropped none.";
-        if (localCount_ < 2) {
-            return "One local gamer only: SendData broadcasts to OTHERS, so none arrived.";
-        }
-        return "No AppData arrived even at 0% loss -- loss not demonstrable here.";
+        return "0/8 at 0% loss too -- Local sessions never deliver PacketSend.";
     }
 
     // Sends kBurst packets and returns how many came back.
@@ -145,10 +150,31 @@ private:
         localCount_ = locals.getCountProperty();
         if (localCount_ == 0) return;
         LocalNetworkGamer* sender = locals[0];
-        // SendData with no recipient broadcasts to the OTHER gamers, so a lone
-        // local gamer has nobody to send to and receives nothing -- which would
-        // make the measurement inconclusive rather than wrong. With a second
-        // local gamer the packets have somewhere to go.
+        // A second local gamer does NOT fix this -- confirmed by reading
+        // NetworkSession::Update() (NetworkSession.cpp) directly: PacketSend
+        // event handling is entirely gated behind
+        // ENetBackend::RealNetworkingEnabled(sessionType_), which returns true
+        // ONLY for NetworkSessionType::SystemLink (ENetBackend.cpp). For a
+        // Local session (this screen, deliberately, since SystemLink needs a
+        // real peer -- see below), that gate means EVERY PacketSend is an
+        // unconditional no-op, regardless of how many local gamers exist or
+        // how they were added -- LocalNetworkGamer::EnqueuePacket has exactly
+        // one call site in the whole codebase, and it sits behind that same
+        // gate. An earlier version of this comment blamed "not enough local
+        // gamers to route to"; that diagnosis was wrong -- 0 always arrives on
+        // Local, by design, no matter the gamer count.
+        //
+        // The real (SystemLink) path genuinely works -- CNA's own test suite
+        // proves it end-to-end (ENetBackendTests.cpp) -- but reaching it from
+        // a single self-contained demo screen isn't possible through the
+        // public XNA API: SystemLink discovery (NetworkSession::Find/Join,
+        // see DiscoverAndJoinScreen.hpp) is real UDP LAN broadcast requiring a
+        // SECOND cna_examples process to answer it. CNA's own tests get a
+        // same-process loopback connection only by dropping to
+        // CNA::Internal::Net::ENetHostHandle and hand-encoding
+        // AppDataMessage packets directly -- internal transport plumbing, not
+        // the public Microsoft::Xna::Framework::Net surface this catalog
+        // demonstrates, so that route is deliberately not taken here either.
         LocalNetworkGamer* receiver = localCount_ > 1 ? locals[1] : locals[0];
         if (sender == nullptr || receiver == nullptr) return;
 

@@ -31,6 +31,13 @@ set(SHARP_RUNTIME_BUILD_TESTS OFF CACHE BOOL "Build sharp-runtime tests" FORCE)
 # extensions beyond XNA 4.0/WP7, not something every CNA consumer wants).
 set(CNA_DEVICES ON CACHE BOOL "Enable CNA-specific device/sensor extensions" FORCE)
 
+# CNA::Graphics::RenderPipelineSettings (D2's honesty screen) lives entirely
+# behind this flag -- default OFF in CNA itself, same reasoning as
+# CNA_DEVICES above (a NOXNA extension beyond XNA 4.0). Small, self-contained
+# surface (7 files total in ../cna: RenderPipelineSettings + PbrMaterial +
+# their 3 small enum headers), no dependency on any other subsystem.
+set(CNA_NOXNA ON CACHE BOOL "Enable CNA NOXNA extended graphics layer" FORCE)
+
 add_subdirectory(../cna CNA_BUILD)
 
 # Re-export the backend target name CNA sets internally, for the linker

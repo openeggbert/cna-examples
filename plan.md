@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-28)
 
-Thirteen Areas, **248 demo screens** across 79 categories, all with real content. The numbers below
+Thirteen Areas, **249 demo screens** across 79 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -55,8 +55,8 @@ this file and `README.md`. Nothing here is counted by hand.
 | Media | — | 4 | 17 |
 | Avatars | — | 3 | 7 |
 | 2D Graphics | 4 | 13 | 40 |
-| 3D Graphics | 5 | 17 | 42 |
-| **Total** | **13** | **79** | **248** |
+| 3D Graphics | 5 | 17 | 43 |
+| **Total** | **13** | **79** | **249** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -269,17 +269,17 @@ are the content build-out. F is verification.
 
 Original target end state: **13 Areas, ~290 demo screens.**
 
-### 7.0 Status as of 2026-07-28 — 248 screens, A/B/C/D/E/F1 substantially complete
+### 7.0 Status as of 2026-07-28 — 249 screens, A/B/C/D/E/F1 substantially complete
 
 | Phase | Status |
 |---|---|
 | A, B, C1–C5 | **Done** (C4 extended to 4 screens 2026-07-28, still reduced from 6; C5 at reduced scope) |
 | D1 XACT · D3 Model Content · D4 Effect Reflection · D5 Textures & Queries · D6 Formats · D7 Input EXT · D8 Net | **Done**, all at reduced scope — see each phase's result section |
-| **D2 PBR** | **Done 2026-07-28** — 1 screen. Root cause (a polymorphic-vertex `sizeof()` mismatch) fixed by repacking into a private packed POD before upload; verified live by pixel probe. `docs/wip-pbr/` removed, superseded |
+| **D2 PBR** | **Done 2026-07-28** — 2 screens. Root cause (a polymorphic-vertex `sizeof()` mismatch) fixed by repacking into a private packed POD before upload; verified live by pixel probe. `docs/wip-pbr/` removed, superseded. `RenderPipelineSettingsScreen` shipped same-day as a follow-up (`CNA_NOXNA` now enabled, same precedent as `CNA_DEVICES`) |
 | **E Avatars** | **Done** — 7 screens, 3 categories, exactly at plan.md's original target |
 | **F1** defect sweep | **Done** — 2 real defects found and fixed (see its own result section) |
 | **F2** Emscripten | **BLOCKED on a CNA defect** — compiles fully for wasm, fails linking `libCNA.a`. Exact one-line upstream fix now identified, not applied here |
-| **F3** SDL_RENDERER | **Done** — 248/248 on both backends (re-verified after D2's fix) |
+| **F3** SDL_RENDERER | **Done** — 249/249 on both backends (re-verified after D2's follow-up and D8's diagnosis correction) |
 
 **The ~290 target will not be reached by building every planned screen, and that bias was
 consciously reversed mid-session (see NEXT.md §2a): D4 shipped 3 of 4, D6 2 of 6, D7 2 of 3, D8 1 of
@@ -658,7 +658,7 @@ reflected hue measurably changes as the object spins (green → dark green → b
 claim about backend behaviour rather than an API demonstration, and it belongs with D6's surface
 format work where it can be shown across every format at once.
 
-#### D2 PBR — **DONE 2026-07-28, 1 category, 1 screen** (was BLOCKED `needs_human`)
+#### D2 PBR — **DONE 2026-07-28, 1 category, 2 screens** (was BLOCKED `needs_human`)
 
 A `PbrEffect` metallic/roughness grid was written, **reverted** because it never rendered geometry,
 diagnosed in a follow-up investigation pass, and then successfully fixed and shipped once the real
@@ -697,10 +697,23 @@ Registered as a new **PbrEffect** category inside the existing **Effects Gallery
 Graphics area), alongside AlphaTestEffect/DualTextureEffect/EnvironmentMapEffect/SkinnedEffect/
 CustomShader -- it's a single-technique effect showcase like its siblings there, not a new group.
 
-**Not done, deliberately out of scope for this fix:** the `RenderPipelineSettings` screen from
-D2's original ~5-screen projection. That's a different, smaller idea (an honest "stores settings,
-consumed by nothing" screen) unrelated to the rendering defect this pass fixed; it remains
-available as a small follow-up if ever wanted, not carried here to keep this fix focused.
+**Second screen, shipped as a same-day follow-up: `RenderPipelineSettingsScreen.hpp`.** D2's
+original ~5-screen projection paired PbrEffect with an honest screen for the `RenderPipelineSettings`
+bag; deferred at the time to keep the rendering-defect fix focused, then picked up right after.
+Re-verified the premise from scratch rather than trusting the old investigation: grepped the entire
+`../cna` source tree fresh and confirmed nothing outside `RenderPipelineSettings`' own `.cpp`
+reads it -- no `GraphicsDevice`, no backend, no effect. The type lives behind `CNA_NOXNA`
+(`../cna/include/CNA/Graphics/RenderPipelineSettings.hpp`), default `OFF` in CNA for the same reason
+`CNA_DEVICES` is -- a NOXNA extension beyond XNA 4.0 -- so this project's own `CMakeLists.txt` now
+force-enables it too, mirroring the existing `CNA_DEVICES` precedent exactly (small, self-contained,
+7-file surface: `RenderPipelineSettings` + `PbrMaterial` + 3 small enum headers; no dependency on
+any other subsystem; full rebuild confirmed no regressions). The screen sets every property to a
+deliberately non-default value and reads every one back -- verified live, a faithful, exact round
+trip -- then states plainly that changing any of it has zero visible rendering effect, with an
+amber (not green/red) verdict swatch in the same honest spirit as D8 Net's amber verdict: this is
+not a pass/fail on correctness, it's a plain statement of what is and isn't wired up.
+
+*(Side note for whoever next touches PBR: the same source grep surfaced `../cna/include/CNA/Graphics/PbrMaterial.hpp`, also `CNA_NOXNA`-gated, which appears to directly contradict this project's own earlier note that "there is no `PbrMaterial` type" -- not investigated further here, out of scope for this follow-up, but worth checking before repeating that claim.)*
 
 **Historical record kept for what it teaches:** two real API facts came out of the original attempt
 and hold regardless of the fix above: tangent vertex types have **no** typed
@@ -852,12 +865,35 @@ versions was tested against nothing. Both are deliberately scoped to **AppData o
 session-management traffic and a host's relay hop for two other peers are unaffected and 100% loss
 does not tear the lobby down; 0.0 and 1.0 are handled deterministically without touching the RNG.
 
-**The screen's verdict is amber, honestly.** It sends a burst at 0% loss and again at 100% and
-compares the counts, but no AppData arrives in a local session even at 0% — `SendData` with no
-recipient broadcasts to the *other* gamers, and this environment yields too few local gamers for
-that to have anywhere to go. The screen reports that outcome explicitly and distinguishes it from
-a real failure rather than claiming a demonstration it could not make. Making it conclusive needs
-two genuinely signed-in local gamers; that is the obvious next step if this screen is revisited.
+**The screen's verdict is amber, honestly — and, as of a 2026-07-28 follow-up, definitively so, not
+just "not yet tried".** The original write-up above guessed the fix was "get two genuinely
+signed-in local gamers into the session"; that guess was wrong, and has now been disproven by
+reading the source directly rather than guessed at again. `NetworkSession::Update()`
+(`NetworkSession.cpp`) gates its entire `PacketSend` delivery path behind
+`ENetBackend::RealNetworkingEnabled(sessionType_)`, which is `true` **only** for
+`NetworkSessionType::SystemLink` (`ENetBackend.cpp`: `return sessionType == NetworkSessionType::SystemLink;`).
+For `NetworkSessionType::Local` — what this screen deliberately uses — every `PacketSend` is an
+*unconditional* no-op regardless of local-gamer count: `LocalNetworkGamer::EnqueuePacket` has
+exactly one call site in the whole codebase, and it sits behind that same gate. Confirmed by
+constructing two real non-guest `SignedInGamer`s via `SignedInGamer::CreateInternal(...)` and the
+explicit `NetworkSession::Create(sessionType, vector<SignedInGamer*>, ...)` overload (which bypasses
+the guest-filtering that caps the simple `Create(sessionType, maxLocalGamers, maxGamers)` overload
+at 1 non-guest gamer, per `GamerRosterScreen.hpp`'s own existing finding) — even with a real second
+local gamer wired in, delivery is still architecturally unreachable on `Local`.
+
+**The real (SystemLink) path genuinely works** — proven end-to-end in CNA's own test suite
+(`ENetBackendTests.cpp`: `ZeroSimulatedLatencyAndPacketLossDeliverAppDataImmediately`,
+`SimulatedPacketLossOfOneDropsAllAppDataDeterministically`) — but reaching it from a single
+self-contained demo screen isn't possible through the public XNA API this catalog demonstrates.
+`NetworkSession::Find()`/`Join()` (see `DiscoverAndJoinScreen.hpp`) is real UDP LAN broadcast
+discovery requiring a **second, separate `cna_examples` process** to answer it — not something one
+screen's `OnDemoLoad()` can set up for itself. CNA's own tests get a same-process loopback
+connection only by dropping to `CNA::Internal::Net::ENetHostHandle` and hand-encoding
+`AppDataMessage` packets directly — internal transport plumbing, not the public
+`Microsoft::Xna::Framework::Net` surface this catalog sticks to, so that route was deliberately not
+taken here either. **This is now a settled architectural limitation, not an open follow-up**: the
+screen's on-screen text and code comments were rewritten 2026-07-28 to state the corrected diagnosis
+precisely, so nobody re-attempts the "just add a second local gamer" dead end again.
 
 #### D6 Formats — 2 screens — **DONE (reduced scope, see below)**
 
@@ -977,7 +1013,7 @@ build" cleanly on SDL_RENDERER while `AvatarDescription` keeps working there.
 |---|---|
 | F1 | **Done, 2026-07-28.** Defect sweep over everything this roadmap added since the last such pass (D1, D3, D4, D5, D6, D7, D8, Phase E, C4's extension — ~27 screens plus supporting infrastructure). Not a re-verification of "does it render" (already 247/247 clean going in) but a skeptical read for behavioral/visual defects that survive a clean automated sweep. Full writeup below. |
 | F2 | **BLOCKED on a CNA defect.** `emcmake` configures and **every translation unit compiles for wasm**; two real cna-examples bugs were found and fixed getting there (the web branch linked `SDL3::SDL3-static`, a target that never existed in this scope, and the three Media/Video screens needed a platform gate). The link then fails inside CNA's own archive: `libCNA.a(VideoContentTypeReader.cpp.o)` references `Media::Video`, whose implementation CNA does not build for Emscripten. Any web consumer of CNA hits this. The exact one-line fix location in `../cna/cmake/CnaLibrary.cmake` has since been identified but not applied (belongs in that repo). See `NEXT.md` §6b/§7. |
-| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with every 3D Graphics category gated on `SupportsCapability(ThreeD)`. **248/248 render on both backends** (re-verified after D2's fix, 2026-07-28), 248 screenshots each, 0 layout problems. See below. |
+| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with every 3D Graphics category gated on `SupportsCapability(ThreeD)`. **249/249 render on both backends** (re-verified after D2's `RenderPipelineSettings` follow-up and D8's diagnosis correction, 2026-07-28), 249 screenshots each, 0 layout problems. See below. |
 
 Android hardware verification is **not** part of this cycle — see §10.
 

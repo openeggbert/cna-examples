@@ -1,6 +1,7 @@
 # NEXT — short-term continuity for cna-examples
 
-**Updated:** 2026-07-28 (autonomous session continuing — D3, E, C4-extend, F1 and now D2 all done)
+**Updated:** 2026-07-28 (autonomous session continuing — D3, E, C4-extend, F1, D2 and now D2's
+RenderPipelineSettings follow-up + D8's diagnosis correction all done)
 **Branch:** `feature/examples-phase-bcde`, ahead of `develop` @ `d7353e3`, all
 pushed. Working tree clean, no jobs in flight, both native build trees green.
 **Authoritative plan:** [`plan.md`](plan.md). Historical record: [`plan20260727.md`](plan20260727.md).
@@ -15,9 +16,9 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **248** across 13 areas, 79 categories |
-| Last full validation | **248/248 on EASYGL and SDL_RENDERER** (re-run after D2's fix), 248 screenshots each, 0 layout problems, catalog+layout+docs clean |
-| Head commit | `e76891a` |
+| Demo screens | **249** across 13 areas, 79 categories |
+| Last full validation | **249/249 on EASYGL and SDL_RENDERER** (re-run after D2's RenderPipelineSettings follow-up and D8's diagnosis correction), 249 screenshots each, 0 layout problems, catalog+layout+docs clean |
+| Head commit | see §8 for the exact hash after this session's final commit |
 
 **Phases, in roadmap order:**
 
@@ -31,17 +32,17 @@ state.
 | C4 Storage | **Done, extended 2026-07-28** — 2 categories, 4 screens |
 | C5 Diagnostics | **Done, reduced scope** — 4 categories, 4 screens |
 | D1 Audio/XACT | **Done, reduced scope** — 1 category, 2 screens |
-| D2 PBR | **Done, 2026-07-28** — 1 category, 1 screen. Was `needs_human`; fixed once the root cause (a polymorphic-vertex `sizeof()` mismatch) was known — see §7 |
+| D2 PBR | **Done, 2026-07-28** — 1 category, 2 screens. Was `needs_human`; fixed once the root cause (a polymorphic-vertex `sizeof()` mismatch) was known. `RenderPipelineSettingsScreen` shipped same-day as the deferred second half of D2's original plan, behind a newly-enabled `CNA_NOXNA` (same precedent as `CNA_DEVICES`) — see §7 |
 | D3 Model Content | **Done, reduced scope** — 4 screens added to the existing Model category |
 | D4 Effect Reflection | **Done, reduced scope** — 1 category, 3 screens |
 | D5 3D Textures & Queries | **Done** — 1 category, 4 screens |
 | D6 2D formats & events | **Done, reduced scope** — 2 screens; Device Events already existed |
 | D7 Input EXT | **Done, reduced scope** — 2 screens into existing categories |
-| D8 Net | **Done, reduced scope** — 1 screen; its verdict is amber on purpose, see #39 |
+| D8 Net | **Done, reduced scope** — 1 screen; its amber verdict is now DEFINITIVELY diagnosed (2026-07-28), not just "not yet made conclusive" — see #39 and #56 |
 | E Avatars | **Done** — 3 categories, 7 screens, exactly at plan.md's original count |
 | F1 defect sweep | **Done, 2026-07-28** — 2 real defects found and fixed (both cna-examples-side), 1 major upstream `../cna` content defect root-caused and left `needs_human` — see §5 #51 (updated), #53a, #53b and plan.md's F1 writeup |
 | F2 Emscripten | **BLOCKED on an upstream CNA defect** — exact one-line fix identified, not applied — see §6b and §7 |
-| F3 SDL_RENDERER pass | **Done** — 248/248 on both backends, 3D gated on ThreeD |
+| F3 SDL_RENDERER pass | **Done** — 249/249 on both backends, 3D gated on ThreeD |
 
 **Scope kept shrinking, and that was correct.** D4 went 4→3, D6 6→2, D7 3→2, D8 3→1, D3 5→4. Every
 cut was verified as already-covered, non-existent, or (D3's `SkinnedModelEXT`) genuinely out of
@@ -444,6 +445,37 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    `SetDataRaw` immediately fixed the render on the first attempt -- no other change was needed.
    Worth noting for the NEXT time this bug class is suspected on a new vertex type: the
    `static_assert` check costs seconds and settles it before writing any rendering code.
+57. **`RenderPipelineSettings`/`PbrMaterial` live behind `CNA_NOXNA`, a real CMake option (default
+   OFF in CNA), NOT enabled in this project until 2026-07-28.** `CNA_NOXNA:BOOL=OFF` in
+   `build/CMakeCache.txt` meant the entire `CNA::Graphics` namespace was compiled out of this app,
+   even though the source files are always present in `../cna` (grepping the source tree, not the
+   configured build, silently hides this). `CMakeLists.txt` now force-enables it the same way it
+   already force-enables `CNA_DEVICES`. Small, contained blast radius (7 files total in `../cna`),
+   full rebuild confirmed no regressions across all 249 screens on both backends.
+58. **`../cna/include/CNA/Graphics/PbrMaterial.hpp` exists, also `CNA_NOXNA`-gated, and appears to
+   directly contradict this project's own earlier D2 note that "there is no `PbrMaterial` type."**
+   Surfaced incidentally while re-verifying `RenderPipelineSettings`' "read by no backend" claim,
+   NOT investigated further (out of scope for that follow-up) -- worth checking before repeating
+   the old claim, and worth investigating properly if PBR is revisited again.
+59. **D8 Net's amber verdict was previously misdiagnosed as "not enough local gamers"; the real
+   cause is architectural and a second local gamer cannot fix it.**
+   `NetworkSession::Update()` (`NetworkSession.cpp`) gates its entire `PacketSend` delivery path
+   behind `ENetBackend::RealNetworkingEnabled(sessionType_)`, which is `true` **only** for
+   `NetworkSessionType::SystemLink` (`ENetBackend.cpp`) -- for `NetworkSessionType::Local`, every
+   `PacketSend` is an unconditional no-op regardless of gamer count (`LocalNetworkGamer::EnqueuePacket`
+   has exactly one call site, and it sits behind that same gate). Confirmed empirically too, not just
+   by source-reading: constructing two real non-guest `SignedInGamer`s via `SignedInGamer::CreateInternal(...)`
+   and `NetworkSession::Create(sessionType, vector<SignedInGamer*>, ...)` (which bypasses the
+   guest-filtering that caps the simpler `Create(sessionType, maxLocalGamers, maxGamers)` overload
+   at 1 non-guest gamer -- see `GamerRosterScreen.hpp`'s own existing finding) still delivered
+   0 packets on `Local`. The real (SystemLink) path works -- proven in `ENetBackendTests.cpp` -- but
+   reaching it from one self-contained demo screen isn't possible through the public XNA API: real
+   discovery needs a second `cna_examples` process, and CNA's own tests only get same-process
+   loopback by dropping to `CNA::Internal::Net::ENetHostHandle` + hand-encoded `AppDataMessage`
+   packets, which is internal transport plumbing, not the public `Microsoft::Xna::Framework::Net`
+   surface this catalog demonstrates. `SimulatedConditionsScreen.hpp`'s comments and on-screen text
+   were rewritten to state this precisely -- this is now a settled limitation, not an open
+   follow-up; do not re-attempt "just add a second local gamer."
 
 ## 6. Commands
 
@@ -684,21 +716,40 @@ cause turned out to live in this repo's own reverted screen. Fixed by repacking
 56, not the naive 48 the original code assumed — the hidden `IVertexType` vtable pointer). Shipped as
 a new **PbrEffect** category in **3D Graphics > Effects Gallery**, verified live by pixel probe.
 `docs/wip-pbr/` removed (superseded). See `plan.md`'s D2 section and §7 above for the full account.
-248/248 re-verified on both backends after this fix.
 
-**The roadmap is now substantially complete.** Every phase through D2/F1/F3 is DONE; only F2
-(Emscripten) remains, `needs_human`-blocked on a defect inside `../cna` itself, precisely diagnosed
-(exact one-line fix location identified, see §7) but deliberately not applied here per the owner's
-2026-07-28 instruction to keep `../cna` untouched this session. **Do NOT start F2** without reading
-§7 first, and do not modify `../cna` without new authorization from the owner.
+**D2's `RenderPipelineSettings` follow-up is now DONE too (2026-07-28, same day).** The honesty
+screen deferred from D2's original scope: `CNA_NOXNA` is now enabled in `CMakeLists.txt` (same
+precedent as `CNA_DEVICES`), and `RenderPipelineSettingsScreen` proves the settings bag is a real,
+faithful store (every property round-trips exactly) that nothing in this backend consumes (verified
+by a fresh full-tree grep of `../cna`, not assumed from the old investigation). Amber verdict, same
+honest spirit as D8's. See §5 item 57 for the `CNA_NOXNA` finding and item 58 for an incidental
+`PbrMaterial` discrepancy worth checking next time PBR is touched.
+
+**D8 Net's amber verdict is now DEFINITIVELY diagnosed (2026-07-28), not just "not yet made
+conclusive."** The old "two local gamers" follow-up idea was WRONG and has been disproven, not just
+left untried: `NetworkSessionType::Local` gates its entire `PacketSend` path off unconditionally
+(`RealNetworkingEnabled` is `SystemLink`-only), so no number of local gamers can ever make it
+deliver. The only real path (SystemLink) needs a second real process and isn't reachable from one
+self-contained screen through the public API. See §5 item 59 for the full citation trail.
+`SimulatedConditionsScreen.hpp`'s comments/on-screen text now state this precisely — **do not
+re-attempt "add a second local gamer," it has been tried and conclusively fails.**
+
+**249/249 re-verified on both backends after both follow-ups.**
+
+**The roadmap is now substantially complete.** Every phase through D2/F1/F3 is DONE, including both
+of D2's and D8's small follow-ups; only F2 (Emscripten) remains, `needs_human`-blocked on a defect
+inside `../cna` itself, precisely diagnosed (exact one-line fix location identified, see §7) but
+deliberately not applied here per the owner's 2026-07-28 instruction to keep `../cna` untouched this
+session. **Do NOT start F2** without reading §7 first, and do not modify `../cna` without new
+authorization from the owner.
 
 **Next unblocked work, if this session continues**, per the general autonomous-work mandate (do not
 stop merely because the planned roadmap is done — reassess for further safe, valuable work): a fresh
 audit pass in the spirit of F1 but broader than "this session's additions" — e.g. a TODO/FIXME/stub
 sweep across the FULL `src/` tree (F1 only checked the areas added this session), a compiler-warnings
-pass (`-Wall -Wextra` if not already the default), or picking up one of the smaller follow-ups noted
-along the way (a `RenderPipelineSettings` honesty screen for D2, revisiting Phase E's Stand2
-animation-content defect once `../cna` gets attention, or the D8 Net two-local-gamers follow-up).
+pass (`-Wall -Wextra` if not already the default), investigating the `PbrMaterial` discrepancy noted
+in §5 item 58, or revisiting Phase E's Stand2 animation-content defect once `../cna` gets attention
+(it is `needs_human`, see §7 — do not attempt to fix `.clip.bin` content from this repo).
 
 **Before writing any code for a phase**, grep `src/Demos/` for the APIs its plan row claims are
 missing. D6, D7, D8 and D3 all shrank once that was checked (or, for D3, once the architecture was
