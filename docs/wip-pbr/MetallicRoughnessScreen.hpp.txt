@@ -1,0 +1,187 @@
+// SPDX-License-Identifier: MIT
+#pragma once
+
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "Microsoft/Xna/Framework/Graphics/BufferUsage.hpp"
+#include "Microsoft/Xna/Framework/Graphics/DepthStencilState.hpp"
+#include "Microsoft/Xna/Framework/Graphics/IndexBuffer.hpp"
+#include "Microsoft/Xna/Framework/Graphics/IndexElementSize.hpp"
+#include "Microsoft/Xna/Framework/Graphics/PbrEffect.hpp"
+#include "Microsoft/Xna/Framework/Graphics/PrimitiveType.hpp"
+#include "Microsoft/Xna/Framework/Graphics/RasterizerState.hpp"
+#include "Microsoft/Xna/Framework/Graphics/VertexBuffer.hpp"
+#include "Microsoft/Xna/Framework/Graphics/Viewport.hpp"
+#include "Microsoft/Xna/Framework/MathHelper.hpp"
+#include "Microsoft/Xna/Framework/Matrix.hpp"
+
+#include "Demos/DemoScreen.hpp"
+#include "Demos/Graphics2D/TextureDemoHelpers.hpp"
+#include "Demos/Graphics3D/Geometry3DHelpers.hpp"
+
+namespace CnaExamples::Demos::Graphics3D::PbrDemos {
+
+using namespace CnaExamples::GameStateManagement;
+using Microsoft::Xna::Framework::MathHelper;
+using Microsoft::Xna::Framework::Matrix;
+using Microsoft::Xna::Framework::Graphics::BufferUsage;
+using Microsoft::Xna::Framework::Graphics::DepthStencilState;
+using Microsoft::Xna::Framework::Graphics::IndexBuffer;
+using Microsoft::Xna::Framework::Graphics::IndexElementSize;
+using Microsoft::Xna::Framework::Graphics::PbrEffect;
+using Microsoft::Xna::Framework::Graphics::PrimitiveType;
+using Microsoft::Xna::Framework::Graphics::RasterizerState;
+using Microsoft::Xna::Framework::Graphics::VertexBuffer;
+using Microsoft::Xna::Framework::Graphics::VertexPositionNormalTangentTexture;
+using Microsoft::Xna::Framework::Graphics::Viewport;
+
+// PbrEffect is CNA's metallic-roughness BRDF -- the glTF/industry-standard
+// material model, and a genuinely different one from BasicEffect's
+// diffuse/specular Blinn-Phong. Two scalars describe almost every opaque
+// material:
+//
+//   METALLIC   0 = dielectric (plastic, wood, stone): a white-ish specular
+//                  highlight sits on top of the base colour.
+//              1 = metal: there is no diffuse term at all, and the reflection
+//                  is TINTED BY THE BASE COLOUR. This is why a metal sphere
+//                  goes dark where it reflects nothing -- it has no
+//                  diffuse floor to fall back to.
+//
+//   ROUGHNESS  0 = mirror-smooth, a tight bright highlight.
+//              1 = fully diffuse, the highlight spread across the surface.
+//
+// The grid below is the standard way to read them: metallic increases down the
+// rows, roughness increases across the columns, everything else held constant.
+// Spheres, not cubes -- a flat face shows almost none of this, because the
+// interesting behaviour is the highlight sweeping across a curved surface.
+//
+// A VertexBuffer is REQUIRED here, and that is worth stating plainly because
+// getting it wrong fails silently. PbrEffect needs tangents, so the vertex type
+// is VertexPositionNormalTangentTexture -- and GraphicsDevice only provides
+// typed DrawUserIndexedPrimitives overloads for four legacy vertex types
+// (VertexPositionColor, VertexPositionColorTexture, VertexPositionTexture,
+// VertexPositionNormalTexture). A tangent vertex array therefore binds to the
+// untyped `const void*` overload, which carries NO vertex declaration, so the
+// GPU reinterprets stride-48 data under whatever layout was last bound. It does
+// not throw or warn -- it draws garbage geometry that fills the viewport, which
+// is exactly how this screen was first written and what the measurement caught.
+//
+// VertexBuffer::SetData has the same gap, so uploading needs SetDataRaw with an
+// explicit stride. Tangent vertex types are second-class across this API: the
+// buffered path with an explicit VertexDeclaration is the only correct one.
+class MetallicRoughnessScreen : public DemoScreen {
+public:
+    MetallicRoughnessScreen() : DemoScreen("PbrEffect: Metallic & Roughness") {}
+
+    void OnDemoLoad() override {
+        auto& device = GetScreenManager()->getGraphicsDeviceProperty();
+        sphere_ = BuildSphereTangentMesh(0.42f, 24, 16);
+        // The two-argument VertexBuffer constructor, matching ../cna's own
+        // working PBR example: SetDataRaw pushes the layout, so passing a
+        // VertexDeclaration here as well is not the supported path.
+        // SetDataRaw, not SetData: the typed SetData overloads cover the same
+        // legacy vertex types as the typed draw calls, and tangent vertices are
+        // not among them. SetDataRaw at least takes the stride explicitly, so
+        // it cannot be got wrong silently the way the void* draw call can.
+        // Expanded to a flat, non-indexed triangle list -- ../cna's own working
+        // PBR path draws with DrawPrimitives and no IndexBuffer.
+        flat_.reserve(sphere_.indices.size());
+        for (std::uint16_t index : sphere_.indices) flat_.push_back(sphere_.vertices[index]);
+        triangleCount_ = (int)flat_.size() / 3;
+        vb_.emplace(device, (int)flat_.size());
+        vb_->SetDataRaw(flat_.data(), (int)flat_.size(),
+                        (int)sizeof(VertexPositionNormalTangentTexture));
+        // A base-colour texture is not optional in practice: the PBR shader
+        // samples albedo unconditionally, so leaving it null renders nothing.
+        baseColor_.emplace(CnaExamples::Demos::Graphics2D::CreateCheckerboardTexture(
+            device, 8, 8, 8, Color(230, 190, 110, 255), Color(230, 190, 110, 255)));
+        effect_.emplace(device);
+        effect_->EnableDefaultLighting();
+        effect_->setTextureProperty(&*baseColor_);
+        effect_->setDiffuseColorProperty(Vector3(0.85f, 0.68f, 0.30f));
+    }
+
+    void OnDemoUnload() override {
+        effect_.reset();
+        baseColor_.reset();
+        vb_.reset();
+    }
+
+protected:
+    void OnDemoUpdate(GameTime& gameTime) override {
+        spin_ += (float)gameTime.getElapsedGameTimeProperty().getTotalSecondsProperty() * 0.35f;
+    }
+
+    void OnDemoDraw(const GameTime&, SpriteBatch& sb, SpriteFont& font) override {
+        const Color tint = mul(Color::White, TransitionAlpha());
+        std::vector<std::string> lines;
+        lines.push_back("The metallic-roughness BRDF -- glTF's material model, and a different one");
+        lines.push_back("from BasicEffect's diffuse/specular Blinn-Phong.");
+        lines.push_back("Roughness 0 -> 1 across;  metallic 0 -> 1 down.  Base colour is constant.");
+        lines.push_back("A metal has NO diffuse term and tints its reflection with the base colour,");
+        lines.push_back("so the bottom row darkens where it reflects nothing.");
+        lines.emplace_back();
+        lines.push_back("Drawn through a VertexBuffer, necessarily: tangent vertices have no typed");
+        lines.push_back("DrawUserIndexedPrimitives overload, and the void* one carries no vertex");
+        lines.push_back("declaration -- it silently draws garbage rather than failing.");
+        DrawLines(sb, font, Vector2(40.0f, 82.0f), lines, tint);
+
+        sb.End();
+        DrawGrid();
+        sb.Begin();
+    }
+
+private:
+    static constexpr int kCols = 5;
+    static constexpr int kRows = 3;
+
+    void DrawGrid() {
+        auto& device = GetScreenManager()->getGraphicsDeviceProperty();
+        const Viewport original = device.getViewportProperty();
+        Viewport scene(0, 250, original.getWidthProperty(), 330);
+        device.setViewportProperty(scene);
+        device.setDepthStencilStateProperty(DepthStencilState::Default);
+        device.setRasterizerStateProperty(RasterizerState::CullNone);
+        device.Clear(Microsoft::Xna::Framework::Graphics::ClearOptions::DepthBuffer,
+                     Color::Black, 1.0f, 0);
+
+        const float aspect = (float)scene.getWidthProperty() / (float)scene.getHeightProperty();
+        effect_->setViewProperty(Matrix::CreateLookAt(Vector3(0.0f, 0.0f, 5.4f), Vector3::Zero,
+                                                      Vector3(0.0f, 1.0f, 0.0f)));
+        effect_->setProjectionProperty(
+            Matrix::CreatePerspectiveFieldOfView(MathHelper::PiOver4, aspect, 0.1f, 100.0f));
+
+        device.SetVertexBuffer(&*vb_);
+        for (int row = 0; row < kRows; ++row) {
+            for (int col = 0; col < kCols; ++col) {
+                const float metallic = (float)row / (float)(kRows - 1);
+                const float roughness = 0.05f + 0.95f * (float)col / (float)(kCols - 1);
+                effect_->setMetallicFactorProperty(metallic);
+                effect_->setRoughnessFactorProperty(roughness);
+
+                const float x = ((float)col - (kCols - 1) * 0.5f) * 1.05f;
+                const float y = ((kRows - 1) * 0.5f - (float)row) * 1.05f;
+                effect_->setWorldProperty(Matrix::CreateRotationY(spin_) *
+                                          Matrix::CreateTranslation(Vector3(x, y, 0.0f)));
+                effect_->Apply();
+                device.DrawPrimitives(PrimitiveType::TriangleList, 0, triangleCount_);
+            }
+        }
+        device.SetVertexBuffer(nullptr);
+
+        device.setViewportProperty(original);
+        device.setDepthStencilStateProperty(DepthStencilState::None);
+    }
+
+    SphereTangentMesh sphere_;
+    std::vector<VertexPositionNormalTangentTexture> flat_;
+    int triangleCount_ = 0;
+    std::optional<Microsoft::Xna::Framework::Graphics::Texture2D> baseColor_;
+    std::optional<VertexBuffer> vb_;
+    std::optional<PbrEffect> effect_;
+    float spin_ = 0.0f;
+};
+
+} // namespace CnaExamples::Demos::Graphics3D::PbrDemos

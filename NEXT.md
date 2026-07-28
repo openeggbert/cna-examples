@@ -1,8 +1,8 @@
 # NEXT — short-term continuity for cna-examples
 
-**Updated:** 2026-07-27 (end of the autonomous session)
-**Branch:** `feature/examples-phase-bcde`, 7 commits ahead of `develop` @ `d7353e3`, all pushed.
-The working tree is clean and both build trees are green.
+**Updated:** 2026-07-28 (end of the autonomous session)
+**Branch:** `feature/examples-phase-bcde`, **18 commits** ahead of `develop` @ `d7353e3`, all
+pushed. Working tree clean, no jobs in flight, both native build trees green.
 **Authoritative plan:** [`plan.md`](plan.md). Historical record: [`plan20260727.md`](plan20260727.md).
 
 This file is the continuity document: what just happened, what is in flight, what is
@@ -16,23 +16,37 @@ state.
 | | |
 |---|---|
 | Demo screens | **234** across 12 areas, 75 categories |
-| Last full validation | 222/222 on EASYGL **and** SDL_RENDERER, 0 layout problems, catalog+layout+docs clean |
-| Phase A (correct what exists) | **Done** — see plan.md §7 |
-| Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
-| Phase C1 (Framework area) | **Done** — 5 categories, 17 screens |
-| Phase C2 (Math area) | **Done** — 5 categories, 16 screens |
-| Phase C3 (Content area) | **Done** — 5 categories, 7 screens (CNJ category since added) |
-| Phase C4 (Storage area) | **Done, reduced scope** — 2 categories, 2 screens |
-| Phase C5 (Diagnostics area) | **Done, reduced scope** — 4 categories, 4 screens |
-| Phase F3 (SDL_RENDERER pass) | **Done** — 222/222 on both backends, 3D gated on ThreeD |
-| Phase D1 (Audio/XACT) | **Done, reduced scope** — 1 category, 2 screens |
-| Phase D5 (3D Textures & Queries) | **Done** — 1 category, 4 screens |
-| Phase D4 (Effect Reflection) | **Done, reduced scope** — 1 category, 3 screens |
-| Phase D2 (PBR) | **Blocked** — see §7, `needs_human` |
-| Phase D7 (Input EXT) | **Done, reduced scope** — 2 screens into existing categories |
-| Phase D8 (Net) | **Done, reduced scope** — 1 screen; verdict amber, see #39 |
-| Phase D6 (2D formats/events) | **Done, reduced scope** — 2 screens; Device Events already existed |
-| Phases D3, E, F1, F2 | Not started |
+| Last full validation | **234/234 on EASYGL and SDL_RENDERER**, 234 screenshots each, 0 layout problems, catalog+layout+docs clean |
+| Head commit | `037fdf2` |
+
+**Phases, in roadmap order:**
+
+| Phase | Status |
+|---|---|
+| A — correct what exists | **Done** — see plan.md §7 |
+| B — navigation shell | **Done** — search, drag-scroll, breadcrumbs, API footer |
+| C1 Framework | **Done** — 5 categories, 17 screens |
+| C2 Math | **Done** — 5 categories, 16 screens |
+| C3 Content | **Done** — 5 categories, 7 screens |
+| C4 Storage | **Done, reduced scope** — 2 categories, 2 screens |
+| C5 Diagnostics | **Done, reduced scope** — 4 categories, 4 screens |
+| D1 Audio/XACT | **Done, reduced scope** — 1 category, 2 screens |
+| D2 PBR | **BLOCKED, `needs_human`** — see §7 |
+| D3 Model Content | **Not started** — needs model assets; use the build-time borrow pattern |
+| D4 Effect Reflection | **Done, reduced scope** — 1 category, 3 screens |
+| D5 3D Textures & Queries | **Done** — 1 category, 4 screens |
+| D6 2D formats & events | **Done, reduced scope** — 2 screens; Device Events already existed |
+| D7 Input EXT | **Done, reduced scope** — 2 screens into existing categories |
+| D8 Net | **Done, reduced scope** — 1 screen; its verdict is amber on purpose, see #39 |
+| E Avatars | **Not started** — needs avatar meshes; same borrow pattern |
+| F1 defect sweep | **Not started** |
+| F2 Emscripten | **BLOCKED on an upstream CNA defect** — see §6b and §7 |
+| F3 SDL_RENDERER pass | **Done** — 234/234 on both backends, 3D gated on ThreeD |
+
+**Scope kept shrinking, and that was correct.** D4 went 4→3, D6 6→2, D7 3→2, D8 3→1. Every cut
+was verified as already-covered or non-existent, and each is recorded with its reason in
+`plan.md`. **Grep `src/Demos/` for the APIs a phase claims are missing before writing any code** —
+three phases in a row (D6, D7, D8) shrank once that check was actually done.
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -310,7 +324,7 @@ python3 tools/check_shots.py build/screenshots --quiet
 ./tools/headless.sh --keys down,select,select --pointer 480,560,300 --frames 200
 ```
 
-## 6b. Phase F2 — the Emscripten build, in progress
+## 6b. Phase F2 — the Emscripten build (BLOCKED upstream, detail here; summary in §7)
 
 **Where it got to:** `emcmake cmake -S . -B build-web` configures cleanly and **every translation
 unit compiles for wasm**. The build fails only at link, on twelve undefined symbols, all of them
@@ -367,9 +381,13 @@ cmake --build build-web -j4 --target cna_examples
 **D2 (PbrEffect) — `needs_human`: PbrEffect renders nothing from this app, cause not found.**
 
 A `PbrEffect` metallic/roughness grid screen was written, verified by pixel measurement, and
-**reverted** because it never rendered geometry. The repo is back at the clean 229-demo state; the
-work-in-progress screen and the sphere-helper patch are preserved under the session scratchpad
-(`pbr-wip/`) but are NOT in the tree.
+**reverted** because it never rendered geometry. Shipping a demo that draws nothing is worse than
+not shipping it.
+
+**The work-in-progress is preserved in the repo at [`docs/wip-pbr/`](docs/wip-pbr/)** — the screen
+itself plus a patch adding `BuildSphereTangentMesh()` (that part is believed correct and is
+independently useful). It is outside the build and outside `check_catalog.py`'s scan, so it costs
+nothing. Read `docs/wip-pbr/README.md` together with this section before restarting D2.
 
 What was established, so none of it needs redoing:
 
@@ -401,6 +419,28 @@ What was established, so none of it needs redoing:
    introducing a camera. If the matrices are the problem, that is a CNA bug worth reporting
    upstream rather than working around here.
 
+---
+
+**F2 (Emscripten) — `needs_human`: blocked on a defect in CNA itself, not in this app.**
+
+`emcmake` configures cleanly and **every translation unit compiles for wasm**. Two genuine
+cna-examples bugs were found and fixed getting there (see §6b for both, including the
+`SDL3::SDL3-static` target that never existed). The link now fails only inside CNA's own archive:
+
+    wasm-ld: error: CNA_BUILD/libCNA.a(VideoContentTypeReader.cpp.o):
+             undefined symbol: Microsoft::Xna::Framework::Media::Video::Video(...)
+             undefined symbol: vtable for Microsoft::Xna::Framework::Media::Video
+
+CNA compiles `VideoContentTypeReader.cpp` into `libCNA.a` for Emscripten while omitting the
+`Video`/`VideoPlayer` implementation those objects reference. **Any** web consumer of CNA hits
+this, not only this app. The fix belongs upstream — exclude that translation unit from the
+Emscripten build too, or provide stub definitions for `Video`. Nothing in cna-examples can work
+around it, because the unresolved symbols are inside a library this project only consumes.
+
+This is worth raising with the CNA maintainer as a bug report rather than sitting on it.
+
+---
+
 Everything else in the roadmap is unblocked. The three that could
 have been were settled up front and are recorded in §2: asset licensing, branch policy, and
 depth-over-breadth.
@@ -414,27 +454,48 @@ preference worth stating, because the current bias is deliberate and will otherw
 
 ## 8. Resume here
 
-Candidates, in this order:
+Everything below is unblocked and needs no decision from the project owner. Take them in this
+order; each is self-contained and ends in a commit.
 
-**(a) Phase D2/D3/D4/D6/D7/D8** — deepening existing areas (PBR & pipeline, Model content, effect
-reflection, Texture3D/Cube/RenderTargetCube, occlusion queries, 2D surface formats and device
-events, Input EXT screens, Net QoS). **D1 (XACT) and D5 (Textures & Queries) are done.** D2-D4 are
-all 3D and must be wrapped in `Requiring(CNA::GraphicsCapability::ThreeD, ...)` like the existing
-3D categories, or the SDL_RENDERER sweep will abort on them.
+**(a) D3 — Model Content.** The largest remaining gap. Real `Model` loading via `ContentManager`,
+`ModelMesh`/`ModelMeshPart`/`EffectMaterial` traversal and effect swapping, `SkinnedModelEXT`,
+`AnimationPlayer` clip playback, `MorphTargetEXT`. Needs model assets, so reuse the build-time
+borrow already working for `.xnb` and XACT (`cmake/ExamplesHelpers.cmake`): point at `../cna`,
+guard on existence, and have the screen report the absence rather than failing the build. Nothing
+Ms-PL may enter this repository's history — that rule is settled, see §2.
 
-**(b) Extend C4 Storage** — container directory operations and container lifetime.
+**(b) Phase E — Avatars.** Same borrow pattern; `../cna/examples/` has eight `demo_avatar*`
+programs to model it on. Check what those actually do before planning screen count.
 
-**(c) Phase F2, the Emscripten build** — `~/emsdk` is installed (`emcc` at
-`~/emsdk/upstream/emscripten/emcc`, not on `PATH`; source `~/emsdk/emsdk_env.sh`). Expect to gate
-Net, Camera, FileDialog, SystemTray, Microphone and Storage the way 3D is now gated — the
-`Requiring()` + `SetRequiredCapability` machinery is in place, though a platform gate would need
-a predicate other than `GraphicsCapability`.
+**(c) Phase F1 — defect sweep** over everything built this session.
 
-Then E (Avatars, reusing the build-time asset copy already working for `.xnb`) → F1.
+**(d) Extend C4 Storage** — container directory operations and container lifetime, the two screens
+C4 deliberately left out.
 
-**The asset-borrowing mechanism is built and working** (`cmake/ExamplesHelpers.cmake`), so
-Phase E's avatar meshes can reuse the same pattern: copy from `../cna` at build time, guard on
-existence, and have the demo report absence on screen.
+**Do NOT start** D2 or F2 without reading §7 first: both are blocked, D2 on an unexplained
+rendering failure and F2 on a defect in CNA itself.
+
+**Before writing any code for a phase**, grep `src/Demos/` for the APIs its plan row claims are
+missing. D6, D7 and D8 all shrank by half or more once that was checked — the plan over-estimates
+gaps, and the existing 234 screens already cover more than it assumes.
+
+**Workflow that works here, in order:**
+
+1. Read the CNA header first and build against what is actually there.
+2. Syntax-check a new screen with a throwaway TU before touching `AreaCatalog.hpp`
+   (`g++ -std=c++23 -fsyntax-only $DEFS $INCLUDES /tmp/tu.cpp`, taking the flags from
+   `build/CMakeFiles/cna_examples.dir/flags.make`). A full rebuild per iteration is far slower.
+3. Register it, build, and run just that demo through `tools/headless.sh` with `--screenshot`.
+4. **Verify by measurement, not by "it rendered".** Give any screen that makes a checkable claim a
+   `DrawVerdict()` swatch and assert its colour with a pixel probe; that is what caught the
+   `RenderTargetCube` and `SurfaceFormat` findings.
+5. Update `README.md`, `plan.md` and `NEXT.md` counts, then `check_catalog.py` + `check_layout.py`.
+6. Sweep the new area alone (`./tools/sweep.sh "Area/"`), then both backends in full.
+7. Commit with the finding in the message, and push.
+
+Keep going to the next item without stopping to summarise. Stopping after each phase to write a
+status report was the main process failure of the last session; the owner had to re-prompt three
+times.
 
 Pattern established by C1 and worth repeating:
 

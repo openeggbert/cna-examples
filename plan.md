@@ -1,6 +1,6 @@
 # cna-examples — Plan
 
-**Revision date:** 2026-07-27
+**Revision date:** 2026-07-28
 **Supersedes:** [`plan20260727.md`](plan20260727.md) — the previous plan, archived verbatim. That
 document is the historical record of how the first seven Areas were designed, built and verified
 (including per-screen detail and the defect write-ups from each verification pass). It is still
@@ -34,7 +34,7 @@ Two sibling repos cover adjacent ground and are deliberately *not* duplicated he
 Where `../cna/examples/` has already solved a hard content problem (runtime XACT bank
 generation, avatar mesh assets), `cna-examples` reuses that solution rather than re-deriving it.
 
-## 2. Current state (2026-07-27)
+## 2. Current state (2026-07-28)
 
 Twelve Areas, **234 demo screens** across 75 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
@@ -132,7 +132,9 @@ than assume a full pipeline, which is exactly what a real CNA consumer has to do
 `Diagnostics` area (Phase C5) makes that capability model visible to the user as a demo in its
 own right.
 
-**F3 result.** `tools/sweep_backend.sh build-sdlrenderer` renders **218/218** with zero layout
+**F3 result.** *(Figures below are as-of F3, when the catalog held 218 screens. It has since grown
+to 234, and both backends were re-verified at 234/234 — see §7.0.)*
+`tools/sweep_backend.sh build-sdlrenderer` renders **218/218** with zero layout
 problems, and the EasyGL tree still renders 218/218 — no regression from the gating.
 
 Two rounds were needed, and the second is the interesting one:
@@ -264,7 +266,27 @@ Six phases. A is corrective and comes first because the app currently tells user
 untrue. B is enabling: a 290-screen catalog is unusable without search and scrolling. C, D and E
 are the content build-out. F is verification.
 
-Target end state: **13 Areas, ~290 demo screens.**
+Original target end state: **13 Areas, ~290 demo screens.**
+
+### 7.0 Status as of 2026-07-28 — 234 screens, A/B/C/D substantially complete
+
+| Phase | Status |
+|---|---|
+| A, B, C1–C5 | **Done** (C4/C5 at reduced scope) |
+| D1 XACT · D4 Effect Reflection · D5 Textures & Queries · D6 Formats · D7 Input EXT · D8 Net | **Done**, all at reduced scope — see each phase's result section |
+| **D2 PBR** | **BLOCKED, `needs_human`** — screen written, never rendered, reverted. WIP preserved at [`docs/wip-pbr/`](docs/wip-pbr/) |
+| **D3 Model Content** | **Not started** — the largest remaining gap |
+| **E Avatars** | **Not started** |
+| **F1** defect sweep | **Not started** |
+| **F2** Emscripten | **BLOCKED on a CNA defect** — compiles fully for wasm, fails linking `libCNA.a` |
+| **F3** SDL_RENDERER | **Done** — 234/234 on both backends |
+
+**The ~290 target will not be reached by building every planned screen, and should not be.**
+D4 shipped 3 of 4, D6 2 of 6, D7 2 of 3, D8 1 of 3 — every cut verified as already covered
+elsewhere in the catalog or as an API that does not exist (there is no `PbrMaterial` type;
+`RenderPipelineSettings` is read by no backend). The catalog is worth more at 234 honest screens
+than at 290 with duplicates. **Before building any remaining phase, grep `src/Demos/` for the APIs
+its row claims are missing** — three phases in a row shrank by half once that was done.
 
 ### Phase A — Correct what already exists
 
@@ -744,9 +766,9 @@ New Home entry, 3 categories, **7 screens**, built on `../cna/examples/demo_avat
 
 | # | Work |
 |---|---|
-| F1 | **Xvfb screenshot sweep of every screen** via B5's `--demo`/`--screenshot`/`--frames` CLI. The 2D and 3D passes found 11 real defects between them (two of them framework-level bugs in CNA itself, not demo bugs), so this is the highest-yield verification step available. Every defect found is fixed or explicitly recorded. |
-| F2 | **Emscripten (web) build.** Confirm the whole catalog compiles for web and that demos which cannot work there (Net, Camera, FileDialog, SystemTray, Storage paths, Microphone) degrade with an honest "not available on this platform" screen rather than throwing. |
-| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with all 14 3D Graphics categories gated on `SupportsCapability(ThreeD)`. **218/218 render on both backends.** See below. |
+| F1 | **Not started.** **Xvfb screenshot sweep of every screen** via B5's `--demo`/`--screenshot`/`--frames` CLI. The 2D and 3D passes found 11 real defects between them (two of them framework-level bugs in CNA itself, not demo bugs), so this is the highest-yield verification step available. Every defect found is fixed or explicitly recorded. |
+| F2 | **BLOCKED on a CNA defect.** `emcmake` configures and **every translation unit compiles for wasm**; two real cna-examples bugs were found and fixed getting there (the web branch linked `SDL3::SDL3-static`, a target that never existed in this scope, and the three Media/Video screens needed a platform gate). The link then fails inside CNA's own archive: `libCNA.a(VideoContentTypeReader.cpp.o)` references `Media::Video`, whose implementation CNA does not build for Emscripten. Any web consumer of CNA hits this. See `NEXT.md` §6b/§7. |
+| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with every 3D Graphics category gated on `SupportsCapability(ThreeD)`. **234/234 render on both backends**, 234 screenshots each, 0 layout problems. See below. |
 
 Android hardware verification is **not** part of this cycle — see §10.
 
