@@ -15,7 +15,7 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **232** across 12 areas, 75 categories |
+| Demo screens | **233** across 12 areas, 75 categories |
 | Last full validation | 222/222 on EASYGL **and** SDL_RENDERER, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
 | Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
@@ -31,7 +31,8 @@ state.
 | Phase D2 (PBR) | **Blocked** — see §7, `needs_human` |
 | Phase D7 (Input EXT) | **Done, reduced scope** — 2 screens into existing categories |
 | Phase D8 (Net) | **Done, reduced scope** — 1 screen; verdict amber, see #39 |
-| Phases D3, D6, E, F1, F2 | Not started |
+| Phase D6 (2D formats/events) | **Partial** — SurfaceFormat matrix done; FromStream + Device Events outstanding |
+| Phases D3, E, F1, F2 | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -260,6 +261,13 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    local gamers for the packets to have anywhere to go. Tried `Create(Local, 1, 4)` and
    `Create(Local, 2, 4)`, plus an explicit second receiver; both gave 0 received even at 0% loss.
    To make it conclusive, get two genuinely signed-in local gamers into the session first.
+
+40. **On EASYGL only ONE SurfaceFormat works: `Color`.** All eighteen others throw on
+   `Texture2D` construction. There is no `SupportsFormat()` query, so attempting construction is
+   the only way to find out. This **refutes** the "SurfaceFormat is ignored, everything is silently
+   RGBA8" assumption that D5's notes and the D6 plan row both carried -- unsupported formats are
+   refused outright here, not coerced. Do not design a screen around Dxt5 or a float format
+   without probing first.
 
 ## 6. Commands
 

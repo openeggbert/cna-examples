@@ -194,6 +194,7 @@
 #include "Demos/Graphics2D/BeginEndState/TransformMatrixScreen.hpp"
 #include "Demos/Graphics2D/Texture2DBasics/ProceduralCreationScreen.hpp"
 #include "Demos/Graphics2D/Texture2DBasics/SetDataGetDataRoundTripScreen.hpp"
+#include "Demos/Graphics2D/Texture2DBasics/SurfaceFormatMatrixScreen.hpp"
 #include "Demos/Graphics2D/Texture2DBasics/PropertiesAndDisposeScreen.hpp"
 #include "Demos/Graphics2D/SaveAsReload/SaveAsPngRoundTripScreen.hpp"
 #include "Demos/Graphics2D/SaveAsReload/SaveAsJpegRoundTripScreen.hpp"
@@ -1112,6 +1113,10 @@ inline std::vector<DemoEntry> BuildTexture2DBasicsDemos() {
         "SetData/GetData Round-Trip", "Write a known pattern, read it back, verify byte-for-byte"));
     demos.push_back(MakeDemo<PropertiesAndDisposeScreen>(
         "Properties & Dispose", "Width/Height/Bounds + the IsDisposed/HasBackend lifecycle"));
+    demos.push_back(MakeDemo<SurfaceFormatMatrixScreen>(
+        "SurfaceFormat Matrix",
+        "All 19 formats constructed for real -- there is no SupportsFormat() query",
+        {"Texture2D", "SurfaceFormat"}));
     return demos;
 }
 

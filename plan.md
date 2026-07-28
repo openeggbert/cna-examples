@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-27)
 
-Twelve Areas, **232 demo screens** across 75 categories, all with real content. The numbers below
+Twelve Areas, **233 demo screens** across 75 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -53,9 +53,9 @@ this file and `README.md`. Nothing here is counted by hand.
 | Devices | — | 6 | 15 |
 | Net | — | 4 | 15 |
 | Media | — | 4 | 17 |
-| 2D Graphics | 4 | 13 | 38 |
+| 2D Graphics | 4 | 13 | 39 |
 | 3D Graphics | 5 | 16 | 37 |
-| **Total** | **12** | **75** | **232** |
+| **Total** | **12** | **75** | **233** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -76,7 +76,7 @@ Per-category breakdown:
 | Devices | Sensors (4), Vibration (1), Camera (1), System & Display (3), Power (1), Desktop Integration (5) |
 | Net | NetworkSession (6), NetworkGamer (2), GamerServices (5), Leaderboards (2) |
 | Media | Song (6), Video (3), MediaLibrary (4), Pictures (4) |
-| 2D Graphics | Drawing Basics (5), Sort Modes (5), DrawString (4), Begin/End & State (4), Texture2D Basics (3), SaveAs & Reload (2), SpriteFont (4), BlendState (2), SamplerState (2), Viewport & Scissor (3), Render-to-Texture Basics (2), Screen Transition (1), Dispose Safety (1) |
+| 2D Graphics | Drawing Basics (5), Sort Modes (5), DrawString (4), Begin/End & State (4), Texture2D Basics (4), SaveAs & Reload (2), SpriteFont (4), BlendState (2), SamplerState (2), Viewport & Scissor (3), Render-to-Texture Basics (2), Screen Transition (1), Dispose Safety (1) |
 | 3D Graphics | Vertex Types (3), Primitive Types (2), Buffers (3), Basic Rendering (3), Lighting (3), Fog (1), AlphaTestEffect (2), DualTextureEffect (1), EnvironmentMapEffect (2), SkinnedEffect (1), Custom Shader (2), Depth & Culling (3), Camera & Projection (2), Model (2), Volume & Cube Textures (4), Effect Reflection (3) |
 
 ### 2.1 Defects found in the pre-existing state
@@ -702,6 +702,24 @@ recipient broadcasts to the *other* gamers, and this environment yields too few 
 that to have anywhere to go. The screen reports that outcome explicitly and distinguishes it from
 a real failure rather than claiming a demonstration it could not make. Making it conclusive needs
 two genuinely signed-in local gamers; that is the obvious next step if this screen is revisited.
+
+#### D6 Surface Formats — 1 screen — **PARTIAL**
+
+*SurfaceFormat Matrix* added to **Texture2D Basics**: all nineteen `SurfaceFormat` values are
+constructed for real and the outcome tabulated, because there is no `SupportsFormat()` query — the
+only way to find out is to attempt it and see whether it throws.
+
+**Measured on EASYGL: exactly one of the nineteen — `Color` — constructs at all. The other
+eighteen throw.** This refutes the assumption carried in D5's notes and this plan's D6 row, that
+`SurfaceFormat` is ignored and everything is silently stored as RGBA8. On this backend unsupported
+formats are *refused outright*, not quietly coerced. The screen still checks the coercion case (it
+writes a Color and reads it back, reporting whether the round trip was exact) because other
+backends may behave differently — which is precisely why the table is probed live rather than
+hard-coded.
+
+**Still outstanding in D6:** `Texture2D::FromStream` on PNG/JPG/BMP, and the Device Events group
+(MSAA on/off, `PresentInterval` with measured frame rate, back-buffer resize → device reset →
+resource survival).
 
 ### Phase E — Avatars Area
 
