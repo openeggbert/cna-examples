@@ -252,6 +252,10 @@
 #include "Demos/Graphics3D/CameraAndProjection/PerspectiveVsOrthographicScreen.hpp"
 #include "Demos/Graphics3D/ModelGroup/ProceduralModelScreen.hpp"
 #include "Demos/Graphics3D/ModelGroup/ModelBoneHierarchyScreen.hpp"
+#include "Demos/Graphics3D/ModelGroup/ContentModelLoadScreen.hpp"
+#include "Demos/Graphics3D/ModelGroup/ModelEffectMaterialScreen.hpp"
+#include "Demos/Graphics3D/ModelGroup/ModelAnimationPlayerScreen.hpp"
+#include "Demos/Graphics3D/ModelGroup/ModelMorphTargetScreen.hpp"
 #include "Demos/Graphics3D/TexturesAndQueries/Texture3DVolumeScreen.hpp"
 #include "Demos/Graphics3D/TexturesAndQueries/TextureCubeFacesScreen.hpp"
 #include "Demos/Graphics3D/EffectReflection/ReflectionSurfaceScreen.hpp"
@@ -1362,6 +1366,22 @@ inline std::vector<DemoEntry> BuildModelGroupDemos() {
         "Procedural Construction", "A real Model/ModelMesh/ModelMeshPart graph built entirely by hand, no XNB"));
     demos.push_back(MakeDemo<ModelBoneHierarchyScreen>(
         "ModelBone Hierarchy", "A parent/child bone pair -- the child inherits the parent's own transform"));
+    demos.push_back(MakeDemo<ContentModelLoadScreen>(
+        "Load & Traverse",
+        "ContentManager.Load<Model>() from a synthesized .cnj fixture -- and a real Effects-collection gap",
+        {"Model", "ModelMesh", "ModelMeshPart", "ContentManager"}));
+    demos.push_back(MakeDemo<ModelEffectMaterialScreen>(
+        "EffectMaterial & Effect Swapping",
+        "EffectMaterial is never built by either content reader; live part.Effect swap done right",
+        {"EffectMaterial", "Effect", "ModelMeshPart"}));
+    demos.push_back(MakeDemo<ModelAnimationPlayerScreen>(
+        "Skeletal Animation (AnimationPlayer)",
+        "A real SkinningData Tag, AnimationPlayer and two SkinnedEffects, verified against the clip",
+        {"AnimationPlayer", "SkinningData", "SkinnedEffect"}));
+    demos.push_back(MakeDemo<ModelMorphTargetScreen>(
+        "Morph Targets (MorphTargetEXT)",
+        "A CPU-blended morph target driven by a hand-evaluated LINEAR weight track",
+        {"MorphTargetEXT"}));
     return demos;
 }
 

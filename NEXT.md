@@ -1,7 +1,7 @@
 # NEXT — short-term continuity for cna-examples
 
-**Updated:** 2026-07-28 (end of the autonomous session)
-**Branch:** `feature/examples-phase-bcde`, **18 commits** ahead of `develop` @ `d7353e3`, all
+**Updated:** 2026-07-28 (autonomous session continuing — D3 just completed, E/F1/C4-extend queued next)
+**Branch:** `feature/examples-phase-bcde`, **20 commits** ahead of `develop` @ `d7353e3`, all
 pushed. Working tree clean, no jobs in flight, both native build trees green.
 **Authoritative plan:** [`plan.md`](plan.md). Historical record: [`plan20260727.md`](plan20260727.md).
 
@@ -15,9 +15,9 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **234** across 12 areas, 75 categories |
-| Last full validation | **234/234 on EASYGL and SDL_RENDERER**, 234 screenshots each, 0 layout problems, catalog+layout+docs clean |
-| Head commit | `037fdf2` |
+| Demo screens | **238** across 12 areas, 75 categories |
+| Last full validation | **238/238 on EASYGL and SDL_RENDERER**, 238 screenshots each, 0 layout problems, catalog+layout+docs clean |
+| Head commit | (D3 commit, see git log) |
 
 **Phases, in roadmap order:**
 
@@ -32,7 +32,7 @@ state.
 | C5 Diagnostics | **Done, reduced scope** — 4 categories, 4 screens |
 | D1 Audio/XACT | **Done, reduced scope** — 1 category, 2 screens |
 | D2 PBR | **BLOCKED, `needs_human`** — see §7 |
-| D3 Model Content | **Not started** — needs model assets; use the build-time borrow pattern |
+| D3 Model Content | **Done, reduced scope** — 4 screens added to the existing Model category |
 | D4 Effect Reflection | **Done, reduced scope** — 1 category, 3 screens |
 | D5 3D Textures & Queries | **Done** — 1 category, 4 screens |
 | D6 2D formats & events | **Done, reduced scope** — 2 screens; Device Events already existed |
@@ -41,12 +41,20 @@ state.
 | E Avatars | **Not started** — needs avatar meshes; same borrow pattern |
 | F1 defect sweep | **Not started** |
 | F2 Emscripten | **BLOCKED on an upstream CNA defect** — see §6b and §7 |
-| F3 SDL_RENDERER pass | **Done** — 234/234 on both backends, 3D gated on ThreeD |
+| F3 SDL_RENDERER pass | **Done** — 238/238 on both backends, 3D gated on ThreeD |
 
-**Scope kept shrinking, and that was correct.** D4 went 4→3, D6 6→2, D7 3→2, D8 3→1. Every cut
-was verified as already-covered or non-existent, and each is recorded with its reason in
-`plan.md`. **Grep `src/Demos/` for the APIs a phase claims are missing before writing any code** —
-three phases in a row (D6, D7, D8) shrank once that check was actually done.
+**Scope kept shrinking, and that was correct.** D4 went 4→3, D6 6→2, D7 3→2, D8 3→1, D3 5→4. Every
+cut was verified as already-covered, non-existent, or (D3's `SkinnedModelEXT`) genuinely out of
+category rather than absent, and each is recorded with its reason in `plan.md`. **Grep
+`src/Demos/` for the APIs a phase claims are missing before writing any code** — three phases in a
+row (D6, D7, D8) shrank once that check was actually done.
+
+**2026-07-28 (this session): the project owner asked to push closer to `plan.md`'s originally
+projected screen counts** rather than cutting for depth-over-breadth by default (see §2a below) —
+D3's own cut is a case of following that instruction correctly anyway: `SkinnedModelEXT`
+is architecturally Avatar-only (its own doc comment says so), not merely a duplicate idea, so
+shipping it in the Model category would have been a category-boundary mistake, not padding
+avoidance.
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -66,6 +74,21 @@ three phases in a row (D6, D7, D8) shrank once that check was actually done.
    `tools/check_shots.py` and `tools/check_catalog.py` and is committed before the next
    one starts. Half-finished areas are not left lying around.
 
+## 2a. Session decisions (answered by the project owner, 2026-07-28)
+
+1. **Push closer to `plan.md`'s originally projected screen counts** rather than defaulting to
+   depth-over-breadth cuts — supersedes §2 item 3's bias where the two conflict. A planned idea
+   substantial enough to split into more than one screen should be split, per the owner's explicit
+   answer. Cuts are still made, but only for a concrete reason (already covered elsewhere, the API
+   doesn't exist, or — new this session — the idea belongs to a different category/phase
+   entirely), never merely to keep the count down.
+2. **D2 (PbrEffect) and F2 (Emscripten): investigate further and write up findings, but do not
+   modify `../cna`.** Both are diagnosed as defects living inside CNA itself rather than in
+   cna-examples, and `../cna` is the same owner's own repo (not a true third party) — but the
+   owner chose to keep this session's changes confined to `cna-examples`. Leave `../cna`'s
+   pre-existing uncommitted files (`cmake/Tests/EasyGLTests.cmake`, `cmake/Tests/
+   SdlRendererTests.cmake`, untracked `examples/xvfb_screenshot_demo.cpp`) untouched — unrelated
+   in-progress work from another session, not this one's to manage.
 ## 3. Assumptions made without asking
 
 - **B4 (`apis` on `DemoEntry`)** is populated per area as each area is built or touched,
@@ -292,6 +315,35 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    BMP decodes too; the demo hand-builds a 2x2 24-bit BMP rather than vendoring an asset.
    Content pictures live under `Content/MediaLibraryDemo/Pictures/` (capital P).
 
+43. **`ContentManager`'s own `.cnj` `ModelTypeReader` needs no borrowed asset at all.** Unlike
+   `.xnb` (a MonoGame-compiled binary CNA only reads) and XACT (no Linux authoring tool exists),
+   `.cnj` + `.skeleton.bin`/`.clip.bin`/morph-target binary sidecars are CNA's own plain,
+   documented formats -- a demo can synthesize a full skeleton+animation+morph-target Model
+   in-process at `OnDemoLoad()`, exactly the technique `../cna`'s own
+   `easygl_model_skinned_animation_playback_test.cpp` golden test uses to build its fixture. No
+   asset-borrowing decision was needed for D3 after all.
+44. **`ModelMeshPart::setEffectProperty()` self-maintains its parent `ModelMesh`'s `Effects`
+   collection -- but only if the part already has a parent when it is called.** It `Add()`s the
+   new effect and `Remove()`s the old one (properly ref-counted: only if no other part in the mesh
+   still shares it), all inside the setter. `ContentManager.cpp`'s `ModelTypeReader` constructs the
+   `ModelMesh` first, then calls `setEffectProperty()` on its parts, so the sync fires and
+   `Model::Draw()`'s per-frame World/View/Projection push reaches the loaded effects with zero
+   extra code. `ModelGroup/ProceduralModelScreen.hpp` calls `setEffectProperty()` **before**
+   constructing the owning `ModelMesh` (parent still null), so the sync silently does nothing --
+   which is exactly why that screen's own code needs a manual
+   `mesh_->getEffectsPropertyMutable().Add()` afterward. Both are correct; the API is just
+   silently construction-order-dependent. **This was first read wrong from source alone** (grepping
+   `ContentManager.cpp` for `.Add(` misses that the Add/Remove live in `ModelMeshPart.cpp`, one
+   layer down) and only caught by writing a standalone debug binary linked against `../cna`'s own
+   `libCNA.a` and checking `Effects.Count` for real -- see D3's `plan.md` writeup for the exact
+   repro. Re-confirms this repo's own repeated lesson: verify live, do not trust a source-reading
+   conclusion that was never actually run.
+45. **`EffectMaterial` is never constructed by either Model content reader (`.cnj` or `.xnb`)**,
+   contradicting its own doc comment ("created internally by the content pipeline"). Both readers
+   always build a real stock effect (`BasicEffect`/`SkinnedEffect`/etc.) directly. It IS
+   constructible/clonable by hand, but `EffectMaterial::OnApply()` (read from source) is an empty
+   function body -- applying one binds no parameters and changes no GPU state.
+
 ## 6. Commands
 
 ```bash
@@ -445,39 +497,46 @@ Everything else in the roadmap is unblocked. The three that could
 have been were settled up front and are recorded in §2: asset licensing, branch policy, and
 depth-over-breadth.
 
-One judgement call worth re-examining if it ever bites: every new area this session shipped
-**fewer screens than projected** (Content 5 of 15, Storage 2 of 6, Diagnostics 4 of 13), because
-the projections counted API surface rather than distinct demonstrations, and splitting a single
-idea across three screens teaches nothing extra. Each omission is itemised in `plan.md`. If the
-project owner actually wants the higher counts — for coverage-metric reasons, say — that is a
-preference worth stating, because the current bias is deliberate and will otherwise continue.
+**RESOLVED 2026-07-28, see §2a.** The judgement call below was flagged for the owner and answered:
+push closer to `plan.md`'s projected counts going forward, superseding the depth-over-breadth
+default. D3 (this session) already follows the new instruction. Content/Storage/Diagnostics
+(below) were built under the OLD default and are not being retroactively revisited unless the
+owner asks.
+
+Historical record: every new area up to that point shipped **fewer screens than projected**
+(Content 5 of 15, Storage 2 of 6, Diagnostics 4 of 13), because the projections counted API
+surface rather than distinct demonstrations, and splitting a single idea across three screens
+teaches nothing extra. Each omission is itemised in `plan.md`.
 
 ## 8. Resume here
 
 Everything below is unblocked and needs no decision from the project owner. Take them in this
 order; each is self-contained and ends in a commit.
 
-**(a) D3 — Model Content.** The largest remaining gap. Real `Model` loading via `ContentManager`,
-`ModelMesh`/`ModelMeshPart`/`EffectMaterial` traversal and effect swapping, `SkinnedModelEXT`,
-`AnimationPlayer` clip playback, `MorphTargetEXT`. Needs model assets, so reuse the build-time
-borrow already working for `.xnb` and XACT (`cmake/ExamplesHelpers.cmake`): point at `../cna`,
-guard on existence, and have the screen report the absence rather than failing the build. Nothing
-Ms-PL may enter this repository's history — that rule is settled, see §2.
+**D3 — Model Content is DONE** (4 screens: Load & Traverse, EffectMaterial & Effect Swapping,
+Skeletal Animation (AnimationPlayer), Morph Targets — see `plan.md`'s own D3 writeup and NEXT.md
+§5 items 43–45 for the findings). It needed **no** borrowed asset in the end — everything is
+synthesized procedurally via CNA's own `.cnj` content format, the same technique the CNA test suite
+uses. `SkinnedModelEXT` was deliberately NOT put here; it belongs to Phase E (Avatar-only type).
 
-**(b) Phase E — Avatars.** Same borrow pattern; `../cna/examples/` has eight `demo_avatar*`
-programs to model it on. Check what those actually do before planning screen count.
+**(a) Phase E — Avatars.** The largest remaining gap now. Borrow pattern (`../cna/examples/`
+has eight `demo_avatar*` programs to model it on; check what those actually do before planning
+screen count) — this one DOES need real avatar mesh/wardrobe assets from `../cna`, unlike D3.
+`SkinnedModelEXT`'s `AttachPartEXT`/`RemovePartEXT` (wardrobe hot-swap) belong here.
 
-**(c) Phase F1 — defect sweep** over everything built this session.
+**(b) Phase F1 — defect sweep** over everything built this session.
 
-**(d) Extend C4 Storage** — container directory operations and container lifetime, the two screens
+**(c) Extend C4 Storage** — container directory operations and container lifetime, the two screens
 C4 deliberately left out.
 
 **Do NOT start** D2 or F2 without reading §7 first: both are blocked, D2 on an unexplained
-rendering failure and F2 on a defect in CNA itself.
+rendering failure and F2 on a defect in CNA itself. Per §2a, investigate deeper and write up
+findings only — do not modify `../cna` this session.
 
 **Before writing any code for a phase**, grep `src/Demos/` for the APIs its plan row claims are
-missing. D6, D7 and D8 all shrank by half or more once that was checked — the plan over-estimates
-gaps, and the existing 234 screens already cover more than it assumes.
+missing. D6, D7, D8 and D3 all shrank once that was checked (or, for D3, once the architecture was
+actually understood) — the plan over-estimates gaps, and the existing 238 screens already cover
+more than it assumes.
 
 **Workflow that works here, in order:**
 

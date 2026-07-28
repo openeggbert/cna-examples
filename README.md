@@ -15,7 +15,7 @@ first seven areas were built and verified.
 
 ## Status
 
-**12 areas, 75 categories, 234 demo screens**, every one of them exercising a real
+**12 areas, 75 categories, 238 demo screens**, every one of them exercising a real
 `Microsoft::Xna::Framework` / `CNA::*` API call rather than a mock.
 
 | Area | Categories | Screens |
@@ -31,7 +31,7 @@ first seven areas were built and verified.
 | Net | NetworkSession, NetworkGamer, GamerServices, Leaderboards | 15 |
 | Media | Song, Video, MediaLibrary, Pictures | 17 |
 | 2D Graphics | 4 groups, 13 categories | 40 |
-| 3D Graphics | 5 groups, 16 categories | 37 |
+| 3D Graphics | 5 groups, 16 categories | 41 |
 
 Run `./build/cna_examples --list-demos` for the full, authoritative list.
 
@@ -59,7 +59,7 @@ registrations in `src/Navigation/AreaCatalog.hpp` all agree.
   Gamepad, Touch, and Input's joystick/haptics screens (no controller, touchscreen, raw joystick
   or haptic device available); Devices' mobile-only Sensors/Vibration screens; Camera
   (no webcam); MessageBox/FileDialog (need a human).
-- **Backends:** `EASYGL` and `SDL_RENDERER` are both verified — 234/234 demos render on each.
+- **Backends:** `EASYGL` and `SDL_RENDERER` are both verified — 238/238 demos render on each.
   `SDL_RENDERER` is 2D-only by design, so the 3D Graphics area is gated on
   `GraphicsDevice::SupportsCapability(ThreeD)` and those demos explain themselves rather than
   throwing. See `plan.md` §4.

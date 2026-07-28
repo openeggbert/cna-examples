@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-28)
 
-Twelve Areas, **234 demo screens** across 75 categories, all with real content. The numbers below
+Twelve Areas, **238 demo screens** across 75 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -54,8 +54,8 @@ this file and `README.md`. Nothing here is counted by hand.
 | Net | — | 4 | 15 |
 | Media | — | 4 | 17 |
 | 2D Graphics | 4 | 13 | 40 |
-| 3D Graphics | 5 | 16 | 37 |
-| **Total** | **12** | **75** | **234** |
+| 3D Graphics | 5 | 16 | 41 |
+| **Total** | **12** | **75** | **238** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -133,7 +133,7 @@ than assume a full pipeline, which is exactly what a real CNA consumer has to do
 own right.
 
 **F3 result.** *(Figures below are as-of F3, when the catalog held 218 screens. It has since grown
-to 234, and both backends were re-verified at 234/234 — see §7.0.)*
+to 238, and both backends were re-verified at 238/238 — see §7.0.)*
 `tools/sweep_backend.sh build-sdlrenderer` renders **218/218** with zero layout
 problems, and the EasyGL tree still renders 218/218 — no regression from the gating.
 
@@ -268,23 +268,22 @@ are the content build-out. F is verification.
 
 Original target end state: **13 Areas, ~290 demo screens.**
 
-### 7.0 Status as of 2026-07-28 — 234 screens, A/B/C/D substantially complete
+### 7.0 Status as of 2026-07-28 — 238 screens, A/B/C/D substantially complete
 
 | Phase | Status |
 |---|---|
 | A, B, C1–C5 | **Done** (C4/C5 at reduced scope) |
-| D1 XACT · D4 Effect Reflection · D5 Textures & Queries · D6 Formats · D7 Input EXT · D8 Net | **Done**, all at reduced scope — see each phase's result section |
+| D1 XACT · D3 Model Content · D4 Effect Reflection · D5 Textures & Queries · D6 Formats · D7 Input EXT · D8 Net | **Done**, all at reduced scope — see each phase's result section |
 | **D2 PBR** | **BLOCKED, `needs_human`** — screen written, never rendered, reverted. WIP preserved at [`docs/wip-pbr/`](docs/wip-pbr/) |
-| **D3 Model Content** | **Not started** — the largest remaining gap |
 | **E Avatars** | **Not started** |
 | **F1** defect sweep | **Not started** |
 | **F2** Emscripten | **BLOCKED on a CNA defect** — compiles fully for wasm, fails linking `libCNA.a` |
-| **F3** SDL_RENDERER | **Done** — 234/234 on both backends |
+| **F3** SDL_RENDERER | **Done** — 238/238 on both backends |
 
 **The ~290 target will not be reached by building every planned screen, and should not be.**
 D4 shipped 3 of 4, D6 2 of 6, D7 2 of 3, D8 1 of 3 — every cut verified as already covered
 elsewhere in the catalog or as an API that does not exist (there is no `PbrMaterial` type;
-`RenderPipelineSettings` is read by no backend). The catalog is worth more at 234 honest screens
+`RenderPipelineSettings` is read by no backend). The catalog is worth more at 238 honest screens
 than at 290 with duplicates. **Before building any remaining phase, grep `src/Demos/` for the APIs
 its row claims are missing** — three phases in a row shrank by half once that was done.
 
@@ -547,7 +546,7 @@ which is the reverse of what the names suggest.
 |---|---|---|---:|
 | D1 | Audio | **XACT** category: `AudioEngine` (runtime-generated `.xgs`) · `SoundBank` cue playback · `WaveBank` in-memory vs streaming · `AudioCategory` volume/pause · cue variables and RPCs · XACT error paths | 6 |
 | D2 | 3D Graphics | **PBR & Pipeline** group — *PbrEffect* (base colour/metallic/roughness · normal/occlusion/emissive maps · `SkinnedPbrEffect`) and one honest screen for the `RenderPipelineSettings` bag. **Rescoped from 7 to ~5 after checking `../cna`:** there is no `PbrMaterial` type, and `RenderPipelineSettings` (`RenderQuality`/`TonemappingMode`/`ShadowQuality`/HDR/bloom/SSAO) is read by **no backend at all** — nothing outside its own `.cpp` references it, and the `GraphicsDevice::GetRenderPipelineSettings()` its own doc comment names does not exist. It stores settings faithfully and nothing consumes them, so it gets one screen saying exactly that rather than three pretending otherwise. `PbrEffect` by contrast is fully wired into EasyGL with a real metallic-roughness BRDF shader. | ~5 |
-| D3 | 3D Graphics | **Model Content** category: real `Model` via `ContentManager` · `ModelMesh`/`ModelMeshPart`/`EffectMaterial` traversal and effect swapping · `SkinnedModelEXT` · `AnimationPlayer` clip playback · `MorphTargetEXT` | 5 |
+| D3 | 3D Graphics | **Model Content** category: real `Model` via `ContentManager` · `ModelMesh`/`ModelMeshPart`/`EffectMaterial` traversal and effect swapping · `SkinnedModelEXT` · `AnimationPlayer` clip playback · `MorphTargetEXT` | 4 |
 | D4 | 3D Graphics | **Effect Reflection** category: enumerate and set `EffectParameter`s live · techniques/passes + `CurrentTechnique` switching · `EffectAnnotation` · `Effect::Clone` independence | 4 |
 | D5 | 3D Graphics | **Textures & Queries** category: `Texture3D` volume + slice/box `SetData` · `TextureCube` faces and `CubeMapFace` · `RenderTargetCube` rendered per face and used as an env map · `OcclusionQuery` occluded vs visible `PixelCount` · the documented "SurfaceFormat is ignored, everything is RGBA8" caveat, shown honestly | 5 |
 | D6 | 2D Graphics | **Formats & Device Events** group — *Surface Formats* (every `SurfaceFormat` attempted against this backend · DXT1/3/5 · `Texture2D::FromStream` on PNG/JPG/BMP) and *Device Events* (MSAA on/off · `PresentInterval` with measured frame rate · back-buffer resize → device reset → resource survival) | 6 |
@@ -643,6 +642,73 @@ are worth keeping regardless: tangent vertex types have **no** typed `DrawUserIn
 or `VertexBuffer::SetData` overload, so they silently bind the untyped `const void*` overload and
 draw garbage rather than failing; and `VertexPositionNormalTangentTexture::Tangent` is a `Vector4`
 whose W carries glTF bitangent handedness.
+
+#### D3 Model Content — 4 screens added to the existing Model category — **DONE (reduced scope, see below)**
+
+| Screen | Point |
+|---|---|
+| Load & Traverse | Real `ContentManager.Load<Model>()` from a synthesized `.cnj` fixture, traversed via `Bones`/`Meshes`/`MeshParts` |
+| EffectMaterial & Effect Swapping | `EffectMaterial` verified standalone (never built by either content reader); live `ModelMeshPart::setEffectProperty()` swap |
+| Skeletal Animation (AnimationPlayer) | A real `SkinningData` `Tag`, `AnimationPlayer`, two `SkinnedEffect`s driven by `SetBoneTransforms()` |
+| Morph Targets (MorphTargetEXT) | A real `MorphTargetDataEXT`, hand-evaluated `MorphWeightTrackEXT`, `BlendMorphTargetsEXT`/`SetMorphWeightsEXT` |
+
+**Everything is synthesized procedurally at `OnDemoLoad()` into a temp directory** (`.cnj` +
+`.skeleton.bin`/`.clip.bin`/morph binary sidecars, plus 2x2 QOI textures), the same technique
+`../cna`'s own `easygl_model_skinned_animation_playback_test.cpp` golden test uses to build its
+fixture in-process. This turned out to make the originally-planned XNB-fixture borrow (`../cna`'s
+`BlenderDefaultCube.xnb`) unnecessary: `ContentManager`'s own `.cnj` `ModelTypeReader` is a
+first-class, fully-documented CNA content format, not a MonoGame-compiled binary, so nothing needs
+borrowing and nothing Ms-PL is at risk of entering this repo's history. Added to the existing
+**Model** category (not a new one) since `ModelGroup/ProceduralModelScreen.hpp` and
+`ModelBoneHierarchyScreen.hpp` already occupy that slot and the four new screens are a natural
+continuation of the same idea.
+
+**`SkinnedModelEXT` dropped from this category — it belongs to Phase E, not here.** Its own doc
+comment states it plainly: "used by `AvatarRenderer::EnableRealRenderingEXT`... deliberately not
+built on `Model`/`ModelBone`/`ModelMesh`." It is Avatar-specific infrastructure, disjoint from the
+general `Model` content path. The general-purpose equivalent — skeletal animation for a real
+`Model` via `SkinningData`/`AnimationPlayer` — is exactly what the Skeletal Animation screen
+demonstrates instead, so nothing planned is actually missing; the plan's own line item was
+mis-scoped, not the coverage.
+
+**A wrong assumption was caught by empirical verification, not by reasoning about source code
+alone** — worth recording since it is exactly the trap this project's own notes warn about
+repeatedly. Reading `ContentManager.cpp`'s `ModelTypeReader` in isolation suggested that a
+`ModelMeshPart`'s effect is never registered into its parent `ModelMesh`'s own `Effects`
+collection (the collection `Model::Draw()` pushes `World`/`View`/`Projection` into) — i.e. that
+every content-loaded model's camera matrices would silently be no-ops. A standalone debug binary
+linked directly against `../cna`'s `libCNA.a` (mirroring the golden tests' own approach) proved
+this **false**: `Effects.Count == 1` immediately after `Load<Model>()`, with zero extra code. The
+real mechanism, found by then reading `ModelMeshPart.cpp` directly rather than re-guessing:
+`ModelMeshPart::setEffectProperty()` self-maintains its parent mesh's `Effects` collection (`Add()`
+on set, ref-counted `Remove()` on change — only if no other part in the mesh still shares the old
+effect), but **only once the part already has a parent**. `ModelTypeReader` constructs the
+`ModelMesh` first, then calls `setEffectProperty()` on its parts, so the sync fires correctly.
+`ModelGroup/ProceduralModelScreen.hpp` calls `setEffectProperty()` **before** constructing its
+owning `ModelMesh` (parent still null), so its sync is silently skipped — which is exactly why that
+screen's own `OnDemoLoad()` needs a manual `mesh_->getEffectsPropertyMutable().Add()` afterward.
+Both screens are correct; the API is just silently construction-order-dependent, with no error
+either way. The **Load & Traverse** screen states and verifies this live.
+
+**`EffectMaterial` is a second, independent finding.** Its own doc comment claims it is "created
+internally by the content pipeline; games do not instantiate it directly." Neither of CNA's two
+Model readers agrees — the `.cnj` `ModelTypeReader` and the `.xnb` `ModelContentTypeReaders.cpp`
+path both always construct a real stock effect (`BasicEffect`/`SkinnedEffect`/`DualTextureEffect`/
+`PbrEffect`/`SkinnedPbrEffect`) directly into a part's `Effect` slot; grepping both files for any
+`EffectMaterial` construction finds none. The only place it is ever built in this codebase at all
+is its own unit test. It is fully constructible and clonable standalone (verified the same way that
+test does), but reading `EffectMaterial.cpp` directly shows `OnApply()` is an empty function body —
+applying one, even a successfully-constructed one, would bind no parameters and change no GPU
+state. Stated from source, not attempted live: drawing with a deliberately no-op shader application
+is not something to try against a real GL context.
+
+**The morph-target screen caught a bug in its own first draft**, also by verification rather than
+by trusting the arithmetic: the test initially asserted vertex 0's absolute Y was `0.0` at weight 0
+and `+0.5` at weight 1, which is wrong — `BuildQuadNormalTextureMesh`'s own vertex order puts
+vertex 0 at the quad's bottom edge (`Y = -0.35` in the bind pose), not the origin. The screenshot
+showed a `FAIL`, which is what caught it. Fixed to check the **delta** between the two samples
+(`+0.5` exactly, matching the authored target regardless of the base value), which is both correct
+and the more robust form of the check anyway.
 
 #### D4 Effect Reflection — 1 category, 3 screens — **DONE (reduced scope, see below)**
 
@@ -768,7 +834,7 @@ New Home entry, 3 categories, **7 screens**, built on `../cna/examples/demo_avat
 |---|---|
 | F1 | **Not started.** **Xvfb screenshot sweep of every screen** via B5's `--demo`/`--screenshot`/`--frames` CLI. The 2D and 3D passes found 11 real defects between them (two of them framework-level bugs in CNA itself, not demo bugs), so this is the highest-yield verification step available. Every defect found is fixed or explicitly recorded. |
 | F2 | **BLOCKED on a CNA defect.** `emcmake` configures and **every translation unit compiles for wasm**; two real cna-examples bugs were found and fixed getting there (the web branch linked `SDL3::SDL3-static`, a target that never existed in this scope, and the three Media/Video screens needed a platform gate). The link then fails inside CNA's own archive: `libCNA.a(VideoContentTypeReader.cpp.o)` references `Media::Video`, whose implementation CNA does not build for Emscripten. Any web consumer of CNA hits this. See `NEXT.md` §6b/§7. |
-| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with every 3D Graphics category gated on `SupportsCapability(ThreeD)`. **234/234 render on both backends**, 234 screenshots each, 0 layout problems. See below. |
+| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with every 3D Graphics category gated on `SupportsCapability(ThreeD)`. **238/238 render on both backends**, 238 screenshots each, 0 layout problems. See below. |
 
 Android hardware verification is **not** part of this cycle — see §10.
 
