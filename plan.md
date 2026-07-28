@@ -915,24 +915,73 @@ build" cleanly on SDL_RENDERER while `AvatarDescription` keeps working there.
    probe (`GraphicsDevice::GetBackBufferData`, the same route `tools/headless.sh --screenshot`
    itself uses) at a fixed torso coordinate before and after switching appearances — not just that
    the struct's setters/getters round-trip.
-4. **Unresolved, recorded rather than chased down**: on the Animation Preset Cycling screen, at
-   least one clip (`Stand2`) renders with the avatar's head invisible/out of frame, while `Stand0`
-   (identical code path, identical camera) frames correctly. Confirmed NOT a camera-distance
-   problem (pulling the camera back from 3.0 to 4.4 world units made no difference) and NOT a
-   whole-part failure (the same `CNAAvatarBody` part's torso/arms/legs render fine) — points at a
-   per-clip head/neck bone transform issue in that clip's data or in
-   `ComputeBoneTransformsEXT`'s hierarchy math. Does not affect this screen's own verified claim
-   (the valid/invalid preset split, and `DrawRealEXT` not throwing).
+4. **ROOT-CAUSED 2026-07-28 (Phase F1), and much bigger than first thought.** What Phase E recorded
+   as "Stand2's head goes invisible" turns out to be one visible symptom of a **systemic content
+   defect spanning nearly the entire avatar animation library**, both genders. A standalone
+   diagnostic (a throwaway `.cpp` linked directly against `../cna`'s already-built `libCNA.a`,
+   loading each real `SkinnedModelEXT` and dumping every clip's raw per-keyframe data) found: for
+   roughly **60 (clip, bone) track pairs** — `Stand0`–`Stand7`, `Wave`, `Celebrate`, `Clap`, every
+   `Male*`/`Female*` emote, every idle variant — the `Translation` channel is correct **only** on a
+   track's first and last keyframe (exactly matching `BindPoseLocal`) and reads as raw `(0,0,0)` on
+   **100% of the interior keyframes**. `Stand2`'s head-bone (index 12) track: keys 1–108 all read
+   `(0,0,0)` against a bind pose of `(0, 0.100, 0)`; only keys 0 and 109 are correct. `Rotation`/
+   `Scale` are unaffected — smooth, continuous, plausible motion throughout. This pulls the
+   affected bone toward its parent's origin for nearly the whole clip, snapping back only at the
+   very first/last frame; for a leaf bone like the head this reads as "sunk into the torso,
+   invisible". **`Stand7`'s own ROOT bone (index 0, bind length 1.0) shows the identical 138/138
+   interior-collapse pattern** — the same defect, at whole-body scale, on a different clip.
+   `ContentManager::ReadAnimationClipFileEXT` (the `.clip.bin` binary reader,
+   `../cna/src/.../ContentManager.cpp`) was read in full and ruled out: three sequential float
+   reads per axis, already hardened against a real evaluation-order bug (its own comment cites Task
+   11.11). **The defect is upstream in the content itself** — the `.clip.bin` files
+   `../cna/tools/avatar_builder/`'s pipeline baked apparently write a real translation only on a
+   track's first/last keyframe and zero everywhere between. Per the owner's 2026-07-28 instruction
+   (investigate, do not modify `../cna`), no fix was attempted; this is left precisely diagnosed for
+   the maintainer, alongside D2/F2 in `NEXT.md` §7. Does not affect this screen's own verified claim
+   (the valid/invalid preset split, and `DrawRealEXT` not throwing) — the screen already reports
+   honestly rather than masking this.
 
 ### Phase F — Verification
 
 | # | Work |
 |---|---|
-| F1 | **Not started.** **Xvfb screenshot sweep of every screen** via B5's `--demo`/`--screenshot`/`--frames` CLI. The 2D and 3D passes found 11 real defects between them (two of them framework-level bugs in CNA itself, not demo bugs), so this is the highest-yield verification step available. Every defect found is fixed or explicitly recorded. |
+| F1 | **Done, 2026-07-28.** Defect sweep over everything this roadmap added since the last such pass (D1, D3, D4, D5, D6, D7, D8, Phase E, C4's extension — ~27 screens plus supporting infrastructure). Not a re-verification of "does it render" (already 247/247 clean going in) but a skeptical read for behavioral/visual defects that survive a clean automated sweep. Full writeup below. |
 | F2 | **BLOCKED on a CNA defect.** `emcmake` configures and **every translation unit compiles for wasm**; two real cna-examples bugs were found and fixed getting there (the web branch linked `SDL3::SDL3-static`, a target that never existed in this scope, and the three Media/Video screens needed a platform gate). The link then fails inside CNA's own archive: `libCNA.a(VideoContentTypeReader.cpp.o)` references `Media::Video`, whose implementation CNA does not build for Emscripten. Any web consumer of CNA hits this. The exact one-line fix location in `../cna/cmake/CnaLibrary.cmake` has since been identified but not applied (belongs in that repo). See `NEXT.md` §6b/§7. |
 | F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with every 3D Graphics category gated on `SupportsCapability(ThreeD)`. **247/247 render on both backends** (re-verified after C4's extension, 2026-07-28), 247 screenshots each, 0 layout problems. See below. |
 
 Android hardware verification is **not** part of this cycle — see §10.
+
+#### F1 defect sweep — findings
+
+**Two real defects found and fixed, both in cna-examples code (not upstream):**
+
+1. **Layout: `DrawVerdict()`'s caption could overlap `DrawLines()`'s own last line.** Both
+   independently clamp to the same `LabelBaselineLimit()`, so a screen whose body text reaches
+   exactly that limit gets its verdict caption drawn on top of its last content line instead of
+   below it — a gap in the "already fixed" story from item 34 (that fix stops the swatch from
+   running *under* the Back hint; it does not reserve room *against* `DrawLines()`'s own last line).
+   Hit by `Net/NetworkSession/Simulated Latency & Packet Loss` (13 lines, one over the ~12-line
+   budget every other screen in this codebase already respects) — confirmed by screenshot, not
+   assumed. Fixed the same way D4's screens were: trimmed to 12 lines, re-verified by screenshot
+   showing clean separation. Spot-checked every other `DrawVerdict()` screen at or near the 12-line
+   boundary across D1/D3/D4/D5/D6/D7/E/C4 (13 screens checked by direct pixel/screenshot
+   inspection) — no other instance found.
+2. Nothing else — search reachability, breadcrumbs, and the `apis` API-footer field were all
+   confirmed populated correctly for every area added this roadmap (spot-checked D3/Avatars
+   registrations in `AreaCatalog.hpp` directly). No TODO/FIXME/HACK/stub/placeholder markers found
+   anywhere under the areas in scope. No shared-file regressions found in `DemoScreen.hpp`,
+   `Geometry3DHelpers.hpp`, or `AreaCatalog.hpp` (all changes this roadmap were additive).
+
+**One major finding, `needs_human`, upstream in `../cna` — not fixed here:** chasing Phase E's own
+"Stand2 unresolved" note (see Phase E section, item 4) turned it from a one-clip curiosity into a
+precisely root-caused, systemic defect spanning ~60 `(clip, bone)` pairs across nearly the entire
+avatar animation library, both genders — a `.clip.bin`-content-level bug in
+`../cna/tools/avatar_builder/`, not a cna-examples bug, not a reader bug (the reader was read in
+full and ruled out). Full diagnosis in the Phase E section and `NEXT.md` §5 item 51 / §7. Per the
+owner's standing 2026-07-28 instruction, no fix was attempted in `../cna`.
+
+**Re-validated after both fixes:** 247/247 on EASYGL and SDL_RENDERER (full unfiltered sweeps, not
+filtered), `check_catalog.py`/`check_layout.py`/`check_shots.py` all clean.
 
 ### 7.2 Verification harness — findings that shaped it
 

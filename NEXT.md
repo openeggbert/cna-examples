@@ -1,6 +1,6 @@
 # NEXT — short-term continuity for cna-examples
 
-**Updated:** 2026-07-28 (autonomous session continuing — D3, E and C4-extend done, F1 queued next)
+**Updated:** 2026-07-28 (autonomous session continuing — D3, E, C4-extend and F1 all done)
 **Branch:** `feature/examples-phase-bcde`, ahead of `develop` @ `d7353e3`, all
 pushed. Working tree clean, no jobs in flight, both native build trees green.
 **Authoritative plan:** [`plan.md`](plan.md). Historical record: [`plan20260727.md`](plan20260727.md).
@@ -16,8 +16,8 @@ state.
 | | |
 |---|---|
 | Demo screens | **247** across 13 areas, 78 categories |
-| Last full validation | **247/247 on EASYGL and SDL_RENDERER**, 247 screenshots each, 0 layout problems, catalog+layout+docs clean |
-| Head commit | `d34c6da` |
+| Last full validation | **247/247 on EASYGL and SDL_RENDERER** (re-run after F1's fixes), 247 screenshots each, 0 layout problems, catalog+layout+docs clean |
+| Head commit | see end of §8 (record it after this session's final push) |
 
 **Phases, in roadmap order:**
 
@@ -39,7 +39,7 @@ state.
 | D7 Input EXT | **Done, reduced scope** — 2 screens into existing categories |
 | D8 Net | **Done, reduced scope** — 1 screen; its verdict is amber on purpose, see #39 |
 | E Avatars | **Done** — 3 categories, 7 screens, exactly at plan.md's original count |
-| F1 defect sweep | **Not started** |
+| F1 defect sweep | **Done, 2026-07-28** — 2 real defects found and fixed (both cna-examples-side), 1 major upstream `../cna` content defect root-caused and left `needs_human` — see §5 #51 (updated), #53a, #53b and plan.md's F1 writeup |
 | F2 Emscripten | **BLOCKED on an upstream CNA defect** — exact one-line fix identified, not applied — see §6b and §7 |
 | F3 SDL_RENDERER pass | **Done** — 247/247 on both backends, 3D gated on ThreeD |
 
@@ -379,16 +379,25 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    -- keep new ones under roughly 55-60 characters (`"PASS: meshes loaded; Effects self-maintenance
    verified"`, 56 chars, is a safe reference length) rather than assuming `DrawVerdict()` wraps or
    truncates like `DrawLines()` does.
-51. **Unresolved finding, recorded rather than chased down**: at least one avatar animation clip
-   (observed on `"Stand2"`) renders with the avatar's head invisible/out of frame during
-   `DrawRealEXT`, while `"Stand0"` (identical code path, identical camera) frames correctly.
-   Confirmed by pixel-scanning a screenshot column (not by eye), and confirmed NOT a
-   camera-distance problem: pulling the camera back from 3.0 to 4.4 world units made no difference.
-   Since the same `CNAAvatarBody` part's torso/arms/legs render fine in the same frame, this points
-   at a per-clip head/neck bone transform issue in that clip's data or in
-   `ComputeBoneTransformsEXT`'s per-bone hierarchy math -- worth a closer look if this area is
-   revisited, starting from a direct dump of the computed world-bone matrix for the head bone
-   across both clips.
+51. **ROOT-CAUSED 2026-07-28 (Phase F1) -- was recorded as "Stand2's head goes invisible", turned
+   out to be systemic.** A standalone diagnostic linked directly against `../cna`'s already-built
+   `libCNA.a` (load each real `SkinnedModelEXT`, dump every clip's raw per-keyframe data) found
+   ~60 `(clip, bone)` track pairs across BOTH genders and nearly every expressive clip
+   (`Stand0`-`Stand7`, `Wave`, `Celebrate`, `Clap`, every `Male*`/`Female*` emote, every idle
+   variant) where `Translation` is correct ONLY on a track's first and last keyframe (exactly
+   matching `BindPoseLocal`) and reads raw `(0,0,0)` on 100% of the interior keyframes.
+   `Stand2`/head-bone(12): keys 1-108 all `(0,0,0)` vs bind pose `(0,0.100,0)`; only keys 0 and 109
+   correct. `Rotation`/`Scale` are fine throughout (smooth, plausible motion) -- only `Translation`
+   collapses. This pulls the affected bone toward its parent's origin for nearly the whole clip,
+   snapping back only at the very first/last frame; for a leaf bone like the head that reads as
+   "sunk into the torso, invisible". **`Stand7`'s own ROOT bone (index 0, bind length 1.0) shows the
+   identical 138/138 interior-collapse pattern** -- a whole-body-scale instance of the same defect.
+   `ContentManager::ReadAnimationClipFileEXT` (the `.clip.bin` reader) was read in full and ruled
+   out -- three sequential float reads per axis, already hardened against a real evaluation-order
+   bug (Task 11.11). **The defect is upstream, in the content itself**: the `.clip.bin` files
+   `../cna/tools/avatar_builder/` bakes apparently only ever write a real translation on a track's
+   first/last keyframe. See §7 for the needs_human writeup -- no fix attempted here per the owner's
+   2026-07-28 instruction to investigate `../cna`-side defects without modifying `../cna`.
 52. **`GetFileNames()`/`GetDirectoryNames()` never recurse.** Both only ever list this container's own
    root. `CreateFile`/`OpenFile` happily accept a nested relative path like `"notes/todo.txt"` and the
    file is completely real (`FileExists` confirms it) -- it is simply invisible to a root-level
@@ -404,6 +413,27 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    concept, so two independent live handles over the same directory coexist fine and each immediately
    sees what the other writes. `StorageDevice::DeleteContainer`, by contrast, really does remove the
    entire tree in one call (`fs::remove_all`), no "must be empty" restriction.
+54. **`DrawVerdict()`'s clamp and `DrawLines()`'s own stop condition clamp independently to the
+   SAME `LabelBaselineLimit()`, so they can collide.** Found by Phase F1's screenshot spot-check,
+   not by `check_layout.py` (which only inspects literal source coordinates, not computed ones --
+   the same blind spot recorded for item 34's original finding). `DrawLines()` happily draws its
+   last body line right up to that limit; if the screen's line count reaches exactly that point,
+   `DrawVerdict()`'s own clamped Y lands on the SAME pixel row instead of below it, so the verdict
+   caption is drawn directly on top of the last content line -- both become unreadable, overlapping
+   text. Hit by `Net/NetworkSession/Simulated Latency & Packet Loss` at 13 lines (one over the
+   ~12-line budget). Item 34's clamp only prevents drawing *under* the Back hint; it does not
+   reserve room *against* `DrawLines()`'s own last line. Fixed by trimming that screen to 12 lines
+   (same remedy as D4's screens, see plan.md) rather than changing the shared helper -- 13 other
+   `DrawVerdict()` screens at or near the boundary were spot-checked directly and none reproduce it,
+   so this stays a per-screen budget discipline issue, not a rearchitected shared component.
+55. **The "Stand2 head invisible" finding (item 51, superseded above) is not a one-clip curiosity --
+   it is a systemic upstream `.clip.bin` content defect spanning ~60 (clip, bone) track pairs across
+   nearly the entire avatar animation library, both genders.** See the rewritten item 51 above and
+   §7 for the full diagnosis and reproduction recipe. The technique worth remembering: a throwaway
+   `.cpp` linked directly against an ALREADY-BUILT `libCNA.a` (no rebuild, no CMake reconfigure --
+   just the same `$DEFS`/`$FLAGS`/`link.txt` recipe `tools/checks/*.cpp` already use) can load real
+   game content and dump its raw data for inspection in seconds, far faster than adding
+   screenshot-based instrumentation to a live demo screen for a one-off investigation.
 
 ## 6. Commands
 
@@ -631,6 +661,32 @@ than sitting on it -- it's precise enough to apply directly without re-investiga
 
 ---
 
+**Avatar animation content (found during Phase F1, 2026-07-28) -- `needs_human`: systemic
+`.clip.bin` translation-channel defect in `../cna`'s avatar content, not a cna-examples bug.**
+
+Full diagnosis and reproduction method are in §5 item 51 and `plan.md`'s Phase E section (item 4).
+Summary: nearly every animated bone track in nearly every avatar animation clip (~60 `(clip, bone)`
+pairs, both genders) has its `Translation` channel correct only on the first and last keyframe and
+zeroed on 100% of interior keyframes, while `Rotation`/`Scale` are fine. The reader
+(`ContentManager::ReadAnimationClipFileEXT` in `../cna/src/.../ContentManager.cpp`) was read in
+full and is not the cause -- it does a straightforward sequential read of whatever is in the file.
+**The `.clip.bin` files themselves, produced by `../cna/tools/avatar_builder/`, are the suspect.**
+
+Reproduction: build a throwaway `.cpp` against `../cna`'s already-built `build/CNA_BUILD/libCNA.a`
+(see the exact `g++`/flags recipe pattern in `tools/checks/math_claims.cpp`'s header comment -- same
+approach, different includes), `ContentManager::Load<std::shared_ptr<SkinnedModelEXT>>(...)` a real
+avatar, then for each clip/track print every keyframe's `Translation` alongside
+`BindPoseLocal[track.BoneIndex]`. Any track whose bind-pose translation length exceeds ~0.02 and
+whose interior keyframes read as `(0,0,0)` reproduces the defect immediately -- no rendering or
+screenshot needed.
+
+Not fixed here: the owner's 2026-07-28 instruction was investigate-and-document, not modify
+`../cna`. Worth raising with the CNA maintainer (yourself) alongside D2/F2 above -- likely the
+highest-impact of the three, since it visibly affects nearly the entire avatar animation library
+rather than one code path.
+
+---
+
 Everything else in the roadmap is unblocked. The three that could
 have been were settled up front and are recorded in §2: asset licensing, branch policy, and
 depth-over-breadth.
@@ -671,12 +727,31 @@ recorded rather than chased down). It DOES need real avatar mesh/wardrobe assets
 accept nested relative paths; and `StorageContainer::Dispose()` does not gate any further use of the
 object at all (no method checks `IsDisposed`) — it only means "the `Disposing` event has fired."
 
-**(a) Phase F1 — defect sweep** over everything built this session.
+**Phase F1 — defect sweep is DONE** (see plan.md's F1 writeup and NEXT.md §5 items 54–55). Two real
+cna-examples defects found and fixed (a `DrawVerdict()`/`DrawLines()` overlap trap, and — nothing
+else; search/breadcrumbs/API-footer integration and TODO/FIXME markers were all checked clean). One
+major upstream finding: the "Stand2" cosmetic issue from Phase E turned out to be a systemic
+`.clip.bin` content defect across ~60 track pairs in nearly the whole avatar animation library —
+root-caused precisely, `needs_human`, not fixed here (see §7). Re-validated 247/247 on both backends
+after the fixes.
 
-**Do NOT start** D2 or F2 without reading §7 first: both are blocked, D2 on an unexplained
-rendering failure (root cause now identified, see §7, but not applied) and F2 on a defect in CNA
-itself (exact fix location now identified, see §7, but not applied). Per §2a, investigate deeper
-and write up findings only — do not modify `../cna` this session.
+**The roadmap is now substantially complete.** Every phase through F1/F3 is DONE; only D2 (PbrEffect)
+and F2 (Emscripten) remain, and both are `needs_human`-blocked on defects inside `../cna` itself,
+precisely diagnosed (see §7) but deliberately not fixed here per the owner's 2026-07-28 instruction.
+**Do NOT start** D2 or F2 without reading §7 first, and do not modify `../cna` without new
+authorization from the owner — the standing instruction was investigate-and-document only.
+
+**Next unblocked work, if this session continues**, per the general autonomous-work mandate (do not
+stop merely because the planned roadmap is done — reassess for further safe, valuable work): a fresh
+audit pass in the spirit of F1 but broader than "this session's additions" — e.g. a TODO/FIXME/stub
+sweep across the FULL `src/` tree (F1 only checked the areas listed above), a compiler-warnings pass
+(`-Wall -Wextra` if not already the default), or re-examining whether D2's now-precise root cause
+(NEXT.md §7: `VertexPositionNormalTangentTexture`'s real `sizeof()` is 56 not 48) is safe enough to
+actually apply and re-measure live, since a fix description already exists and is a small, focused,
+verifiable change *inside cna-examples' own screen code* (the fix lives in the demo screen's vertex
+upload, not in `../cna` — only the *diagnosis* required reading `../cna`). That would be worth
+weighing against the owner's original "don't modify `../cna`" instruction, which does not forbid
+fixing the cna-examples-side consumption of the bug.
 
 **Before writing any code for a phase**, grep `src/Demos/` for the APIs its plan row claims are
 missing. D6, D7, D8 and D3 all shrank once that was checked (or, for D3, once the architecture was

@@ -52,16 +52,29 @@ using Microsoft::Xna::Framework::GamerServices::AvatarRenderer;
 // discovering the throw live and treating it as a bug -- it is real, correct, documented behavior.
 // The screen then auto-cycles only the 21 presets that actually exist on the loaded (Male) body.
 //
-// UNRESOLVED, noted rather than chased down: at least one clip in the cycle (observed on "Stand2")
-// renders with the avatar's head invisible/out of frame, while "Stand0" (identical code path,
-// same camera) frames correctly -- confirmed by pixel-scanning a screenshot column, not by eye,
-// and confirmed NOT a camera-distance problem (pulling the camera back from 3.0 to 4.4 world units
-// did not bring it back). Since the torso/arms/legs of the very same CNAAvatarBody part render
-// fine, this points at a per-clip head/neck bone transform issue in that clip's data or in
-// ComputeBoneTransformsEXT's per-bone hierarchy math, not a whole-part or rendering-pipeline
-// failure. Not root-caused further -- it does not affect this screen's own verified claim (the
-// valid/invalid preset split and DrawRealEXT succeeding without throwing), so it is recorded here
-// and in NEXT.md rather than blocking the rest of Phase E.
+// ROOT-CAUSED 2026-07-28 (Phase F1): the "Stand2 head invisible" symptom is one visible instance
+// of a SYSTEMIC content defect, not a one-clip glitch. A standalone diagnostic linked against
+// ../cna's own libCNA.a (loading both bodies' real SkinnedModelEXT and dumping every clip's raw
+// per-keyframe data) found: for ~60 (clip, bone) track pairs across BOTH genders and nearly every
+// expressive clip (Stand0-7, Wave, Celebrate, Clap, every Male*/Female* emote, every idle
+// variant), the Translation channel is correct ONLY on a track's first and last keyframe
+// (matching BindPoseLocal exactly) and reads as raw (0,0,0) on 100% of the INTERIOR keyframes --
+// e.g. Stand2's head-bone (12) track: keys 1-108 all read T=(0,0,0) against a bind pose of
+// (0,0.100,0), with keys 0 and 109 alone correct. Rotation/Scale channels are unaffected (smooth,
+// continuous, plausible small nods/gestures throughout). This pulls the affected bone toward its
+// parent's origin for nearly the whole clip, snapping back only at the very first/last frame --
+// for a leaf bone like the head this reads as "invisible/sunk into the torso"; Stand7's OWN ROOT
+// bone (0) shows the identical 138/138 interior-collapse pattern, which would be a much larger,
+// whole-body version of the same glitch. ContentManager's ReadAnimationClipFileEXT (the .clip.bin
+// binary reader, ../cna/src/.../ContentManager.cpp) was read in full and is straightforward --
+// three sequential float reads per axis, already hardened against a real evaluation-order bug
+// (its own comment cites Task 11.11) -- so this is NOT a reader bug. The defect is upstream, in
+// the CONTENT ITSELF: the .clip.bin files ../cna's tools/avatar_builder/ pipeline baked
+// apparently only ever write a real translation on a track's first/last keyframe and zero
+// everywhere between. Per the owner's 2026-07-28 instruction, no fix was attempted in ../cna --
+// this is precisely diagnosed and left for the maintainer (see NEXT.md's D2/F2-style writeup).
+// It does not affect this screen's own verified claim (the valid/invalid preset split and
+// DrawRealEXT succeeding without throwing).
 class AvatarAnimationPresetCycleScreen : public DemoScreen {
 public:
     AvatarAnimationPresetCycleScreen() : DemoScreen("AvatarRenderer: Animation Preset Cycling") {}

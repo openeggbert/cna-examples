@@ -92,11 +92,10 @@ protected:
         lines.push_back("  SimulatedLatency now        " +
                         std::to_string((int)latencyMs_) + " ms");
         lines.emplace_back();
-        lines.push_back("0.0 and 1.0 are handled deterministically, without touching the RNG --");
-        lines.push_back("which is why this screen can assert a result, not just a tendency.");
-        lines.push_back("Both are scoped to APPDATA ONLY: join/leave/state-change traffic and a");
-        lines.push_back("host's relay hop for two other peers are unaffected, so 100% loss does");
-        lines.push_back("not tear the session down. The session below is still alive: " +
+        lines.push_back("0.0/1.0 are deterministic, no RNG touched -- so this screen can assert a");
+        lines.push_back("result, not just a tendency. Both are scoped to APPDATA ONLY: join/leave/");
+        lines.push_back("state traffic and a relay hop for other peers are unaffected, so 100%");
+        lines.push_back("loss doesn't tear the session down. Session state: " +
                         std::string(SessionStateName(session_->getSessionStateProperty())));
         const Vector2 end = DrawLines(sb, font, Vector2(40.0f, 82.0f), lines, tint);
 
