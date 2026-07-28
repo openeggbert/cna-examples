@@ -116,9 +116,16 @@
 #include "Demos/Media/Song/EventsScreen.hpp"
 #include "Demos/Media/Song/UnsupportedFormatScreen.hpp"
 #include "Demos/Media/Song/VisualizationScreen.hpp"
-#include "Demos/Media/Video/LoadAndPlayScreen.hpp"
-#include "Demos/Media/Video/PlaybackControlScreen.hpp"
-#include "Demos/Media/Video/MultiTrackEXTScreen.hpp"
+// CNA does not build Media::Video/VideoPlayer for Emscripten, but it still
+// declares them, so these screens compile for wasm and then fail to LINK on
+// twelve undefined symbols. This is a platform condition rather than a
+// GraphicsCapability, so Requiring() cannot express it and the screens are
+// excluded from the translation unit entirely on that target.
+#if !defined(__EMSCRIPTEN__)
+#  include "Demos/Media/Video/LoadAndPlayScreen.hpp"
+#  include "Demos/Media/Video/PlaybackControlScreen.hpp"
+#  include "Demos/Media/Video/MultiTrackEXTScreen.hpp"
+#endif
 #include "Demos/Media/MediaLibrary/CatalogAccessScreen.hpp"
 #include "Demos/Media/MediaLibrary/SongMetadataScreen.hpp"
 #include "Demos/Media/MediaLibrary/AlbumArtistGenreScreen.hpp"
@@ -725,8 +732,14 @@ inline std::vector<DemoEntry> BuildSongDemos() {
 }
 
 inline std::vector<DemoEntry> BuildVideoDemos() {
-    using namespace CnaExamples::Demos::Media::VideoDemos;
     std::vector<DemoEntry> demos;
+#if defined(__EMSCRIPTEN__)
+    // Returning an empty category is deliberate: the Video category disappears
+    // from the web build's menu rather than offering three entries that cannot
+    // work. tools/check_catalog.py counts the native tree, so it still sees 3.
+    return demos;
+#else
+    using namespace CnaExamples::Demos::Media::VideoDemos;
     demos.push_back(MakeDemo<LoadAndPlayScreen>(
         "Load & Play", "A real FFmpeg-decoded clip, live GetTexture() every frame",
         {"Video", "VideoPlayer::Play", "VideoPlayer::GetTexture"}));
@@ -737,6 +750,7 @@ inline std::vector<DemoEntry> BuildVideoDemos() {
         "Multi-Track (EXT)", "SetAudioTrackEXT()/SetVideoTrackEXT() -- CNA extensions",
         {"VideoPlayer::SetAudioTrackEXT", "VideoPlayer::SetVideoTrackEXT"}));
     return demos;
+#endif
 }
 
 inline std::vector<DemoEntry> BuildMediaLibraryDemos() {

@@ -329,7 +329,25 @@ implementation for Emscripten, but the headers still declare it, so the three
 2. SDL3 for wasm is already prebuilt at `../cna/.sdl-prebuilt-emscripten/install/lib/*.a` (21 MB),
    so nothing needs rebuilding -- do not delete that directory.
 
-**Next step:** gate the three Video screens out of the Emscripten build. `Requiring()` takes a
+**DONE since:** the three Video screens are now gated out of the wasm translation unit
+(`#if !defined(__EMSCRIPTEN__)` around the includes and the `BuildVideoDemos()` body, which
+returns an empty category there). That removed all twelve of *this app's* undefined symbols.
+
+**NOW BLOCKED ON AN UPSTREAM CNA DEFECT — `needs_human`.** The link still fails, but every
+remaining undefined symbol comes from **CNA's own archive**, not from cna-examples:
+
+    wasm-ld: error: CNA_BUILD/libCNA.a(VideoContentTypeReader.cpp.o):
+             undefined symbol: Microsoft::Xna::Framework::Media::Video::Video(...)
+             undefined symbol: vtable for Microsoft::Xna::Framework::Media::Video
+             undefined symbol: typeinfo for Microsoft::Xna::Framework::Media::Video
+
+CNA compiles `VideoContentTypeReader.cpp` into `libCNA.a` for Emscripten while omitting the
+`Video`/`VideoPlayer` implementation those objects reference, so the archive is internally
+inconsistent on that target: **any** web consumer of CNA hits this, not just this app. Nothing in
+cna-examples can fix it. Upstream needs to either exclude `VideoContentTypeReader.cpp` from the
+Emscripten build too, or provide stub definitions for `Video`. Until then F2 cannot finish linking.
+
+**Historical next step (now superseded):** gate the three Video screens out of the Emscripten build. `Requiring()` takes a
 `GraphicsCapability` and this is a platform condition, so it needs a separate predicate --
 conditional compilation (`#if !defined(__EMSCRIPTEN__)`) around the Video includes and the
 `BuildVideoDemos()` body is the smallest honest fix. Watch out: `tools/check_catalog.py` counts
