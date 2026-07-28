@@ -462,14 +462,57 @@ What was established, so none of it needs redoing:
    sphere's triangle winding; `RasterizerState::CullNone`; binding a base-colour `Texture2D`
    (the PBR shader samples albedo, so a null texture was a plausible cause); expanding to a flat
    non-indexed list drawn with `DrawPrimitives` instead of `DrawIndexedPrimitives`.
-5. **The one untested difference from the known-good path.**
-   `../cna/examples/easygl_pbreffect_golden_test.cpp` renders correctly and differs from the app in
-   exactly one remaining respect: it uses **identity** World/View/Projection with quad vertices
-   already in NDC, whereas the app sets real camera matrices. Start there -- verify whether
-   `PbrEffect`'s `setWorldProperty`/`setViewProperty`/`setProjectionProperty` actually reach the
-   shader, e.g. by drawing one NDC-space triangle with identity matrices first and only then
-   introducing a camera. If the matrices are the problem, that is a CNA bug worth reporting
-   upstream rather than working around here.
+5. **The camera-matrix hypothesis was investigated 2026-07-28 and RULED OUT.** The WVP pipeline is
+   mechanically correct: `PbrEffect : IEffectMatrices` (`PbrEffect.hpp:32`), so
+   `GraphicsDevice::ExtractMatrices` (`GraphicsDevice.cpp:550-561`) pulls real World/View/Projection
+   via `dynamic_cast`, `EasyGLGraphicsBackend::BindDrawParams` (`EasyGLGraphicsBackend.cpp:3987-3991`)
+   uploads `uWVP = world*view*projection`, and the vertex shader uses it
+   (`EasyGLGraphicsBackend.cpp:3621`). The reverted screen's camera (LookAt eye z=5.4, 45° FOV,
+   geometry out to x=±2.1/y=±0.525) is well inside the frustum by hand calculation.
+6. **ACTUAL ROOT CAUSE, found 2026-07-28 by source-reading (not yet fixed or reverified live --
+   see below): `VertexPositionNormalTangentTexture` is POLYMORPHIC, so its real `sizeof()` is 56,
+   not the naive 48 = 12+12+16+8.** It inherits `IVertexType`
+   (`IVertexType.hpp:14-17`, virtual dtor + pure virtual method), which adds a hidden 8-byte vtable
+   pointer (Itanium ABI) at offset 0, pushing every field back: real layout is
+   `[vptr:8][Position:12][Normal:12][Tangent:16][TexCoord:8]`. **This exact bug class is already
+   documented elsewhere in CNA**: `VertexPositionColorTests.cpp:77` (`sizeof` 40 not 16, "due to the
+   Color vtable issue"), `easygl_model_json_reader_test.cpp:9` (`VertexPositionNormalTexture` 40 not
+   32). CNA's typed `VertexBuffer::SetData` overloads work around it by manually repacking each named
+   field into a tightly-packed POD before upload (`VertexBuffer.cpp:54-70`) -- but **there is no typed
+   `SetData` overload for `VertexPositionNormalTangentTexture`** (see point 2 above), so the reverted
+   screen's `SetDataRaw(flat_.data(), count, sizeof(VertexPositionNormalTangentTexture))`
+   (`docs/wip-pbr/MetallicRoughnessScreen.hpp.txt:93-95`) uploaded the real polymorphic object's raw
+   bytes at stride 56. **The golden test never hits this**: it defines its own plain,
+   non-polymorphic `PbrGpuVertex` POD (`easygl_pbreffect_golden_test.cpp:39-47`,
+   `static_assert(sizeof(PbrGpuVertex)==48)`) and uploads that instead of
+   `VertexPositionNormalTangentTexture` -- THAT, not identity-vs-real-camera, is the actual
+   mechanical difference from the reverted screen. Consequence if stride really is 56:
+   `EasyGLGraphicsBackend::ApplyLayout(56)` hits the **skinned-vertex** case
+   (`EasyGLGraphicsBackend.cpp:2303-2324` -- pos/normal/uv/weights/indices), a completely different
+   layout; `aPos` (offset 0) reads bytes starting at the vtable pointer itself as float position
+   data, producing NaN/huge/denormal clip-space positions. That degenerate-position failure mode is
+   consistent with "draws nothing" and with all five previously-ruled-out fixes above (every one of
+   them varied camera/culling/draw-mode while still uploading the same corrupted bytes).
+   **One-second confirmation for whoever picks this back up**, before touching any rendering code:
+   `static_assert(sizeof(VertexPositionNormalTangentTexture) == 48);` should FAIL to compile. If it
+   does, the fix is: define a private, non-polymorphic packed GPU-vertex struct in the demo screen
+   (mirror the golden test's `PbrGpuVertex`, or CNA's own `VertexPositionColor`-repack pattern) and
+   upload THAT via `SetDataRaw(..., 48)` -- never the real `VertexPositionNormalTangentTexture` array
+   directly. `BuildSphereTangentMesh()` (`docs/wip-pbr/sphere-helper.patch`) is still fine to reuse,
+   just repack its output before upload.
+7. **Separate, independent latent CNA bug found while confirming point 6 (not this app's to fix,
+   dormant/unexercised, worth a heads-up upstream regardless):**
+   `VertexPositionNormalTangentTexture.cpp:6-18`'s `getVertexDeclarationStatic()` uses the correct
+   inflated `sizeof()` for the declaration's overall stride but hardcodes per-field `VertexElement`
+   offsets `0,12,24,40` -- which assume no vtable pointer. The true offsets (given the real 56-byte
+   layout) would be `8,20,32,48`. No typed `SetData` overload exists to exercise this declaration, so
+   it's dormant rather than actively wrong today, but it would misbehave the instant something did
+   use it.
+
+**This diagnosis is source-verified but NOT yet reverified by actually building and rendering the
+fix** -- per the owner's 2026-07-28 instruction, this investigation pass made no code changes in
+either repo. The very next step for whoever resumes D2 is the one-line `static_assert` above, then
+applying the repack fix and re-measuring.
 
 ---
 
@@ -489,7 +532,41 @@ this, not only this app. The fix belongs upstream — exclude that translation u
 Emscripten build too, or provide stub definitions for `Video`. Nothing in cna-examples can work
 around it, because the unresolved symbols are inside a library this project only consumes.
 
-This is worth raising with the CNA maintainer as a bug report rather than sitting on it.
+**EXACT LOCATION AND FIX, found 2026-07-28 by source-reading (not applied -- read-only investigation
+per the owner's instruction; the fix belongs in `../cna`, a separate repo).**
+`../cna/cmake/CnaLibrary.cmake:50-54`:
+
+```cmake
+if(NOT CNA_FFMPEG_AVAILABLE)
+    list(FILTER CNA_SOURCES EXCLUDE REGEX ".*/CNA/Internal/Media/VideoDecoder\\.cpp$")
+    list(FILTER CNA_SOURCES EXCLUDE REGEX ".*/Media/Video/VideoPlayer\\.cpp$")
+    list(FILTER CNA_SOURCES EXCLUDE REGEX ".*/Media/Video/Video\\.cpp$")
+endif()
+```
+
+`CNA_FFMPEG_AVAILABLE` is forced `OFF` on Emscripten (`CnaLibrary.cmake:7-11`: `MINGW OR WIN32 OR
+EMSCRIPTEN OR ANDROID`), so this block excludes `Video.cpp`/`VideoPlayer.cpp`/`VideoDecoder.cpp` from
+`libCNA.a` -- but `src/CNA/Internal/Xnb/VideoContentTypeReader.cpp` lives at a different path
+(`CNA/Internal/Xnb/...`, not `CNA/Internal/Media/...` or `Media/Video/...`) and matches none of the
+three regexes, so it stays compiled in and still calls the real `Video(...)` constructor
+(`VideoContentTypeReader.cpp:64,97`) whose definition lives only in the excluded `Video.cpp`. This is
+a **simple oversight, not structural** -- `VideoContentTypeReader.cpp` is a single dedicated file,
+not part of a shared glob with other readers, so excluding it is safe and risks no other content
+type. **Precise one-line fix**, add after line 53 in the same `if`-block:
+
+```cmake
+list(FILTER CNA_SOURCES EXCLUDE REGEX ".*/CNA/Internal/Xnb/VideoContentTypeReader\\.cpp$")
+```
+
+(A consumer's `Video` content-load requests would then need to fail gracefully rather than hit an
+"unregistered reader" error on that platform -- a design detail for whoever applies this upstream.)
+**Sibling check performed**: grepped every `EXCLUDE REGEX` filter in `cmake/*.cmake` against all 16
+files under `src/CNA/Internal/Xnb/`. Video is the only FFmpeg/platform-gated content type there; no
+other reader has an excluded-but-referenced implementation, so this does not need to be found again
+piecemeal.
+
+This is worth raising with the CNA maintainer (i.e. yourself, in `../cna`) as a one-line fix rather
+than sitting on it -- it's precise enough to apply directly without re-investigating.
 
 ---
 

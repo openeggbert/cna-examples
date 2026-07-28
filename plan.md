@@ -633,8 +633,16 @@ format work where it can be shown across every format at once.
 A `PbrEffect` metallic/roughness grid was written and then **reverted**: it never rendered
 geometry, and the cause was not found within a reasonable budget. The repo stays at its verified
 state rather than carrying a screen that draws nothing. Full findings, including the five things
-tried that did not fix it and the one remaining untested difference from `../cna`'s own working
-example, are in `NEXT.md` §7.
+tried that did not fix it, are in `NEXT.md` §7.
+
+**Root cause found 2026-07-28 by a follow-up source-reading investigation (not yet applied/verified
+live).** Not the camera matrices -- the WVP pipeline is mechanically correct. The real cause:
+`VertexPositionNormalTangentTexture` is polymorphic (inherits `IVertexType`'s vtable), so its true
+`sizeof()` is 56, not the naive 48 the reverted screen assumed when calling `SetDataRaw`. This is the
+same vtable-inflation bug class already documented elsewhere in CNA
+(`VertexPositionColor`/`VertexPositionNormalTexture`), just without a typed `SetData` repacking
+overload to hide it here. Full citation-backed writeup with the exact fix direction is in `NEXT.md`
+§7.
 
 The short version: `PbrEffect` is genuinely implemented in EasyGL (a real metallic-roughness BRDF
 shader), so this is not a missing-feature dead end. Two real API facts came out of the attempt and
