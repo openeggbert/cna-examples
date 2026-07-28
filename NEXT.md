@@ -17,7 +17,7 @@ state.
 |---|---|
 | Demo screens | **247** across 13 areas, 78 categories |
 | Last full validation | **247/247 on EASYGL and SDL_RENDERER** (re-run after F1's fixes), 247 screenshots each, 0 layout problems, catalog+layout+docs clean |
-| Head commit | see end of §8 (record it after this session's final push) |
+| Head commit | `1c79229` |
 
 **Phases, in roadmap order:**
 
