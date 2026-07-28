@@ -17,7 +17,7 @@ state.
 |---|---|
 | Demo screens | **245** across 13 areas, 78 categories |
 | Last full validation | **245/245 on EASYGL and SDL_RENDERER**, 245 screenshots each, 0 layout problems, catalog+layout+docs clean |
-| Head commit | (this Phase E commit, see git log — update after committing) |
+| Head commit | `5ea563c` |
 
 **Phases, in roadmap order:**
 
