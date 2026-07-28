@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-28)
 
-Thirteen Areas, **247 demo screens** across 78 categories, all with real content. The numbers below
+Thirteen Areas, **248 demo screens** across 79 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -55,8 +55,8 @@ this file and `README.md`. Nothing here is counted by hand.
 | Media | — | 4 | 17 |
 | Avatars | — | 3 | 7 |
 | 2D Graphics | 4 | 13 | 40 |
-| 3D Graphics | 5 | 16 | 41 |
-| **Total** | **13** | **78** | **247** |
+| 3D Graphics | 5 | 17 | 42 |
+| **Total** | **13** | **79** | **248** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -134,7 +134,7 @@ than assume a full pipeline, which is exactly what a real CNA consumer has to do
 own right.
 
 **F3 result.** *(Figures below are as-of F3, when the catalog held 218 screens. It has since grown
-to 247, and both backends were re-verified at 247/247 — see §7.0.)*
+to 248, and both backends were re-verified at 248/248 — see §7.0.)*
 `tools/sweep_backend.sh build-sdlrenderer` renders **218/218** with zero layout
 problems, and the EasyGL tree still renders 218/218 — no regression from the gating.
 
@@ -269,17 +269,17 @@ are the content build-out. F is verification.
 
 Original target end state: **13 Areas, ~290 demo screens.**
 
-### 7.0 Status as of 2026-07-28 — 247 screens, A/B/C/D/E substantially complete
+### 7.0 Status as of 2026-07-28 — 248 screens, A/B/C/D/E/F1 substantially complete
 
 | Phase | Status |
 |---|---|
 | A, B, C1–C5 | **Done** (C4 extended to 4 screens 2026-07-28, still reduced from 6; C5 at reduced scope) |
 | D1 XACT · D3 Model Content · D4 Effect Reflection · D5 Textures & Queries · D6 Formats · D7 Input EXT · D8 Net | **Done**, all at reduced scope — see each phase's result section |
-| **D2 PBR** | **BLOCKED, `needs_human`** — screen written, never rendered, reverted. Root cause since identified (a polymorphic-vertex `sizeof()` mismatch, not the camera matrices) but not yet applied/reverified live. WIP preserved at [`docs/wip-pbr/`](docs/wip-pbr/) |
+| **D2 PBR** | **Done 2026-07-28** — 1 screen. Root cause (a polymorphic-vertex `sizeof()` mismatch) fixed by repacking into a private packed POD before upload; verified live by pixel probe. `docs/wip-pbr/` removed, superseded |
 | **E Avatars** | **Done** — 7 screens, 3 categories, exactly at plan.md's original target |
-| **F1** defect sweep | **Not started** |
+| **F1** defect sweep | **Done** — 2 real defects found and fixed (see its own result section) |
 | **F2** Emscripten | **BLOCKED on a CNA defect** — compiles fully for wasm, fails linking `libCNA.a`. Exact one-line upstream fix now identified, not applied here |
-| **F3** SDL_RENDERER | **Done** — 247/247 on both backends (re-verified after C4's extension) |
+| **F3** SDL_RENDERER | **Done** — 248/248 on both backends (re-verified after D2's fix) |
 
 **The ~290 target will not be reached by building every planned screen, and that bias was
 consciously reversed mid-session (see NEXT.md §2a): D4 shipped 3 of 4, D6 2 of 6, D7 2 of 3, D8 1 of
@@ -575,7 +575,7 @@ which is the reverse of what the names suggest.
 | # | Area | Addition | Screens |
 |---|---|---|---:|
 | D1 | Audio | **XACT** category: `AudioEngine` (runtime-generated `.xgs`) · `SoundBank` cue playback · `WaveBank` in-memory vs streaming · `AudioCategory` volume/pause · cue variables and RPCs · XACT error paths | 6 |
-| D2 | 3D Graphics | **PBR & Pipeline** group — *PbrEffect* (base colour/metallic/roughness · normal/occlusion/emissive maps · `SkinnedPbrEffect`) and one honest screen for the `RenderPipelineSettings` bag. **Rescoped from 7 to ~5 after checking `../cna`:** there is no `PbrMaterial` type, and `RenderPipelineSettings` (`RenderQuality`/`TonemappingMode`/`ShadowQuality`/HDR/bloom/SSAO) is read by **no backend at all** — nothing outside its own `.cpp` references it, and the `GraphicsDevice::GetRenderPipelineSettings()` its own doc comment names does not exist. It stores settings faithfully and nothing consumes them, so it gets one screen saying exactly that rather than three pretending otherwise. `PbrEffect` by contrast is fully wired into EasyGL with a real metallic-roughness BRDF shader. | ~5 |
+| D2 | 3D Graphics | **PbrEffect** category (Effects Gallery group): metallic-roughness grid, verified live by pixel probe after a polymorphic-vertex `sizeof()` bug was found and fixed. `RenderPipelineSettings` (`RenderQuality`/`TonemappingMode`/`ShadowQuality`/HDR/bloom/SSAO) remains deliberately out of scope — it is read by **no backend at all**, nothing outside its own `.cpp` references it, and the `GraphicsDevice::GetRenderPipelineSettings()` its own doc comment names does not exist; a small honest follow-up screen if ever wanted, not part of this fix. There is no `PbrMaterial`/`SkinnedPbrEffect` demonstration either — see the D2 result section for the full account. | 1 |
 | D3 | 3D Graphics | **Model Content** category: real `Model` via `ContentManager` · `ModelMesh`/`ModelMeshPart`/`EffectMaterial` traversal and effect swapping · `SkinnedModelEXT` · `AnimationPlayer` clip playback · `MorphTargetEXT` | 4 |
 | D4 | 3D Graphics | **Effect Reflection** category: enumerate and set `EffectParameter`s live · techniques/passes + `CurrentTechnique` switching · `EffectAnnotation` · `Effect::Clone` independence | 4 |
 | D5 | 3D Graphics | **Textures & Queries** category: `Texture3D` volume + slice/box `SetData` · `TextureCube` faces and `CubeMapFace` · `RenderTargetCube` rendered per face and used as an env map · `OcclusionQuery` occluded vs visible `PixelCount` · the documented "SurfaceFormat is ignored, everything is RGBA8" caveat, shown honestly | 5 |
@@ -658,28 +658,58 @@ reflected hue measurably changes as the object spins (green → dark green → b
 claim about backend behaviour rather than an API demonstration, and it belongs with D6's surface
 format work where it can be shown across every format at once.
 
-#### D2 PBR — **BLOCKED (`needs_human`), 0 screens shipped**
+#### D2 PBR — **DONE 2026-07-28, 1 category, 1 screen** (was BLOCKED `needs_human`)
 
-A `PbrEffect` metallic/roughness grid was written and then **reverted**: it never rendered
-geometry, and the cause was not found within a reasonable budget. The repo stays at its verified
-state rather than carrying a screen that draws nothing. Full findings, including the five things
-tried that did not fix it, are in `NEXT.md` §7.
+A `PbrEffect` metallic/roughness grid was written, **reverted** because it never rendered geometry,
+diagnosed in a follow-up investigation pass, and then successfully fixed and shipped once the real
+cause was known. Kept as a case study because the whole arc -- write, revert, diagnose from source
+reading alone, fix, verify by measurement -- is a genuine instance of this project's own discipline
+working as intended across three separate sessions.
 
-**Root cause found 2026-07-28 by a follow-up source-reading investigation (not yet applied/verified
-live).** Not the camera matrices -- the WVP pipeline is mechanically correct. The real cause:
-`VertexPositionNormalTangentTexture` is polymorphic (inherits `IVertexType`'s vtable), so its true
-`sizeof()` is 56, not the naive 48 the reverted screen assumed when calling `SetDataRaw`. This is the
-same vtable-inflation bug class already documented elsewhere in CNA
-(`VertexPositionColor`/`VertexPositionNormalTexture`), just without a typed `SetData` repacking
-overload to hide it here. Full citation-backed writeup with the exact fix direction is in `NEXT.md`
-§7.
+**Root cause (confirmed live, not just source-read): `VertexPositionNormalTangentTexture` is
+polymorphic.** It inherits `IVertexType`, which declares a virtual destructor, so the struct carries
+a hidden 8-byte vtable pointer and its real `sizeof()` is 56, not the naive 48 = 12+12+16+8 the
+reverted screen assumed when calling `SetDataRaw(..., sizeof(VertexPositionNormalTangentTexture))`.
+`static_assert(sizeof(VertexPositionNormalTangentTexture) == 48)` fails to compile, confirming it
+directly. This is the same vtable-inflation bug class already documented elsewhere in CNA
+(`VertexPositionColor` is 40 bytes not 16, `VertexPositionNormalTexture` is 40 not 32) -- PBR's
+tangent vertex type just has no typed `VertexBuffer::SetData` overload to hide it via repacking,
+unlike those two.
 
-The short version: `PbrEffect` is genuinely implemented in EasyGL (a real metallic-roughness BRDF
-shader), so this is not a missing-feature dead end. Two real API facts came out of the attempt and
-are worth keeping regardless: tangent vertex types have **no** typed `DrawUserIndexedPrimitives`
-or `VertexBuffer::SetData` overload, so they silently bind the untyped `const void*` overload and
-draw garbage rather than failing; and `VertexPositionNormalTangentTexture::Tangent` is a `Vector4`
-whose W carries glTF bitangent handedness.
+**The fix**, shipped in `src/Demos/Graphics3D/PbrEffect/PbrMetallicRoughnessScreen.hpp`: define a
+private, non-polymorphic, tightly-packed `GpuVertex` POD (`static_assert(sizeof(GpuVertex) == 48)`,
+mirroring `../cna/examples/easygl_pbreffect_golden_test.cpp`'s own `PbrGpuVertex` field-for-field),
+repack `BuildSphereTangentMesh()`'s output into it, and upload *that* via `SetDataRaw(..., 48)` --
+never the polymorphic `VertexPositionNormalTangentTexture` array's raw bytes directly. Once the
+stride was honest, the geometry rendered correctly on the first try; no other change was needed
+(the WVP pipeline, texture binding, and lighting setup were already correct, as the intermediate
+investigation pass established).
+
+**Verified live, not assumed:** the screen probes `GetBackBufferData` at the centre grid cell (which
+sits exactly at the camera's look-at target with this layout) against a background reference point
+above the grid, and shows a green/red verdict swatch based on a real measured colour difference --
+the same route `tools/headless.sh --screenshot` itself uses. Confirmed by screenshot: five columns
+of increasing roughness × three rows of increasing metallic, the bottom (fully metallic) row
+visibly darker where it has no diffuse floor to fall back to, exactly as the metallic-roughness BRDF
+predicts.
+
+Registered as a new **PbrEffect** category inside the existing **Effects Gallery** group (3D
+Graphics area), alongside AlphaTestEffect/DualTextureEffect/EnvironmentMapEffect/SkinnedEffect/
+CustomShader -- it's a single-technique effect showcase like its siblings there, not a new group.
+
+**Not done, deliberately out of scope for this fix:** the `RenderPipelineSettings` screen from
+D2's original ~5-screen projection. That's a different, smaller idea (an honest "stores settings,
+consumed by nothing" screen) unrelated to the rendering defect this pass fixed; it remains
+available as a small follow-up if ever wanted, not carried here to keep this fix focused.
+
+**Historical record kept for what it teaches:** two real API facts came out of the original attempt
+and hold regardless of the fix above: tangent vertex types have **no** typed
+`DrawUserIndexedPrimitives` overload, so an untyped array silently binds the `const void*` overload
+and draws garbage (or, as it turned out, nothing) rather than failing; and
+`VertexPositionNormalTangentTexture::Tangent` is a `Vector4` whose W carries glTF bitangent
+handedness. `docs/wip-pbr/` (the original reverted screen and the sphere-mesh patch) is now
+superseded by the real shipped screen and has been removed from the repo -- its content lives on
+here and in `NEXT.md`'s D2 history.
 
 #### D3 Model Content — 4 screens added to the existing Model category — **DONE (reduced scope, see below)**
 
@@ -947,7 +977,7 @@ build" cleanly on SDL_RENDERER while `AvatarDescription` keeps working there.
 |---|---|
 | F1 | **Done, 2026-07-28.** Defect sweep over everything this roadmap added since the last such pass (D1, D3, D4, D5, D6, D7, D8, Phase E, C4's extension — ~27 screens plus supporting infrastructure). Not a re-verification of "does it render" (already 247/247 clean going in) but a skeptical read for behavioral/visual defects that survive a clean automated sweep. Full writeup below. |
 | F2 | **BLOCKED on a CNA defect.** `emcmake` configures and **every translation unit compiles for wasm**; two real cna-examples bugs were found and fixed getting there (the web branch linked `SDL3::SDL3-static`, a target that never existed in this scope, and the three Media/Video screens needed a platform gate). The link then fails inside CNA's own archive: `libCNA.a(VideoContentTypeReader.cpp.o)` references `Media::Video`, whose implementation CNA does not build for Emscripten. Any web consumer of CNA hits this. The exact one-line fix location in `../cna/cmake/CnaLibrary.cmake` has since been identified but not applied (belongs in that repo). See `NEXT.md` §6b/§7. |
-| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with every 3D Graphics category gated on `SupportsCapability(ThreeD)`. **247/247 render on both backends** (re-verified after C4's extension, 2026-07-28), 247 screenshots each, 0 layout problems. See below. |
+| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with every 3D Graphics category gated on `SupportsCapability(ThreeD)`. **248/248 render on both backends** (re-verified after D2's fix, 2026-07-28), 248 screenshots each, 0 layout problems. See below. |
 
 Android hardware verification is **not** part of this cycle — see §10.
 
@@ -982,6 +1012,11 @@ owner's standing 2026-07-28 instruction, no fix was attempted in `../cna`.
 
 **Re-validated after both fixes:** 247/247 on EASYGL and SDL_RENDERER (full unfiltered sweeps, not
 filtered), `check_catalog.py`/`check_layout.py`/`check_shots.py` all clean.
+
+**Addendum, D2 fixed 2026-07-28 (after F1 completed):** F1's own report flagged that the D2 root
+cause it inherited from the earlier investigation pass "is applicable inside cna-examples' own
+screen code and may be worth revisiting." It was: see the D2 result section above. 248/248
+re-verified on both backends after that fix.
 
 ### 7.2 Verification harness — findings that shaped it
 

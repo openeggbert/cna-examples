@@ -1,6 +1,6 @@
 # NEXT — short-term continuity for cna-examples
 
-**Updated:** 2026-07-28 (autonomous session continuing — D3, E, C4-extend and F1 all done)
+**Updated:** 2026-07-28 (autonomous session continuing — D3, E, C4-extend, F1 and now D2 all done)
 **Branch:** `feature/examples-phase-bcde`, ahead of `develop` @ `d7353e3`, all
 pushed. Working tree clean, no jobs in flight, both native build trees green.
 **Authoritative plan:** [`plan.md`](plan.md). Historical record: [`plan20260727.md`](plan20260727.md).
@@ -15,9 +15,9 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **247** across 13 areas, 78 categories |
-| Last full validation | **247/247 on EASYGL and SDL_RENDERER** (re-run after F1's fixes), 247 screenshots each, 0 layout problems, catalog+layout+docs clean |
-| Head commit | `1c79229` |
+| Demo screens | **248** across 13 areas, 79 categories |
+| Last full validation | **248/248 on EASYGL and SDL_RENDERER** (re-run after D2's fix), 248 screenshots each, 0 layout problems, catalog+layout+docs clean |
+| Head commit | *(recorded in the next doc-only commit after this one lands)* |
 
 **Phases, in roadmap order:**
 
@@ -31,7 +31,7 @@ state.
 | C4 Storage | **Done, extended 2026-07-28** — 2 categories, 4 screens |
 | C5 Diagnostics | **Done, reduced scope** — 4 categories, 4 screens |
 | D1 Audio/XACT | **Done, reduced scope** — 1 category, 2 screens |
-| D2 PBR | **BLOCKED, `needs_human`** — see §7 |
+| D2 PBR | **Done, 2026-07-28** — 1 category, 1 screen. Was `needs_human`; fixed once the root cause (a polymorphic-vertex `sizeof()` mismatch) was known — see §7 |
 | D3 Model Content | **Done, reduced scope** — 4 screens added to the existing Model category |
 | D4 Effect Reflection | **Done, reduced scope** — 1 category, 3 screens |
 | D5 3D Textures & Queries | **Done** — 1 category, 4 screens |
@@ -41,7 +41,7 @@ state.
 | E Avatars | **Done** — 3 categories, 7 screens, exactly at plan.md's original count |
 | F1 defect sweep | **Done, 2026-07-28** — 2 real defects found and fixed (both cna-examples-side), 1 major upstream `../cna` content defect root-caused and left `needs_human` — see §5 #51 (updated), #53a, #53b and plan.md's F1 writeup |
 | F2 Emscripten | **BLOCKED on an upstream CNA defect** — exact one-line fix identified, not applied — see §6b and §7 |
-| F3 SDL_RENDERER pass | **Done** — 247/247 on both backends, 3D gated on ThreeD |
+| F3 SDL_RENDERER pass | **Done** — 248/248 on both backends, 3D gated on ThreeD |
 
 **Scope kept shrinking, and that was correct.** D4 went 4→3, D6 6→2, D7 3→2, D8 3→1, D3 5→4. Every
 cut was verified as already-covered, non-existent, or (D3's `SkinnedModelEXT`) genuinely out of
@@ -89,6 +89,10 @@ avoidance.
    pre-existing uncommitted files (`cmake/Tests/EasyGLTests.cmake`, `cmake/Tests/
    SdlRendererTests.cmake`, untracked `examples/xvfb_screenshot_demo.cpp`) untouched — unrelated
    in-progress work from another session, not this one's to manage.
+   **Outcome, D2:** the investigation later found the cause actually lived in cna-examples' own
+   reverted screen code, not `../cna` — so this instruction's premise didn't hold for D2, and it
+   was fixed within the same `../cna`-untouched scope this instruction describes (see §7). F2's
+   cause is genuinely in `../cna`; it remains blocked exactly as this instruction anticipated.
 ## 3. Assumptions made without asking
 
 - **B4 (`apis` on `DemoEntry`)** is populated per area as each area is built or touched,
@@ -434,6 +438,12 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    just the same `$DEFS`/`$FLAGS`/`link.txt` recipe `tools/checks/*.cpp` already use) can load real
    game content and dump its raw data for inspection in seconds, far faster than adding
    screenshot-based instrumentation to a live demo screen for a one-off investigation.
+56. **D2's polymorphic-vertex diagnosis was confirmed live, not just by source-reading.** A
+   `static_assert(sizeof(VertexPositionNormalTangentTexture) == 48)` genuinely fails to compile
+   (real size is 56), and repacking into a private, non-polymorphic 48-byte POD before
+   `SetDataRaw` immediately fixed the render on the first attempt -- no other change was needed.
+   Worth noting for the NEXT time this bug class is suspected on a new vertex type: the
+   `static_assert` check costs seconds and settles it before writing any rendering code.
 
 ## 6. Commands
 
@@ -521,89 +531,21 @@ cmake --build build-web -j4 --target cna_examples
 
 ## 7. Blocked / needs_human
 
-**D2 (PbrEffect) — `needs_human`: PbrEffect renders nothing from this app, cause not found.**
+**D2 (PbrEffect) — RESOLVED 2026-07-28. No longer needs_human.** Full history and the fix are in
+`plan.md`'s D2 result section (search `#### D2 PBR`); kept there rather than duplicated here since
+this is a continuity/status file, not the roadmap record. Summary: root cause was a polymorphic
+`VertexPositionNormalTangentTexture` (hidden vtable pointer inflates its real `sizeof()` to 56, not
+the naive 48 the original screen assumed), fixed by repacking into a private packed POD before
+upload. Verified live by pixel probe; shipped as `3D Graphics > Effects Gallery > PbrEffect >
+Metallic & Roughness`. `docs/wip-pbr/` has been removed (superseded by the real screen).
 
-A `PbrEffect` metallic/roughness grid screen was written, verified by pixel measurement, and
-**reverted** because it never rendered geometry. Shipping a demo that draws nothing is worse than
-not shipping it.
-
-**The work-in-progress is preserved in the repo at [`docs/wip-pbr/`](docs/wip-pbr/)** — the screen
-itself plus a patch adding `BuildSphereTangentMesh()` (that part is believed correct and is
-independently useful). It is outside the build and outside `check_catalog.py`'s scan, so it costs
-nothing. Read `docs/wip-pbr/README.md` together with this section before restarting D2.
-
-What was established, so none of it needs redoing:
-
-1. **PbrEffect IS implemented in EasyGL.** `EasyGLGraphicsBackend::EnsurePbrProgram()` compiles a
-   real metallic-roughness BRDF (`PbrLight()`, three directional lights, normal/emissive/occlusion
-   maps). This is not an unimplemented-feature dead end.
-2. **Tangent vertex types are second-class across the API.** `GraphicsDevice` has typed
-   `DrawUserIndexedPrimitives` overloads for only four legacy vertex types; a
-   `VertexPositionNormalTangentTexture` array therefore binds the untyped `const void*` overload,
-   which carries NO vertex declaration, so the GPU reinterprets stride-48 data under whatever
-   layout was last bound. It does not throw -- it draws garbage that fills the viewport. That was
-   the first symptom and it was diagnosed by measurement, not by the app failing.
-   `VertexBuffer::SetData` has the same gap; uploading needs `SetDataRaw(data, count, stride)`.
-3. **`Tangent` is a `Vector4`, not a `Vector3`** -- W is the bitangent handedness sign, glTF
-   convention `Bitangent = cross(Normal, Tangent.xyz) * Tangent.W`. For a UV sphere `cross(N,T)`
-   works out to `d(position)/d(phi)`, which points along +V, so W = +1.
-4. **Things tried that did NOT fix it** (all measured, viewport stayed empty): the buffered path
-   with an explicit `VertexDeclaration`; the two-argument `VertexBuffer(device, count)` constructor
-   that `../cna`'s own working example uses; `SetDataRaw` with an explicit stride; flipping the
-   sphere's triangle winding; `RasterizerState::CullNone`; binding a base-colour `Texture2D`
-   (the PBR shader samples albedo, so a null texture was a plausible cause); expanding to a flat
-   non-indexed list drawn with `DrawPrimitives` instead of `DrawIndexedPrimitives`.
-5. **The camera-matrix hypothesis was investigated 2026-07-28 and RULED OUT.** The WVP pipeline is
-   mechanically correct: `PbrEffect : IEffectMatrices` (`PbrEffect.hpp:32`), so
-   `GraphicsDevice::ExtractMatrices` (`GraphicsDevice.cpp:550-561`) pulls real World/View/Projection
-   via `dynamic_cast`, `EasyGLGraphicsBackend::BindDrawParams` (`EasyGLGraphicsBackend.cpp:3987-3991`)
-   uploads `uWVP = world*view*projection`, and the vertex shader uses it
-   (`EasyGLGraphicsBackend.cpp:3621`). The reverted screen's camera (LookAt eye z=5.4, 45° FOV,
-   geometry out to x=±2.1/y=±0.525) is well inside the frustum by hand calculation.
-6. **ACTUAL ROOT CAUSE, found 2026-07-28 by source-reading (not yet fixed or reverified live --
-   see below): `VertexPositionNormalTangentTexture` is POLYMORPHIC, so its real `sizeof()` is 56,
-   not the naive 48 = 12+12+16+8.** It inherits `IVertexType`
-   (`IVertexType.hpp:14-17`, virtual dtor + pure virtual method), which adds a hidden 8-byte vtable
-   pointer (Itanium ABI) at offset 0, pushing every field back: real layout is
-   `[vptr:8][Position:12][Normal:12][Tangent:16][TexCoord:8]`. **This exact bug class is already
-   documented elsewhere in CNA**: `VertexPositionColorTests.cpp:77` (`sizeof` 40 not 16, "due to the
-   Color vtable issue"), `easygl_model_json_reader_test.cpp:9` (`VertexPositionNormalTexture` 40 not
-   32). CNA's typed `VertexBuffer::SetData` overloads work around it by manually repacking each named
-   field into a tightly-packed POD before upload (`VertexBuffer.cpp:54-70`) -- but **there is no typed
-   `SetData` overload for `VertexPositionNormalTangentTexture`** (see point 2 above), so the reverted
-   screen's `SetDataRaw(flat_.data(), count, sizeof(VertexPositionNormalTangentTexture))`
-   (`docs/wip-pbr/MetallicRoughnessScreen.hpp.txt:93-95`) uploaded the real polymorphic object's raw
-   bytes at stride 56. **The golden test never hits this**: it defines its own plain,
-   non-polymorphic `PbrGpuVertex` POD (`easygl_pbreffect_golden_test.cpp:39-47`,
-   `static_assert(sizeof(PbrGpuVertex)==48)`) and uploads that instead of
-   `VertexPositionNormalTangentTexture` -- THAT, not identity-vs-real-camera, is the actual
-   mechanical difference from the reverted screen. Consequence if stride really is 56:
-   `EasyGLGraphicsBackend::ApplyLayout(56)` hits the **skinned-vertex** case
-   (`EasyGLGraphicsBackend.cpp:2303-2324` -- pos/normal/uv/weights/indices), a completely different
-   layout; `aPos` (offset 0) reads bytes starting at the vtable pointer itself as float position
-   data, producing NaN/huge/denormal clip-space positions. That degenerate-position failure mode is
-   consistent with "draws nothing" and with all five previously-ruled-out fixes above (every one of
-   them varied camera/culling/draw-mode while still uploading the same corrupted bytes).
-   **One-second confirmation for whoever picks this back up**, before touching any rendering code:
-   `static_assert(sizeof(VertexPositionNormalTangentTexture) == 48);` should FAIL to compile. If it
-   does, the fix is: define a private, non-polymorphic packed GPU-vertex struct in the demo screen
-   (mirror the golden test's `PbrGpuVertex`, or CNA's own `VertexPositionColor`-repack pattern) and
-   upload THAT via `SetDataRaw(..., 48)` -- never the real `VertexPositionNormalTangentTexture` array
-   directly. `BuildSphereTangentMesh()` (`docs/wip-pbr/sphere-helper.patch`) is still fine to reuse,
-   just repack its output before upload.
-7. **Separate, independent latent CNA bug found while confirming point 6 (not this app's to fix,
-   dormant/unexercised, worth a heads-up upstream regardless):**
-   `VertexPositionNormalTangentTexture.cpp:6-18`'s `getVertexDeclarationStatic()` uses the correct
-   inflated `sizeof()` for the declaration's overall stride but hardcodes per-field `VertexElement`
-   offsets `0,12,24,40` -- which assume no vtable pointer. The true offsets (given the real 56-byte
-   layout) would be `8,20,32,48`. No typed `SetData` overload exists to exercise this declaration, so
-   it's dormant rather than actively wrong today, but it would misbehave the instant something did
-   use it.
-
-**This diagnosis is source-verified but NOT yet reverified by actually building and rendering the
-fix** -- per the owner's 2026-07-28 instruction, this investigation pass made no code changes in
-either repo. The very next step for whoever resumes D2 is the one-line `static_assert` above, then
-applying the repack fix and re-measuring.
+One independent, dormant CNA-side finding surfaced while confirming the diagnosis, **not
+cna-examples' to fix, not urgent** (worth a heads-up upstream sometime):
+`VertexPositionNormalTangentTexture.cpp`'s `getVertexDeclarationStatic()` hardcodes per-field
+`VertexElement` offsets `0,12,24,40`, which assume no vtable pointer; the true offsets (given the
+real 56-byte layout) would be `8,20,32,48`. No typed `SetData` overload exists to exercise this
+declaration today, so it's latent rather than actively wrong, but would misbehave the instant
+something did use it.
 
 ---
 
@@ -735,27 +677,32 @@ major upstream finding: the "Stand2" cosmetic issue from Phase E turned out to b
 root-caused precisely, `needs_human`, not fixed here (see §7). Re-validated 247/247 on both backends
 after the fixes.
 
-**The roadmap is now substantially complete.** Every phase through F1/F3 is DONE; only D2 (PbrEffect)
-and F2 (Emscripten) remain, and both are `needs_human`-blocked on defects inside `../cna` itself,
-precisely diagnosed (see §7) but deliberately not fixed here per the owner's 2026-07-28 instruction.
-**Do NOT start** D2 or F2 without reading §7 first, and do not modify `../cna` without new
-authorization from the owner — the standing instruction was investigate-and-document only.
+**D2 — PbrEffect is now DONE too (2026-07-28, after F1).** F1's own report noted the fix was local to
+cna-examples, not `../cna` — the owner's "no fixes in `../cna`" instruction didn't apply once the
+cause turned out to live in this repo's own reverted screen. Fixed by repacking
+`VertexPositionNormalTangentTexture` into a private packed POD before upload (its real `sizeof()` is
+56, not the naive 48 the original code assumed — the hidden `IVertexType` vtable pointer). Shipped as
+a new **PbrEffect** category in **3D Graphics > Effects Gallery**, verified live by pixel probe.
+`docs/wip-pbr/` removed (superseded). See `plan.md`'s D2 section and §7 above for the full account.
+248/248 re-verified on both backends after this fix.
+
+**The roadmap is now substantially complete.** Every phase through D2/F1/F3 is DONE; only F2
+(Emscripten) remains, `needs_human`-blocked on a defect inside `../cna` itself, precisely diagnosed
+(exact one-line fix location identified, see §7) but deliberately not applied here per the owner's
+2026-07-28 instruction to keep `../cna` untouched this session. **Do NOT start F2** without reading
+§7 first, and do not modify `../cna` without new authorization from the owner.
 
 **Next unblocked work, if this session continues**, per the general autonomous-work mandate (do not
 stop merely because the planned roadmap is done — reassess for further safe, valuable work): a fresh
 audit pass in the spirit of F1 but broader than "this session's additions" — e.g. a TODO/FIXME/stub
-sweep across the FULL `src/` tree (F1 only checked the areas listed above), a compiler-warnings pass
-(`-Wall -Wextra` if not already the default), or re-examining whether D2's now-precise root cause
-(NEXT.md §7: `VertexPositionNormalTangentTexture`'s real `sizeof()` is 56 not 48) is safe enough to
-actually apply and re-measure live, since a fix description already exists and is a small, focused,
-verifiable change *inside cna-examples' own screen code* (the fix lives in the demo screen's vertex
-upload, not in `../cna` — only the *diagnosis* required reading `../cna`). That would be worth
-weighing against the owner's original "don't modify `../cna`" instruction, which does not forbid
-fixing the cna-examples-side consumption of the bug.
+sweep across the FULL `src/` tree (F1 only checked the areas added this session), a compiler-warnings
+pass (`-Wall -Wextra` if not already the default), or picking up one of the smaller follow-ups noted
+along the way (a `RenderPipelineSettings` honesty screen for D2, revisiting Phase E's Stand2
+animation-content defect once `../cna` gets attention, or the D8 Net two-local-gamers follow-up).
 
 **Before writing any code for a phase**, grep `src/Demos/` for the APIs its plan row claims are
 missing. D6, D7, D8 and D3 all shrank once that was checked (or, for D3, once the architecture was
-actually understood) — the plan over-estimates gaps, and the existing 247 screens already cover
+actually understood) — the plan over-estimates gaps, and the existing 248 screens already cover
 more than it assumes.
 
 **Workflow that works here, in order:**

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <vector>
@@ -26,6 +27,7 @@ namespace CnaExamples::Demos::Graphics3D::PbrDemos {
 using namespace CnaExamples::GameStateManagement;
 using Microsoft::Xna::Framework::MathHelper;
 using Microsoft::Xna::Framework::Matrix;
+using Microsoft::Xna::Framework::Rectangle;
 using Microsoft::Xna::Framework::Graphics::BufferUsage;
 using Microsoft::Xna::Framework::Graphics::DepthStencilState;
 using Microsoft::Xna::Framework::Graphics::IndexBuffer;
@@ -64,35 +66,50 @@ using Microsoft::Xna::Framework::Graphics::Viewport;
 // (VertexPositionColor, VertexPositionColorTexture, VertexPositionTexture,
 // VertexPositionNormalTexture). A tangent vertex array therefore binds to the
 // untyped `const void*` overload, which carries NO vertex declaration, so the
-// GPU reinterprets stride-48 data under whatever layout was last bound. It does
-// not throw or warn -- it draws garbage geometry that fills the viewport, which
-// is exactly how this screen was first written and what the measurement caught.
+// GPU reinterprets the data under whatever layout was last bound. It does
+// not throw or warn -- it draws garbage geometry (or nothing at all) rather
+// than failing, which is exactly how this screen was first written and what
+// pixel measurement caught.
 //
-// VertexBuffer::SetData has the same gap, so uploading needs SetDataRaw with an
-// explicit stride. Tangent vertex types are second-class across this API: the
-// buffered path with an explicit VertexDeclaration is the only correct one.
-class MetallicRoughnessScreen : public DemoScreen {
+// THE ACTUAL BUG this screen was reverted over (found on a later pass, see
+// docs/wip-pbr/README.md and NEXT.md's D2 entry for the full investigation):
+// VertexPositionNormalTangentTexture inherits IVertexType, which declares a
+// virtual destructor -- so the struct carries a hidden 8-byte vtable pointer,
+// and its REAL sizeof() is 56, not the naive 48 = 12+12+16+8 this screen
+// originally assumed when calling SetDataRaw(..., sizeof(VertexPositionNormalTangentTexture)).
+// Uploading the polymorphic object's raw bytes at stride 56 makes
+// EasyGLGraphicsBackend::ApplyLayout pick the wrong (skinned-vertex) attribute
+// layout, so the position attribute reads bytes starting at the vtable
+// pointer as floats -- degenerate/NaN clip-space positions, i.e. nothing
+// visibly draws. The fix, mirroring both ../cna's own
+// easygl_pbreffect_golden_test.cpp and CNA's own typed VertexBuffer::SetData
+// overloads for legacy vertex types (VertexBuffer.cpp): repack into a
+// private, NON-polymorphic, tightly-packed POD before upload, and upload
+// THAT at its own real (48-byte) stride -- never the polymorphic struct's
+// raw bytes directly.
+class PbrMetallicRoughnessScreen : public DemoScreen {
 public:
-    MetallicRoughnessScreen() : DemoScreen("PbrEffect: Metallic & Roughness") {}
+    PbrMetallicRoughnessScreen() : DemoScreen("PbrEffect: Metallic & Roughness") {}
 
     void OnDemoLoad() override {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
-        sphere_ = BuildSphereTangentMesh(0.42f, 24, 16);
-        // The two-argument VertexBuffer constructor, matching ../cna's own
-        // working PBR example: SetDataRaw pushes the layout, so passing a
-        // VertexDeclaration here as well is not the supported path.
-        // SetDataRaw, not SetData: the typed SetData overloads cover the same
-        // legacy vertex types as the typed draw calls, and tangent vertices are
-        // not among them. SetDataRaw at least takes the stride explicitly, so
-        // it cannot be got wrong silently the way the void* draw call can.
-        // Expanded to a flat, non-indexed triangle list -- ../cna's own working
-        // PBR path draws with DrawPrimitives and no IndexBuffer.
-        flat_.reserve(sphere_.indices.size());
-        for (std::uint16_t index : sphere_.indices) flat_.push_back(sphere_.vertices[index]);
-        triangleCount_ = (int)flat_.size() / 3;
-        vb_.emplace(device, (int)flat_.size());
-        vb_->SetDataRaw(flat_.data(), (int)flat_.size(),
-                        (int)sizeof(VertexPositionNormalTangentTexture));
+        SphereTangentMesh sphere = BuildSphereTangentMesh(0.42f, 24, 16);
+
+        std::vector<GpuVertex> flat;
+        flat.reserve(sphere.indices.size());
+        for (std::uint16_t index : sphere.indices) {
+            const VertexPositionNormalTangentTexture& v = sphere.vertices[index];
+            flat.push_back(GpuVertex{
+                v.Position.X, v.Position.Y, v.Position.Z,
+                v.Normal.X, v.Normal.Y, v.Normal.Z,
+                v.Tangent.X, v.Tangent.Y, v.Tangent.Z, v.Tangent.W,
+                v.TextureCoordinate.X, v.TextureCoordinate.Y,
+            });
+        }
+        triangleCount_ = (int)flat.size() / 3;
+        vb_.emplace(device, (int)flat.size());
+        vb_->SetDataRaw(flat.data(), (int)flat.size(), (int)sizeof(GpuVertex));
+
         // A base-colour texture is not optional in practice: the PBR shader
         // samples albedo unconditionally, so leaving it null renders nothing.
         baseColor_.emplace(CnaExamples::Demos::Graphics2D::CreateCheckerboardTexture(
@@ -101,6 +118,9 @@ public:
         effect_->EnableDefaultLighting();
         effect_->setTextureProperty(&*baseColor_);
         effect_->setDiffuseColorProperty(Vector3(0.85f, 0.68f, 0.30f));
+
+        rendered_ = false;
+        probedOnce_ = false;
     }
 
     void OnDemoUnload() override {
@@ -123,10 +143,21 @@ protected:
         lines.push_back("A metal has NO diffuse term and tints its reflection with the base colour,");
         lines.push_back("so the bottom row darkens where it reflects nothing.");
         lines.emplace_back();
-        lines.push_back("Drawn through a VertexBuffer, necessarily: tangent vertices have no typed");
-        lines.push_back("DrawUserIndexedPrimitives overload, and the void* one carries no vertex");
-        lines.push_back("declaration -- it silently draws garbage rather than failing.");
-        DrawLines(sb, font, Vector2(40.0f, 82.0f), lines, tint);
+        lines.push_back("VertexPositionNormalTangentTexture is polymorphic (a hidden vtable pointer");
+        lines.push_back("inflates its real size past the naive 48 bytes) -- uploading its raw bytes");
+        lines.push_back("corrupts the layout. Fix: repack into a private, packed 48-byte POD first.");
+        const Vector2 end = DrawLines(sb, font, Vector2(40.0f, 82.0f), lines, tint);
+
+        // rendered_ reflects the PREVIOUS frame's probe (the probe itself can only run after
+        // this frame's scene is drawn, below) -- stable from frame 2 onward, same
+        // establish-then-report order OcclusionQueryScreen uses for its own async result.
+        DrawVerdict(sb, font, end.Y + 6.0f,
+                    mul(rendered_ ? Color(40, 200, 90, 255) : Color(220, 60, 60, 255),
+                        TransitionAlpha()),
+                    tint,
+                    rendered_
+                        ? "Verified live: centre-sphere pixels measurably differ from background."
+                        : "Probe found no geometry -- the centre sphere is not rendering.");
 
         sb.End();
         DrawGrid();
@@ -137,10 +168,23 @@ private:
     static constexpr int kCols = 5;
     static constexpr int kRows = 3;
 
+    // Stride-48 GPU-compact PBR vertex, matching ApplyLayout's stride==48
+    // case (Position+Normal+Tangent+TextureCoordinate) and
+    // ../cna/examples/easygl_pbreffect_golden_test.cpp's own PbrGpuVertex
+    // layout exactly -- deliberately NOT derived from IVertexType, so it has
+    // no vtable pointer and its sizeof() is the real, honest 48 bytes.
+    struct GpuVertex {
+        float px, py, pz;
+        float nx, ny, nz;
+        float tx, ty, tz, tw;
+        float u, v;
+    };
+    static_assert(sizeof(GpuVertex) == 48, "PBR vertex must be 48 bytes");
+
     void DrawGrid() {
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
         const Viewport original = device.getViewportProperty();
-        Viewport scene(0, 250, original.getWidthProperty(), 330);
+        Viewport scene(0, 340, original.getWidthProperty(), 260);
         device.setViewportProperty(scene);
         device.setDepthStencilStateProperty(DepthStencilState::Default);
         device.setRasterizerStateProperty(RasterizerState::CullNone);
@@ -171,17 +215,43 @@ private:
         }
         device.SetVertexBuffer(nullptr);
 
+        // Verified live, not assumed: the centre grid cell (row=1, col=2) sits
+        // exactly at world origin with this camera, so it projects to the
+        // exact centre of the scene viewport. A point near the viewport's own
+        // top edge sits above the whole grid (the top row's sphere extends to
+        // world Y ~1.47, well short of the ~2.24 half-height this camera
+        // shows at this distance), so it stays background regardless of
+        // whether the grid rendered. Same GetBackBufferData route
+        // tools/headless.sh's own --screenshot uses (NEXT.md discovery #1).
+        if (!probedOnce_) {
+            const int centerX = scene.getXProperty() + scene.getWidthProperty() / 2;
+            const int centerY = scene.getYProperty() + scene.getHeightProperty() / 2;
+            const int bgY = scene.getYProperty() + 6;
+            Rectangle bgRect(centerX, bgY, 1, 1);
+            Color bg(0, 0, 0, 0);
+            device.GetBackBufferData(&bgRect, &bg, 0, 1);
+            Rectangle probeRect(centerX, centerY, 1, 1);
+            Color probe(0, 0, 0, 0);
+            device.GetBackBufferData(&probeRect, &probe, 0, 1);
+            const int dr = (int)probe.getRProperty() - (int)bg.getRProperty();
+            const int dg = (int)probe.getGProperty() - (int)bg.getGProperty();
+            const int db = (int)probe.getBProperty() - (int)bg.getBProperty();
+            rendered_ = (dr * dr + dg * dg + db * db) > 400; // ~20 per channel, well above dither noise
+            probedOnce_ = true;
+        }
+
         device.setViewportProperty(original);
+        device.setRasterizerStateProperty(RasterizerState::CullCounterClockwise);
         device.setDepthStencilStateProperty(DepthStencilState::None);
     }
 
-    SphereTangentMesh sphere_;
-    std::vector<VertexPositionNormalTangentTexture> flat_;
-    int triangleCount_ = 0;
     std::optional<Microsoft::Xna::Framework::Graphics::Texture2D> baseColor_;
     std::optional<VertexBuffer> vb_;
     std::optional<PbrEffect> effect_;
+    int triangleCount_ = 0;
     float spin_ = 0.0f;
+    bool rendered_ = false;
+    bool probedOnce_ = false;
 };
 
 } // namespace CnaExamples::Demos::Graphics3D::PbrDemos

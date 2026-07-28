@@ -247,6 +247,7 @@
 #include "Demos/Graphics3D/SkinnedEffect/TwoBoneSkinningScreen.hpp"
 #include "Demos/Graphics3D/CustomShader/CustomGlslShaderScreen.hpp"
 #include "Demos/Graphics3D/CustomShader/InvalidShaderScreen.hpp"
+#include "Demos/Graphics3D/PbrEffect/PbrMetallicRoughnessScreen.hpp"
 #include "Demos/Graphics3D/DepthAndCulling/DepthStencilComparisonScreen.hpp"
 #include "Demos/Graphics3D/DepthAndCulling/CullModeScreen.hpp"
 #include "Demos/Graphics3D/DepthAndCulling/FillModeWireframeScreen.hpp"
@@ -1354,6 +1355,16 @@ inline std::vector<DemoEntry> BuildCustomShaderDemos() {
     return demos;
 }
 
+inline std::vector<DemoEntry> BuildPbrEffectDemos() {
+    using namespace CnaExamples::Demos::Graphics3D::PbrDemos;
+    std::vector<DemoEntry> demos;
+    demos.push_back(MakeDemo<PbrMetallicRoughnessScreen>(
+        "Metallic & Roughness",
+        "The glTF metallic-roughness BRDF on a 5x3 sphere grid, verified live by pixel probe",
+        {"PbrEffect"}));
+    return demos;
+}
+
 inline std::vector<DemoEntry> BuildDepthAndCullingDemos() {
     using namespace CnaExamples::Demos::Graphics3D::DepthAndCullingDemos;
     std::vector<DemoEntry> demos;
@@ -1609,6 +1620,7 @@ inline std::vector<AreaEntry> BuildAreaCatalog() {
                 CategoryEntry{"EnvironmentMapEffect", Requiring(CNA::GraphicsCapability::ThreeD, BuildEnvironmentMapEffectDemos())},
                 CategoryEntry{"SkinnedEffect", Requiring(CNA::GraphicsCapability::ThreeD, BuildSkinnedEffectDemos())},
                 CategoryEntry{"Custom Shader", Requiring(CNA::GraphicsCapability::ThreeD, BuildCustomShaderDemos())},
+                CategoryEntry{"PbrEffect", Requiring(CNA::GraphicsCapability::ThreeD, BuildPbrEffectDemos())},
             }},
             GroupEntry{"Device State, Camera & Model", {
                 CategoryEntry{"Depth & Culling", Requiring(CNA::GraphicsCapability::ThreeD, BuildDepthAndCullingDemos())},
