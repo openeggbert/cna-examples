@@ -17,7 +17,7 @@ state.
 |---|---|
 | Demo screens | **247** across 13 areas, 78 categories |
 | Last full validation | **247/247 on EASYGL and SDL_RENDERER**, 247 screenshots each, 0 layout problems, catalog+layout+docs clean |
-| Head commit | (this C4 extension, about to be committed) |
+| Head commit | `d34c6da` |
 
 **Phases, in roadmap order:**
 
