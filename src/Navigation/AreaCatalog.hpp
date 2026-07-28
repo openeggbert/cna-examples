@@ -176,6 +176,8 @@
 #include "Demos/Content/Cnj/CustomCnjLoaderScreen.hpp"
 #include "Demos/Storage/Device/StorageDeviceScreen.hpp"
 #include "Demos/Storage/Container/SaveGameRoundTripScreen.hpp"
+#include "Demos/Storage/Container/DirectoriesAndFilesScreen.hpp"
+#include "Demos/Storage/Container/ContainerLifetimeScreen.hpp"
 #include "Demos/Diagnostics/Logging/LoggerScreen.hpp"
 #include "Demos/Diagnostics/Platform/PlatformInfoScreen.hpp"
 #include "Demos/Diagnostics/Capabilities/GraphicsCapabilityScreen.hpp"
@@ -1017,6 +1019,14 @@ inline std::vector<DemoEntry> BuildStorageContainerDemos() {
         "Save Game Round Trip", "Write, read back and delete a save that survives a restart",
         {"StorageContainer::CreateFile", "StorageContainer::OpenFile",
          "StorageContainer::FileExists", "StorageContainer::DeleteFile"}));
+    demos.push_back(MakeDemo<DirectoriesAndFilesScreen>(
+        "Directories & Files", "CreateDirectory/GetDirectoryNames/GetFileNames -- and why listing is not recursive",
+        {"StorageContainer::CreateDirectory", "StorageContainer::DeleteDirectory",
+         "StorageContainer::GetDirectoryNames", "StorageContainer::GetFileNames"}));
+    demos.push_back(MakeDemo<ContainerLifetimeScreen>(
+        "Container Lifetime", "Dispose, Disposing, reopening a container, and DeleteContainer",
+        {"StorageContainer::Dispose", "StorageContainer::Disposing",
+         "StorageDevice::DeleteContainer"}));
     return demos;
 }
 

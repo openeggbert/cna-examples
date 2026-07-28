@@ -25,6 +25,11 @@ using Microsoft::Xna::Framework::Storage::StorageDevice;
 // predictable enough to display on screen.
 inline constexpr const char* kAppName = "cna-examples";
 inline constexpr const char* kContainerName = "StorageDemo";
+// Distinct container names so each Container-category screen owns its own
+// on-disk directory tree -- sharing one would make one screen's cleanup (or
+// crash) visible as confusing leftover state in another.
+inline constexpr const char* kDirsContainerName = "StorageDemoDirs";
+inline constexpr const char* kLifetimeContainerName = "StorageDemoLifetime";
 
 // Applied once, on first use, and never reverted: unlike the timestep or the
 // window title, an app name is not something another demo could be surprised by.

@@ -1,6 +1,6 @@
 # NEXT — short-term continuity for cna-examples
 
-**Updated:** 2026-07-28 (autonomous session continuing — D3 and E both done, F1/C4-extend queued next)
+**Updated:** 2026-07-28 (autonomous session continuing — D3, E and C4-extend done, F1 queued next)
 **Branch:** `feature/examples-phase-bcde`, ahead of `develop` @ `d7353e3`, all
 pushed. Working tree clean, no jobs in flight, both native build trees green.
 **Authoritative plan:** [`plan.md`](plan.md). Historical record: [`plan20260727.md`](plan20260727.md).
@@ -15,9 +15,9 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **245** across 13 areas, 78 categories |
-| Last full validation | **245/245 on EASYGL and SDL_RENDERER**, 245 screenshots each, 0 layout problems, catalog+layout+docs clean |
-| Head commit | `5ea563c` |
+| Demo screens | **247** across 13 areas, 78 categories |
+| Last full validation | **247/247 on EASYGL and SDL_RENDERER**, 247 screenshots each, 0 layout problems, catalog+layout+docs clean |
+| Head commit | (this C4 extension, about to be committed) |
 
 **Phases, in roadmap order:**
 
@@ -28,7 +28,7 @@ state.
 | C1 Framework | **Done** — 5 categories, 17 screens |
 | C2 Math | **Done** — 5 categories, 16 screens |
 | C3 Content | **Done** — 5 categories, 7 screens |
-| C4 Storage | **Done, reduced scope** — 2 categories, 2 screens |
+| C4 Storage | **Done, extended 2026-07-28** — 2 categories, 4 screens |
 | C5 Diagnostics | **Done, reduced scope** — 4 categories, 4 screens |
 | D1 Audio/XACT | **Done, reduced scope** — 1 category, 2 screens |
 | D2 PBR | **BLOCKED, `needs_human`** — see §7 |
@@ -41,7 +41,7 @@ state.
 | E Avatars | **Done** — 3 categories, 7 screens, exactly at plan.md's original count |
 | F1 defect sweep | **Not started** |
 | F2 Emscripten | **BLOCKED on an upstream CNA defect** — exact one-line fix identified, not applied — see §6b and §7 |
-| F3 SDL_RENDERER pass | **Done** — 245/245 on both backends, 3D gated on ThreeD |
+| F3 SDL_RENDERER pass | **Done** — 247/247 on both backends, 3D gated on ThreeD |
 
 **Scope kept shrinking, and that was correct.** D4 went 4→3, D6 6→2, D7 3→2, D8 3→1, D3 5→4. Every
 cut was verified as already-covered, non-existent, or (D3's `SkinnedModelEXT`) genuinely out of
@@ -389,6 +389,21 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    `ComputeBoneTransformsEXT`'s per-bone hierarchy math -- worth a closer look if this area is
    revisited, starting from a direct dump of the computed world-bone matrix for the head bone
    across both clips.
+52. **`GetFileNames()`/`GetDirectoryNames()` never recurse.** Both only ever list this container's own
+   root. `CreateFile`/`OpenFile` happily accept a nested relative path like `"notes/todo.txt"` and the
+   file is completely real (`FileExists` confirms it) -- it is simply invisible to a root-level
+   listing call. Only a caller that already knows a subdirectory's name can enumerate what is inside
+   it. `DeleteDirectory` is also stricter than it looks: it throws on a non-empty directory rather
+   than doing anything recursive, unlike `StorageDevice::DeleteContainer` (next item).
+53. **`StorageContainer::Dispose()` does not gate anything.** No method on `StorageContainer` checks
+   `IsDisposed` before running, so `FileExists`/`CreateFile`/etc. on an already-disposed handle keep
+   working exactly as before -- confirmed live, not assumed. `Dispose()` here means only "the
+   `Disposing` event has fired" (itself genuinely idempotent: a 2nd call does not re-raise it,
+   confirmed by an event-subscriber counter). Reopening the same container name is not tracked at all
+   -- `StorageDevice::EndOpenContainer` hands out a brand-new object every time with no "already open"
+   concept, so two independent live handles over the same directory coexist fine and each immediately
+   sees what the other writes. `StorageDevice::DeleteContainer`, by contrast, really does remove the
+   entire tree in one call (`fs::remove_all`), no "must be empty" restriction.
 
 ## 6. Commands
 
@@ -650,10 +665,13 @@ writeup and NEXT.md §5 items 46–51 for the findings, including one unresolved
 recorded rather than chased down). It DOES need real avatar mesh/wardrobe assets, borrowed from
 `../cna/examples/demo_avatar/Content/` the same way as `.xnb`/XACT/D3.
 
-**(a) Phase F1 — defect sweep** over everything built this session.
+**C4 Storage extension is DONE** (2 new screens: Directories & Files, Container Lifetime — see
+`plan.md`'s C4 section for the full findings writeup). Two real findings verified live: `GetFileNames`/
+`GetDirectoryNames` never recurse into subdirectories even though `CreateFile`/`OpenFile` happily
+accept nested relative paths; and `StorageContainer::Dispose()` does not gate any further use of the
+object at all (no method checks `IsDisposed`) — it only means "the `Disposing` event has fired."
 
-**(b) Extend C4 Storage** — container directory operations and container lifetime, the two screens
-C4 deliberately left out.
+**(a) Phase F1 — defect sweep** over everything built this session.
 
 **Do NOT start** D2 or F2 without reading §7 first: both are blocked, D2 on an unexplained
 rendering failure (root cause now identified, see §7, but not applied) and F2 on a defect in CNA
@@ -662,7 +680,7 @@ and write up findings only — do not modify `../cna` this session.
 
 **Before writing any code for a phase**, grep `src/Demos/` for the APIs its plan row claims are
 missing. D6, D7, D8 and D3 all shrank once that was checked (or, for D3, once the architecture was
-actually understood) — the plan over-estimates gaps, and the existing 245 screens already cover
+actually understood) — the plan over-estimates gaps, and the existing 247 screens already cover
 more than it assumes.
 
 **Workflow that works here, in order:**

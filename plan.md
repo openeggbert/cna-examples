@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-28)
 
-Thirteen Areas, **245 demo screens** across 78 categories, all with real content. The numbers below
+Thirteen Areas, **247 demo screens** across 78 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -46,7 +46,7 @@ this file and `README.md`. Nothing here is counted by hand.
 | Framework | — | 5 | 17 |
 | Math | — | 5 | 16 |
 | Content | — | 5 | 7 |
-| Storage | — | 2 | 2 |
+| Storage | — | 2 | 4 |
 | Diagnostics | — | 4 | 4 |
 | Input | — | 5 | 52 |
 | Audio | — | 6 | 12 |
@@ -56,7 +56,7 @@ this file and `README.md`. Nothing here is counted by hand.
 | Avatars | — | 3 | 7 |
 | 2D Graphics | 4 | 13 | 40 |
 | 3D Graphics | 5 | 16 | 41 |
-| **Total** | **13** | **78** | **245** |
+| **Total** | **13** | **78** | **247** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -134,7 +134,7 @@ than assume a full pipeline, which is exactly what a real CNA consumer has to do
 own right.
 
 **F3 result.** *(Figures below are as-of F3, when the catalog held 218 screens. It has since grown
-to 245, and both backends were re-verified at 245/245 — see §7.0.)*
+to 247, and both backends were re-verified at 247/247 — see §7.0.)*
 `tools/sweep_backend.sh build-sdlrenderer` renders **218/218** with zero layout
 problems, and the EasyGL tree still renders 218/218 — no regression from the gating.
 
@@ -269,17 +269,17 @@ are the content build-out. F is verification.
 
 Original target end state: **13 Areas, ~290 demo screens.**
 
-### 7.0 Status as of 2026-07-28 — 245 screens, A/B/C/D/E substantially complete
+### 7.0 Status as of 2026-07-28 — 247 screens, A/B/C/D/E substantially complete
 
 | Phase | Status |
 |---|---|
-| A, B, C1–C5 | **Done** (C4/C5 at reduced scope) |
+| A, B, C1–C5 | **Done** (C4 extended to 4 screens 2026-07-28, still reduced from 6; C5 at reduced scope) |
 | D1 XACT · D3 Model Content · D4 Effect Reflection · D5 Textures & Queries · D6 Formats · D7 Input EXT · D8 Net | **Done**, all at reduced scope — see each phase's result section |
 | **D2 PBR** | **BLOCKED, `needs_human`** — screen written, never rendered, reverted. Root cause since identified (a polymorphic-vertex `sizeof()` mismatch, not the camera matrices) but not yet applied/reverified live. WIP preserved at [`docs/wip-pbr/`](docs/wip-pbr/) |
 | **E Avatars** | **Done** — 7 screens, 3 categories, exactly at plan.md's original target |
 | **F1** defect sweep | **Not started** |
 | **F2** Emscripten | **BLOCKED on a CNA defect** — compiles fully for wasm, fails linking `libCNA.a`. Exact one-line upstream fix now identified, not applied here |
-| **F3** SDL_RENDERER | **Done** — 245/245 on both backends |
+| **F3** SDL_RENDERER | **Done** — 247/247 on both backends (re-verified after C4's extension) |
 
 **The ~290 target will not be reached by building every planned screen, and that bias was
 consciously reversed mid-session (see NEXT.md §2a): D4 shipped 3 of 4, D6 2 of 6, D7 2 of 3, D8 1 of
@@ -478,15 +478,17 @@ preview (22500/22500 white pixels), the LZX-compressed one decodes to a genuinel
 correctly fails to load as a `Texture2D`, which is the wrong-type case the screen is there to
 show.
 
-#### C4 Storage — 2 categories, 2 screens — **DONE (reduced scope, see below)**
+#### C4 Storage — 2 categories, 4 screens — **DONE (reduced scope, see below)**
 
 | Category | Screens |
 |---|---|
 | StorageDevice (3) | `BeginShowSelector`/`EndShowSelector` per `PlayerIndex`, `IsConnected` · `DeviceChanged` event, free/total space · `SetAppNameEXT`/`GetStorageRootEXT` — where files really land on this OS |
 | StorageContainer (3) | Save-game write + read round trip · directories and files: `CreateDirectory`/`GetFileNames`/`GetDirectoryNames`/`DeleteFile` · container lifetime: `Dispose`, `Disposing`, reopen, `DeleteContainer` |
 
-**Shipped as 2 screens, not 6.** The two that exist cover the API's substance; the other four
-would have been variations on the same calls.
+**Shipped as 4 screens, not 6.** The original 2 covered the API's substance for the device/round-trip
+half; **extended 2026-07-28** (per the owner's "push closer to projected counts" instruction) with
+the two screens this section's own notes always called "the obvious next step": directory/file
+operations and container lifetime.
 
 - **StorageDevice** — the fake-async selector (`BeginShowSelector`/`EndShowSelector`) across all
   four `PlayerIndex` values, `IsConnected`/`FreeSpace`/`TotalSpace`, and the NOXNA
@@ -494,19 +496,43 @@ would have been variations on the same calls.
   and the space-requirement selector overloads folded in here rather than becoming their own
   screens.
 - **Save Game Round Trip** — open device, open container, `CreateFile`, write, close, `OpenFile`,
-  read back, `DeleteFile`. Directory operations (`CreateDirectory`/`GetDirectoryNames`) and
-  container lifetime are the obvious next screens if this area is extended.
+  read back, `DeleteFile`.
+- **Directories & Files** (new) — `CreateDirectory`, `DirectoryExists`, nested `CreateFile`/`OpenFile`
+  paths, `GetDirectoryNames()`/`GetDirectoryNames(pattern)`, `GetFileNames()`/`GetFileNames(pattern)`,
+  `DeleteDirectory`. **Real finding**: neither `GetFileNames()` nor `GetDirectoryNames()` recurses —
+  both only ever look at the container's own root. A file written to `notes/todo.txt` is completely
+  real (`FileExists` confirms it, `CreateFile`/`OpenFile` happily accept a nested relative path) and
+  is genuinely invisible to a root-level `GetFileNames()` call; only a caller that already knows the
+  subdirectory's name can list what's inside it. **Second finding**: `DeleteDirectory` throws on a
+  non-empty directory (confirmed live, caught and reported on screen) — it is not a recursive delete,
+  unlike `StorageDevice::DeleteContainer` below.
+- **Container Lifetime** (new) — `Dispose()`/`IsDisposed`/`Disposing`, reopening the same container
+  name while an old handle is still alive, and `StorageDevice::DeleteContainer`. **Real findings, all
+  verified live, not assumed from the header**: (1) `Disposing` is genuinely idempotent — a second
+  `Dispose()` call does not re-raise it, confirmed by an event-subscriber counter staying at 1. (2)
+  **`Dispose()` does not gate anything** — no method in `StorageContainer` checks `IsDisposed` before
+  running, so `FileExists()` (and every other operation) on an already-disposed handle keeps working
+  exactly as before; "disposed" here means only "the `Disposing` event has fired," not "this object is
+  now unusable." (3) Reopening is not tracked at all: `StorageDevice::EndOpenContainer` hands out a
+  brand-new `StorageContainer` every time with no notion of "already open" — two independent live
+  handles over the same on-disk directory coexist fine, and what one writes, the other immediately
+  sees. (4) `StorageDevice::DeleteContainer` removes the **entire** tree in one call
+  (`fs::remove_all` under the hood) with no "must be empty" restriction, unlike `DeleteDirectory`
+  above — confirmed by opening a third, brand-new handle after deletion and finding the marker file
+  gone.
 
 **Persistence is verified across processes, not just within one.** The demo recovers its counter
 by parsing the file it wrote, precisely so that a restart continues rather than resetting — an
 in-memory counter would look identical on screen and prove nothing. Checked by running the
 binary three times: the first wrote `save #1`, a second, separate process read it back and wrote
 `save #2`, and the delete path removed the file. Saves land under the real per-OS root
-(`~/.local/share/cna-examples/StorageDemo/Player1/` here), never in the repository.
+(`~/.local/share/cna-examples/StorageDemo/Player1/` here), never in the repository. The two new
+screens use their own dedicated container names (`StorageDemoDirs`, `StorageDemoLifetime`) so none
+of the four Storage screens can leave state that confuses another.
 
 `StorageContainer::ResolvePath` is private, so an application cannot ask where a file physically
-went — deliberately, since the sandbox is the point. The screen shows the storage root instead
-and says why.
+went — deliberately, since the sandbox is the point. The screens show the storage root instead
+and say why.
 
 #### C5 Diagnostics — 4 categories, 4 screens — **DONE (reduced scope, see below)**
 
@@ -904,7 +930,7 @@ build" cleanly on SDL_RENDERER while `AvatarDescription` keeps working there.
 |---|---|
 | F1 | **Not started.** **Xvfb screenshot sweep of every screen** via B5's `--demo`/`--screenshot`/`--frames` CLI. The 2D and 3D passes found 11 real defects between them (two of them framework-level bugs in CNA itself, not demo bugs), so this is the highest-yield verification step available. Every defect found is fixed or explicitly recorded. |
 | F2 | **BLOCKED on a CNA defect.** `emcmake` configures and **every translation unit compiles for wasm**; two real cna-examples bugs were found and fixed getting there (the web branch linked `SDL3::SDL3-static`, a target that never existed in this scope, and the three Media/Video screens needed a platform gate). The link then fails inside CNA's own archive: `libCNA.a(VideoContentTypeReader.cpp.o)` references `Media::Video`, whose implementation CNA does not build for Emscripten. Any web consumer of CNA hits this. The exact one-line fix location in `../cna/cmake/CnaLibrary.cmake` has since been identified but not applied (belongs in that repo). See `NEXT.md` §6b/§7. |
-| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with every 3D Graphics category gated on `SupportsCapability(ThreeD)`. **245/245 render on both backends**, 245 screenshots each, 0 layout problems. See below. |
+| F3 | **Done.** The catalog builds and runs against the 2D-only `SDL_RENDERER` backend, with every 3D Graphics category gated on `SupportsCapability(ThreeD)`. **247/247 render on both backends** (re-verified after C4's extension, 2026-07-28), 247 screenshots each, 0 layout problems. See below. |
 
 Android hardware verification is **not** part of this cycle — see §10.
 
