@@ -19,7 +19,7 @@ state.
 |---|---|
 | Demo screens | **249** across 13 areas, 79 categories |
 | Last full validation | **249/249 on EASYGL and SDL_RENDERER** (re-run after the `-Wall -Wextra` warnings audit), 249 screenshots each, 0 layout problems, 0 compiler warnings on the cna_examples target, catalog+layout+docs clean |
-| Head commit | *(this warnings-audit commit)* |
+| Head commit | `629b72b` |
 
 **Phases, in roadmap order:**
 
