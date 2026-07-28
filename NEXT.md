@@ -15,7 +15,7 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **229** across 12 areas, 75 categories |
+| Demo screens | **232** across 12 areas, 75 categories |
 | Last full validation | 222/222 on EASYGL **and** SDL_RENDERER, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
 | Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
@@ -29,7 +29,9 @@ state.
 | Phase D5 (3D Textures & Queries) | **Done** — 1 category, 4 screens |
 | Phase D4 (Effect Reflection) | **Done, reduced scope** — 1 category, 3 screens |
 | Phase D2 (PBR) | **Blocked** — see §7, `needs_human` |
-| Phases D3, D6–D8, E, F1, F2 | Not started |
+| Phase D7 (Input EXT) | **Done, reduced scope** — 2 screens into existing categories |
+| Phase D8 (Net) | **Done, reduced scope** — 1 screen; verdict amber, see #39 |
+| Phases D3, D6, E, F1, F2 | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
 
@@ -234,6 +236,30 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    and a DELETED screen would have looked like it was still passing. `tools/sweep.sh` and
    `tools/sweep_backend.sh` now clear `*.png`/`*.log` first, but only on an unfiltered run, since
    a filtered sweep is not authoritative about what should exist.
+
+36. **Check what Input already covers before adding "missing" EXT screens.** D7's plan listed
+   gamepad EXT sensors/haptics as a gap, but `GetPowerInfoEXT`, `GetGUIDEXT`, `GetPlayerIndexEXT`
+   and `SetTriggerVibrationEXT` were already demonstrated across the existing 50 Input screens.
+   Only `GetGyroEXT`, `SetLightBarEXT`, `TouchCollection::FindById`, `TouchPanel::NO_FINGER` and
+   `GamePadButtons::FromButtonArray` were genuinely absent. One grep over `src/Demos/Input/`
+   settles it.
+37. **The EXT calls fail in two different ways.** `GetGyroEXT`/`GetAccelerometerEXT` return
+   **bool** and fill the out-parameter only on true -- unchecked reads give stale data.
+   `SetLightBarEXT` returns **void**: no light bar and no controller are both silent no-ops, so
+   nothing can branch on it.
+38. **`TouchCollection::FindById` writes a SENTINEL on failure**, it does not leave the
+   out-parameter alone and does not throw. The miss is signalled by
+   `TouchLocationState::Invalid`. `TouchCollection` uses `Add()`, not `push_back()`.
+
+39. **CNA really implements `SimulatedLatency`/`SimulatedPacketLoss`; FNA does not.** In FNA both
+   are inert auto-properties consumed by nothing. CNA's `ENetBackend` delays and drops AppData for
+   real, scoped to **AppData only** (session-management and host-relay traffic are unaffected, so
+   100% loss does not kill the lobby), with 0.0/1.0 handled deterministically.
+   **Still unproven here:** the demo could not observe a dropped packet, because `SendData` with no
+   recipient broadcasts to the OTHER gamers and a local session in this environment yields too few
+   local gamers for the packets to have anywhere to go. Tried `Create(Local, 1, 4)` and
+   `Create(Local, 2, 4)`, plus an explicit second receiver; both gave 0 received even at 0% loss.
+   To make it conclusive, get two genuinely signed-in local gamers into the session first.
 
 ## 6. Commands
 

@@ -36,6 +36,7 @@
 #include "Demos/Input/Gamepad/TriggersScreen.hpp"
 #include "Demos/Input/Gamepad/DeadZoneModesScreen.hpp"
 #include "Demos/Input/Gamepad/VibrationScreen.hpp"
+#include "Demos/Input/Gamepad/MotionAndLightBarScreen.hpp"
 #include "Demos/Input/Gamepad/PowerInfoScreen.hpp"
 #include "Demos/Input/Gamepad/PlayerIndexEXTScreen.hpp"
 #include "Demos/Input/Gamepad/DeviceInfoScreen.hpp"
@@ -62,6 +63,7 @@
 #include "Demos/Input/Other/InputDeviceEnumerationScreen.hpp"
 #include "Demos/Input/Other/InputDeviceHotplugScreen.hpp"
 #include "Demos/Input/Other/OtherSummaryScreen.hpp"
+#include "Demos/Input/Other/SentinelsAndFactoriesScreen.hpp"
 
 #include "Demos/Audio/SoundEffect/PlayToneScreen.hpp"
 #include "Demos/Audio/SoundEffect/MasterVolumeAndSettingsScreen.hpp"
@@ -96,6 +98,7 @@
 #include "Demos/Net/NetworkSession/SystemLinkHostScreen.hpp"
 #include "Demos/Net/NetworkSession/DiscoverAndJoinScreen.hpp"
 #include "Demos/Net/NetworkSession/PacketRoundTripScreen.hpp"
+#include "Demos/Net/NetworkSession/SimulatedConditionsScreen.hpp"
 #include "Demos/Net/NetworkSession/SessionPropertiesAndEventsScreen.hpp"
 #include "Demos/Net/NetworkGamer/GamerRosterScreen.hpp"
 #include "Demos/Net/NetworkGamer/NetworkMachineScreen.hpp"
@@ -444,6 +447,10 @@ inline std::vector<DemoEntry> BuildGamepadDemos() {
         "Device Info", "GUID/path/serial/firmware/Steam handle/connection/touchpads (EXT)"));
     demos.push_back(MakeDemo<StateEqualityHashScreen>(
         "State Equals()/GetHashCode()", "Snapshot comparison correctness"));
+    demos.push_back(MakeDemo<MotionAndLightBarScreen>(
+        "Motion Sensors & Light Bar",
+        "GetGyroEXT/GetAccelerometerEXT return bool; SetLightBarEXT reports nothing",
+        {"GamePad"}));
     return demos;
 }
 
@@ -496,6 +503,10 @@ inline std::vector<DemoEntry> BuildOtherDemos() {
         "Device Hot-plug Events", "Mouse/Keyboard Connected/DisconnectedEXT (EXT)"));
     demos.push_back(MakeDemo<OtherSummaryScreen>(
         "Summary", "An at-a-glance dashboard across every subsystem above"));
+    demos.push_back(MakeDemo<SentinelsAndFactoriesScreen>(
+        "Sentinels & Factories",
+        "FindById's Invalid sentinel, TouchPanel::NO_FINGER, GamePadButtons::FromButtonArray",
+        {"TouchCollection", "TouchPanel", "GamePadButtons"}));
     return demos;
 }
 
@@ -641,6 +652,10 @@ inline std::vector<DemoEntry> BuildNetworkSessionDemos() {
         "Packet Round-Trip", "PacketWriter/PacketReader -- and a real Write(Color)/ReadColor() mismatch"));
     demos.push_back(MakeDemo<SessionPropertiesAndEventsScreen>(
         "Properties & Events", "NetworkSessionProperties + GamerJoined/GamerLeft/HostChanged"));
+    demos.push_back(MakeDemo<SimulatedConditionsScreen>(
+        "Simulated Latency & Packet Loss",
+        "Inert auto-properties in FNA; really implemented here, and measured",
+        {"NetworkSession"}));
     return demos;
 }
 

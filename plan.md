@@ -36,7 +36,7 @@ generation, avatar mesh assets), `cna-examples` reuses that solution rather than
 
 ## 2. Current state (2026-07-27)
 
-Twelve Areas, **229 demo screens** across 75 categories, all with real content. The numbers below
+Twelve Areas, **232 demo screens** across 75 categories, all with real content. The numbers below
 are produced by `tools/check_catalog.py`, which cross-checks the screen files on disk against the
 `MakeDemo<>` registrations in `src/Navigation/AreaCatalog.hpp` and against the counts written into
 this file and `README.md`. Nothing here is counted by hand.
@@ -48,14 +48,14 @@ this file and `README.md`. Nothing here is counted by hand.
 | Content | — | 5 | 7 |
 | Storage | — | 2 | 2 |
 | Diagnostics | — | 4 | 4 |
-| Input | — | 5 | 50 |
+| Input | — | 5 | 52 |
 | Audio | — | 6 | 12 |
 | Devices | — | 6 | 15 |
-| Net | — | 4 | 14 |
+| Net | — | 4 | 15 |
 | Media | — | 4 | 17 |
 | 2D Graphics | 4 | 13 | 38 |
 | 3D Graphics | 5 | 16 | 37 |
-| **Total** | **12** | **75** | **229** |
+| **Total** | **12** | **75** | **232** |
 
 Before the Phase A work described below, the catalog held **168** demos in 50 categories. (An
 early draft of this document said 169 — that number came from counting `*Screen.hpp` files, which
@@ -71,10 +71,10 @@ Per-category breakdown:
 | Content | ContentManager Basics (2), Manifest (1), CNJ Format (2), XNB Format (1), Errors (1) |
 | Storage | StorageDevice (1), StorageContainer (1) |
 | Diagnostics | Logging (1), Platform & Build (1), Backend & Capabilities (1), Adapter & Display (1) |
-| Input | Keyboard (10), Mouse (10), Gamepad (10), Touch (10), Other (10) |
+| Input | Keyboard (10), Mouse (10), Gamepad (11), Touch (10), Other (11) |
 | Audio | SoundEffect (2), SoundEffectInstance (3), 3D Audio (2), DynamicSoundEffectInstance (1), Microphone (2), XACT (2) |
 | Devices | Sensors (4), Vibration (1), Camera (1), System & Display (3), Power (1), Desktop Integration (5) |
-| Net | NetworkSession (5), NetworkGamer (2), GamerServices (5), Leaderboards (2) |
+| Net | NetworkSession (6), NetworkGamer (2), GamerServices (5), Leaderboards (2) |
 | Media | Song (6), Video (3), MediaLibrary (4), Pictures (4) |
 | 2D Graphics | Drawing Basics (5), Sort Modes (5), DrawString (4), Begin/End & State (4), Texture2D Basics (3), SaveAs & Reload (2), SpriteFont (4), BlendState (2), SamplerState (2), Viewport & Scissor (3), Render-to-Texture Basics (2), Screen Transition (1), Dispose Safety (1) |
 | 3D Graphics | Vertex Types (3), Primitive Types (2), Buffers (3), Basic Rendering (3), Lighting (3), Fog (1), AlphaTestEffect (2), DualTextureEffect (1), EnvironmentMapEffect (2), SkinnedEffect (1), Custom Shader (2), Depth & Culling (3), Camera & Projection (2), Model (2), Volume & Cube Textures (4), Effect Reflection (3) |
@@ -664,6 +664,44 @@ wherever `DrawLines` happened to finish. `DemoScreen::DrawVerdict()` now clamps 
 screens were trimmed to fit naturally so the clamp stays a safety net rather than the normal path.
 `tools/check_layout.py` did not catch this: it only inspects literal draw positions in source, and
 these were computed.
+
+#### D7 Input EXT — 2 screens added to existing categories — **DONE (reduced scope)**
+
+Added to **Gamepad** and **Other** rather than creating a category: these fill gaps in areas that
+already exist. Checked the existing 50 Input screens first, which changed the scope — `GetPowerInfoEXT`,
+`GetGUIDEXT`, `GetPlayerIndexEXT` and `SetTriggerVibrationEXT` were **already covered**, so the
+planned "gamepad EXT" screen would have largely duplicated them. The genuine gaps were `GetGyroEXT`,
+`SetLightBarEXT`, and the three `feature/input` APIs, none of which appeared anywhere in the tree.
+
+| Screen | Category | Point |
+|---|---|---|
+| Motion Sensors & Light Bar | Gamepad | The EXT calls' failure modes differ: the sensor getters return **bool** and fill their out-parameter only when true, so reading it unchecked yields stale data; `SetLightBarEXT` returns **void** and is a silent no-op on a pad without a bar or with no pad at all — write-only hardware with no feedback channel. |
+| Sentinels & Factories | Other | `TouchCollection::FindById` returns bool **and writes a sentinel** on failure — ignoring the return value still hands you a `TouchLocation`, one whose state is `Invalid`. Plus `TouchPanel::NO_FINGER` and `GamePadButtons::FromButtonArray`. |
+
+The second screen needs no touchscreen or controller — it builds its own `TouchCollection` — which
+is precisely why it earns a screen: these are the parts that cannot be checked by waving hardware
+at the app. All 8 of its claims are verified live and reported by a swatch.
+
+#### D8 Net — 1 screen — **DONE (reduced scope)**
+
+`QualityOfService` was already read on the Discover & Join screen and the full `SendDataOptions`
+matrix already appears across nine existing Net screens, so the genuine gap was simulated network
+conditions — added to **NetworkSession** as *Simulated Latency & Packet Loss*.
+
+**The finding: CNA really implements these, and FNA does not.** In FNA `SimulatedLatency` and
+`SimulatedPacketLoss` are plain, inert auto-properties — settable, readable, consumed by nothing
+anywhere in its stubbed-out source. CNA's `ENetBackend` holds delayed AppData in a per-session
+delivery queue and drops packets at exactly the configured rate. Netcode "tested" against FNA's
+versions was tested against nothing. Both are deliberately scoped to **AppData only**, so
+session-management traffic and a host's relay hop for two other peers are unaffected and 100% loss
+does not tear the lobby down; 0.0 and 1.0 are handled deterministically without touching the RNG.
+
+**The screen's verdict is amber, honestly.** It sends a burst at 0% loss and again at 100% and
+compares the counts, but no AppData arrives in a local session even at 0% — `SendData` with no
+recipient broadcasts to the *other* gamers, and this environment yields too few local gamers for
+that to have anywhere to go. The screen reports that outcome explicitly and distinguishes it from
+a real failure rather than claiming a demonstration it could not make. Making it conclusive needs
+two genuinely signed-in local gamers; that is the obvious next step if this screen is revisited.
 
 ### Phase E — Avatars Area
 
