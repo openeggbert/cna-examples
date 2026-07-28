@@ -15,7 +15,7 @@ state.
 
 | | |
 |---|---|
-| Demo screens | **233** across 12 areas, 75 categories |
+| Demo screens | **234** across 12 areas, 75 categories |
 | Last full validation | 222/222 on EASYGL **and** SDL_RENDERER, 0 layout problems, catalog+layout+docs clean |
 | Phase A (correct what exists) | **Done** — see plan.md §7 |
 | Phase B (navigation shell) | **Done** — search, drag-scroll, breadcrumbs, API footer |
@@ -31,7 +31,7 @@ state.
 | Phase D2 (PBR) | **Blocked** — see §7, `needs_human` |
 | Phase D7 (Input EXT) | **Done, reduced scope** — 2 screens into existing categories |
 | Phase D8 (Net) | **Done, reduced scope** — 1 screen; verdict amber, see #39 |
-| Phase D6 (2D formats/events) | **Partial** — SurfaceFormat matrix done; FromStream + Device Events outstanding |
+| Phase D6 (2D formats/events) | **Done, reduced scope** — 2 screens; Device Events already existed |
 | Phases D3, E, F1, F2 | Not started |
 
 `develop` is stable at `d7353e3` and is not being touched this session.
@@ -268,6 +268,15 @@ file afterwards was clean, which is what makes it confusing. Wait for the sweep,
    RGBA8" assumption that D5's notes and the D6 plan row both carried -- unsupported formats are
    refused outright here, not coerced. Do not design a screen around Dxt5 or a float format
    without probing first.
+
+41. **D6's Device Events group was already built.** `Framework/DeviceManager` covers MSAA,
+   VSync/`PresentInterval` and `DeviceReset` between `DeviceEventsScreen` and
+   `VSyncAndMultiSamplingScreen`. Grep before adding a planned group; this is the third phase in a
+   row (D7, D8, D6) whose scope shrank once existing coverage was checked.
+42. **`Texture2D::FromStream` rejects all malformed input properly** -- empty, random noise, and a
+   truncated PNG (valid signature, no data) all throw rather than returning a garbage texture.
+   BMP decodes too; the demo hand-builds a 2x2 24-bit BMP rather than vendoring an asset.
+   Content pictures live under `Content/MediaLibraryDemo/Pictures/` (capital P).
 
 ## 6. Commands
 

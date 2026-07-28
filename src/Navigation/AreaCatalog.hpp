@@ -194,6 +194,7 @@
 #include "Demos/Graphics2D/BeginEndState/TransformMatrixScreen.hpp"
 #include "Demos/Graphics2D/Texture2DBasics/ProceduralCreationScreen.hpp"
 #include "Demos/Graphics2D/Texture2DBasics/SetDataGetDataRoundTripScreen.hpp"
+#include "Demos/Graphics2D/Texture2DBasics/FromStreamFormatsScreen.hpp"
 #include "Demos/Graphics2D/Texture2DBasics/SurfaceFormatMatrixScreen.hpp"
 #include "Demos/Graphics2D/Texture2DBasics/PropertiesAndDisposeScreen.hpp"
 #include "Demos/Graphics2D/SaveAsReload/SaveAsPngRoundTripScreen.hpp"
@@ -1117,6 +1118,10 @@ inline std::vector<DemoEntry> BuildTexture2DBasicsDemos() {
         "SurfaceFormat Matrix",
         "All 19 formats constructed for real -- there is no SupportsFormat() query",
         {"Texture2D", "SurfaceFormat"}));
+    demos.push_back(MakeDemo<FromStreamFormatsScreen>(
+        "FromStream Formats & Failures",
+        "A real PNG, a hand-built BMP, and what happens on empty/noise/truncated bytes",
+        {"Texture2D"}));
     return demos;
 }
 
