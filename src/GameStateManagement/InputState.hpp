@@ -114,16 +114,23 @@ public:
             return;
         }
 
+        // GamePad::GetState starts CNA's controller subsystem on first use.
+        // ScreenManager updates before its first Draw, so defer that first call
+        // by one frame and let the initial menu be presented immediately.
+        const bool pollGamePad = gamePadPollingStarted_;
         for (int i = 0; i < MaxInputs; i++) {
             LastKeyboardStates[i] = CurrentKeyboardStates[i];
-            LastGamePadStates[i]  = CurrentGamePadStates[i];
-
             CurrentKeyboardStates[i] = Keyboard::GetState(static_cast<PlayerIndex>(i));
-            CurrentGamePadStates[i]  = GamePad::GetState(static_cast<PlayerIndex>(i));
 
-            if (CurrentGamePadStates[i].getIsConnectedProperty())
-                GamePadWasConnected[i] = true;
+            if (pollGamePad) {
+                LastGamePadStates[i]  = CurrentGamePadStates[i];
+                CurrentGamePadStates[i]  = GamePad::GetState(static_cast<PlayerIndex>(i));
+
+                if (CurrentGamePadStates[i].getIsConnectedProperty())
+                    GamePadWasConnected[i] = true;
+            }
         }
+        gamePadPollingStarted_ = true;
 
         newTapPosition_.reset();
         std::optional<Vector2> heldTouch;
@@ -295,6 +302,7 @@ private:
     std::vector<ScriptedAction> scripted_;
     ScriptedAction currentScripted_ = ScriptedAction::None;
     bool scriptedOnly_ = false;
+    bool gamePadPollingStarted_ = false;
     bool pointerDown_ = false;
     bool pointerReleased_ = false;
     Vector2 pointerPosition_;
