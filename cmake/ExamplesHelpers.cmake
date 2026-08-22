@@ -8,8 +8,8 @@
 # cna_examples_configure_target(target_name)
 #
 # Links `target_name` against CNA/SHARP_RUNTIME, applies
-# Emscripten/Windows packaging specifics, and copies Content/ next to the
-# built executable.
+# Emscripten/Windows packaging specifics, packages Content/ into Emscripten's
+# virtual filesystem, and copies it next to native executables.
 function(cna_examples_configure_target target_name)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT WIN32 AND NOT EMSCRIPTEN)
         # cnanext's CNA umbrella target carries its selected modular renderer
@@ -25,12 +25,27 @@ function(cna_examples_configure_target target_name)
         # found". Linking CNA is enough: its own link interface carries the
         # static SDL archives through.
         target_link_libraries(${target_name} PRIVATE CNA SHARP_RUNTIME)
+        # CNA uses the standardized Wasm exception ABI. add_subdirectory()
+        # directory options do not propagate back to this application's target,
+        # so repeat the ABI selection for the final executable and linker.
+        target_compile_options(${target_name} PRIVATE
+            -fwasm-exceptions
+            -sWASM_LEGACY_EXCEPTIONS=0
+        )
+        target_link_options(${target_name} PRIVATE
+            -fwasm-exceptions
+            -sWASM_LEGACY_EXCEPTIONS=0
+        )
         set_target_properties(${target_name} PROPERTIES SUFFIX ".html")
         target_link_options(${target_name} PRIVATE
             -sALLOW_MEMORY_GROWTH=1
             -sFORCE_FILESYSTEM=1
             "-sMIN_WEBGL_VERSION=2"
             "-sMAX_WEBGL_VERSION=2"
+            # A browser cannot access the sibling Content/ directory directly.
+            # Preload it at the absolute /Content path that ContentManager uses
+            # before Game::LoadContent requests menufont.
+            "SHELL:--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/Content@/Content"
         )
     else()
         target_link_libraries(${target_name} PRIVATE CNA SHARP_RUNTIME)
@@ -108,6 +123,17 @@ function(cna_examples_configure_target target_name)
 
     set(_cna_xnb_fixtures "${CMAKE_CURRENT_SOURCE_DIR}/../cnanext/tests/assets/xnb")
     if(EXISTS "${_cna_xnb_fixtures}")
+        if(EMSCRIPTEN)
+            # Keep the web filesystem equivalent to the native post-build
+            # layout. The exclusions mirror the removal below: Calibri is
+            # proprietary and its decompressed glyph atlas must not ship.
+            target_link_options(${target_name} PRIVATE
+                "SHELL:--preload-file ${_cna_xnb_fixtures}@/Content/ContentDemo/xnb"
+                "SHELL:--exclude-file ${_cna_xnb_fixtures}/monogame/windows/lzx/FontCalibri14.xnb"
+                "SHELL:--exclude-file ${_cna_xnb_fixtures}/monogame/windows/lzx/FontCalibri14.xnb.manifest.json"
+                "SHELL:--exclude-file ${_cna_xnb_fixtures}/monogame/windows/lzx/reference-decompressed/FontCalibri14.decompressed.bin"
+            )
+        endif()
         add_custom_command(TARGET ${target_name} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory
                 "${_cna_xnb_fixtures}"
@@ -142,6 +168,11 @@ function(cna_examples_configure_target target_name)
     # ---------------------------------------------------------------------
     set(_cna_avatar_content "${CMAKE_CURRENT_SOURCE_DIR}/../cnanext/modules/gamer-services/examples/demo_avatar/Content")
     if(EXISTS "${_cna_avatar_content}")
+        if(EMSCRIPTEN)
+            target_link_options(${target_name} PRIVATE
+                "SHELL:--preload-file ${_cna_avatar_content}@/Content/AvatarDemo"
+            )
+        endif()
         add_custom_command(TARGET ${target_name} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory
                 "${_cna_avatar_content}"

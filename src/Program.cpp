@@ -35,8 +35,20 @@ int main(int argc, char** argv) {
         return 0;
     }
 
+#if defined(__EMSCRIPTEN__)
+    // Game::Run() registers Emscripten's asynchronous main loop by unwinding
+    // this stack frame. The game therefore must outlive main(), rather than
+    // being a local whose destructor cancels the loop before the first Draw.
+    auto* game = new CnaExamples::CnaExamplesGame(options);
+    if (game->StartupFailed()) {
+        delete game;
+        return 2;
+    }
+    game->Run();
+#else
     CnaExamples::CnaExamplesGame game(options);
     if (game.StartupFailed()) return 2;
     game.Run();
+#endif
     return 0;
 }
