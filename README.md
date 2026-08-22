@@ -60,7 +60,7 @@ registrations in `src/Navigation/AreaCatalog.hpp` all agree.
   Gamepad, Touch, and Input's joystick/haptics screens (no controller, touchscreen, raw joystick
   or haptic device available); Devices' mobile-only Sensors/Vibration screens; Camera
   (no webcam); MessageBox/FileDialog (need a human).
-- **Backends:** `EASYGL` and `SDL_RENDERER` are both verified — 249/249 demos render on each.
+- **Renderers:** `OPENGLES3` (implemented by EasyGL) and `SDL_RENDERER` are both verified — 249/249 demos render on each.
   `SDL_RENDERER` is 2D-only by design, so the 3D Graphics area is gated on
   `GraphicsDevice::SupportsCapability(ThreeD)` and those demos explain themselves rather than
   throwing. See `plan.md` §4.
@@ -104,7 +104,7 @@ tools/sweep.sh Media           # ...or just the ones matching a filter
 tools/check_shots.py build/screenshots   # flag blank/overflowing screens
 
 # A second backend, in its own build tree
-cmake -S . -B build-sdlrenderer -DCNA_GRAPHICS_BACKEND=SDL_RENDERER \
+cmake -S . -B build-sdlrenderer -DCNA_GRAPHICS_RENDERER=SDL_RENDERER \
   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
 cmake --build build-sdlrenderer -j4 --target cna_examples
 tools/sweep_backend.sh build-sdlrenderer
@@ -124,15 +124,15 @@ tools/sweep_backend.sh build-sdlrenderer
 |---|---|
 | CMake | ≥ 3.20 |
 | C++ compiler | C++23 (GCC 13+, Clang 16+, MSVC 19.38+) |
-| CNA | sibling directory `../cna` |
-| sharp-runtime | sibling directory `../sharp-runtime` |
+| CNA | sibling directory `../cnanext` |
+| sharp-runtime | sibling directory `../sharp-runtimenext` |
 
 Clone all three side-by-side:
 
 ```
 openeggbert/
-├── cna/
-├── sharp-runtime/
+├── cnanext/
+├── sharp-runtimenext/
 └── cna-examples/       ← this repo
 ```
 
@@ -153,9 +153,9 @@ Run it:
 Keep the `-j4` ceiling and `ccache` — see `../CLAUDE.md` for why (unbounded parallel builds have
 driven this machine into swap).
 
-The graphics backend defaults to `EASYGL`; override with
-`-DCNA_GRAPHICS_BACKEND=<SDL_RENDERER|EASYGL|VULKAN|BGFX|WEBGPU>` if needed (subject to CNA's
-own backend maturity — see CNA's `CLAUDE.md`).
+The graphics renderer defaults to `OPENGLES3` (CNA's EasyGL implementation); override with
+`-DCNA_GRAPHICS_RENDERER=<SDL_RENDERER|OPENGLES2|OPENGLES3|OPENGL33|VULKAN|BGFX|WEBGPU>` if
+needed (subject to CNA's own renderer maturity).
 
 ## Project structure
 
@@ -163,7 +163,7 @@ own backend maturity — see CNA's `CLAUDE.md`).
 cna-examples/
 ├── plan.md                        Architecture, CNA coverage analysis, roadmap
 ├── plan20260727.md                Archived previous plan
-├── CMakeLists.txt                 Top-level build (sibling add_subdirectory of ../cna)
+├── CMakeLists.txt                 Top-level build (sibling add_subdirectory of ../cnanext)
 ├── Content/                       Menu font + UI textures + demo media
 │   ├── MediaDemo/                 ffmpeg-generated tones and a test video clip
 │   └── MediaLibraryDemo/          A synthetic music/picture library (see tools/)
@@ -199,9 +199,9 @@ procedurally at runtime. No third-party audio, video, image or metadata is shipp
 
 The one exception is *borrowed, not bundled*: the Content area's `.xnb` demos need real
 MonoGame-produced files, which CNA can read but never write. Those are copied out of
-`../cna/tests/assets/xnb` into the build output at build time and are **not** in version
+`../cnanext/tests/assets/xnb` into the build output at build time and are **not** in version
 control — they are Ms-PL, and this repository is MIT. `FontCalibri14.xnb` is excluded even
-from that copy, because it embeds a rasterised Calibri glyph atlas. Build without `../cna`
+from that copy, because it embeds a rasterised Calibri glyph atlas. Build without `../cnanext`
 and the XNB demos report the fixtures as unavailable instead of failing.
 
 ## Development

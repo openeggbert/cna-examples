@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "CNA/GraphicsBackendType.hpp"
-#include "CNA/Platform.hpp"
+#include "CNA/GraphicsRendererType.hpp"
+#include "CNA/TargetPlatform.hpp"
 
 #include "Demos/DemoScreen.hpp"
 
@@ -38,8 +38,8 @@ protected:
         lines.push_back("at runtime, because none of it can change while the app is running.");
         lines.emplace_back();
         lines.push_back("CNA::getCurrentPlatform()          = " + PlatformName());
-        lines.push_back("CNA::getCurrentGraphicsBackendName = " +
-                        std::string(CNA::getCurrentGraphicsBackendName()));
+        lines.push_back("CNA::getCurrentGraphicsRendererName = " +
+                        std::string(CNA::getCurrentGraphicsRendererName()));
         lines.emplace_back();
         lines.push_back("Compiler:");
         lines.push_back("  " + CompilerName());
@@ -62,10 +62,10 @@ protected:
 private:
     static std::string PlatformName() {
         switch (CNA::getCurrentPlatform()) {
-            case CNA::Platform::Desktop: return "Desktop";
-            case CNA::Platform::Android: return "Android";
-            case CNA::Platform::iOS:     return "iOS";
-            case CNA::Platform::Web:     return "Web (Emscripten)";
+            case CNA::TargetPlatform::Desktop: return "Desktop";
+            case CNA::TargetPlatform::Android: return "Android";
+            case CNA::TargetPlatform::iOS:     return "iOS";
+            case CNA::TargetPlatform::Web:     return "Web (Emscripten)";
         }
         return "(unknown)";
     }
@@ -98,11 +98,11 @@ private:
 #else
                            "compiled OUT   (audio calls become no-ops)");
 #endif
-        features.push_back(std::string("NOXNA purity     ") +
-#if defined(CNA_NOXNA)
-                           "ON             (non-XNA declarations are deprecation warnings)");
+        features.push_back(std::string("CNA_CNAEXT       ") +
+#if defined(CNA_CNAEXT)
+                           "compiled in    (CNA extended graphics layer)");
 #else
-                           "off            (CNA's NOXNA extensions are freely usable)");
+                           "compiled OUT   (CNA extended graphics layer unavailable)");
 #endif
         features.push_back(std::string("Build type       ") +
 #if defined(NDEBUG)

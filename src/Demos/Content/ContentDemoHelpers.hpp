@@ -7,7 +7,7 @@
 namespace CnaExamples::Demos::Content {
 
 // The .xnb fixtures this area loads are NOT part of this repository. They are
-// real MonoGame-produced files under ../cna/tests/assets/xnb, copied into the
+// real MonoGame-produced files under ../cnanext/tests/assets/xnb, copied into the
 // build output by cmake/ExamplesHelpers.cmake at build time.
 //
 // Two reasons they are borrowed rather than committed:
@@ -19,7 +19,7 @@ namespace CnaExamples::Demos::Content {
 // FontCalibri14.xnb is excluded outright even from the copy: it embeds a
 // rasterised Calibri glyph atlas, a proprietary Microsoft typeface.
 //
-// A checkout without ../cna therefore has no fixtures, and every demo in this
+// A checkout without ../cnanext therefore has no fixtures, and every demo in this
 // category must say so on screen rather than throw.
 
 inline constexpr const char* kXnbRoot = "Content/ContentDemo/xnb/monogame/windows";

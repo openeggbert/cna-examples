@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include <cstdio>
 
-#include "CNA/Entrypoint.hpp"
+#include "CNA/Platform/Entrypoint.hpp"
 #include "CnaExamplesGame.hpp"
 #include "Harness/CommandLine.hpp"
 #include "Harness/DemoIndex.hpp"

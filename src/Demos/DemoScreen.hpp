@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "CNA/GraphicsBackendType.hpp"
+#include "CNA/GraphicsRendererType.hpp"
 #include "CNA/GraphicsCapability.hpp"
 #include "Microsoft/Xna/Framework/Rectangle.hpp"
 #include "Microsoft/Xna/Framework/Graphics/SpriteEffects.hpp"
@@ -303,8 +303,8 @@ private:
         lines.push_back("Not available on this build.");
         lines.emplace_back();
         lines.push_back("Requires GraphicsCapability::" + CapabilityName(requiredCapability_.value()));
-        lines.push_back("Backend:  " + std::string(CNA::getCurrentGraphicsBackendName()) +
-                        "   (chosen at compile time via CNA_GRAPHICS_BACKEND)");
+        lines.push_back("Renderer: " + std::string(CNA::getCurrentGraphicsRendererName()) +
+                        "   (chosen at compile time via CNA_GRAPHICS_RENDERER)");
         lines.emplace_back();
         lines.push_back("This is the backend behaving as designed, not a failure. SDL_RENDERER,");
         lines.push_back("DX3 and CANVAS are 2D-only: their 3D entry points throw rather than");
@@ -326,6 +326,18 @@ private:
             case CNA::GraphicsCapability::WireFrame:               return "WireFrame";
             case CNA::GraphicsCapability::OcclusionQuery:          return "OcclusionQuery";
             case CNA::GraphicsCapability::CustomEffects:           return "CustomEffects";
+            case CNA::GraphicsCapability::Texture3D:               return "Texture3D";
+            case CNA::GraphicsCapability::MultiStreamVertexInput:  return "MultiStreamVertexInput";
+            case CNA::GraphicsCapability::Instancing:               return "Instancing";
+            case CNA::GraphicsCapability::StencilBuffer:            return "StencilBuffer";
+            case CNA::GraphicsCapability::AdditiveBlending:         return "AdditiveBlending";
+            case CNA::GraphicsCapability::CompiledEffects:          return "CompiledEffects";
+            case CNA::GraphicsCapability::FloatRenderTargets:       return "FloatRenderTargets";
+            case CNA::GraphicsCapability::HalfFloatRenderTargets:   return "HalfFloatRenderTargets";
+            case CNA::GraphicsCapability::HalfFloatTextureLinearFiltering:
+                return "HalfFloatTextureLinearFiltering";
+            case CNA::GraphicsCapability::ComputeShaders: return "ComputeShaders";
+            case CNA::GraphicsCapability::IndirectDraw:   return "IndirectDraw";
         }
         return "(unknown)";
     }

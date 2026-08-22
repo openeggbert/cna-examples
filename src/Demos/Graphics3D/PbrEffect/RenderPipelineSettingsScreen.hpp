@@ -21,24 +21,19 @@ using CNA::Graphics::TonemappingMode;
 
 // RenderPipelineSettings was the other half of plan.md's original D2 idea,
 // alongside PbrEffect (see PbrMetallicRoughnessScreen.hpp). It requires the
-// CNA_NOXNA CMake option -- OFF by default in CNA itself, same reasoning as
+// CNA_CNAEXT CMake option -- OFF by default in CNA itself, same reasoning as
 // CNA_DEVICES for the Devices area -- which this project now enables
 // alongside CNA_DEVICES in its own top-level CMakeLists.txt.
 //
-// What this screen actually proves, verified live rather than assumed:
-// RenderPipelineSettings is a real, faithful settings store -- every
-// property round-trips exactly what was set. What it also proves, by
-// grepping the ENTIRE ../cna source tree (not just this header): nothing
-// outside RenderPipelineSettings' own .cpp reads it. No GraphicsDevice, no
-// backend, no effect consults it. Its own doc comment says "Construct via
-// GraphicsDevice::GetRenderPipelineSettings()" -- that method does not
-// exist anywhere in CNA. This is therefore an honest "real API, zero
-// rendering effect" screen, in the same spirit as D8 Net's amber verdict
-// or D5's SurfaceFormat findings: the swatch is not a pass/fail on
-// correctness, it is a plain statement of what is and is not wired up.
+// This screen verifies the value contract directly: defaults and every
+// mutated property round-trip exactly. cnanext's RenderPipeline and its
+// post-processing passes now consume these settings, but this catalog screen
+// deliberately does not create or attach a RenderPipeline to its
+// GraphicsDevice, so it demonstrates the configuration object rather than a
+// second rendered pipeline.
 class RenderPipelineSettingsScreen : public DemoScreen {
 public:
-    RenderPipelineSettingsScreen() : DemoScreen("RenderPipelineSettings: A Store With No Reader") {}
+    RenderPipelineSettingsScreen() : DemoScreen("RenderPipelineSettings: Extended Configuration") {}
 
     void OnDemoLoad() override {
         RenderPipelineSettings settings;
@@ -57,9 +52,8 @@ public:
             !settings.isShadowsEnabled();
 
         // Set every property to a deliberately non-default value, then read
-        // every one back. This is the only thing about this type that is
-        // testable: is it a faithful store, or does something clamp/ignore
-        // a value silently? Verified live, not assumed.
+        // every one back. This proves the configuration object's value
+        // contract independently of any particular render pipeline.
         settings.setHDREnabled(true);
         settings.setExposure(2.5f);
         settings.setGamma(1.8f);
@@ -93,21 +87,20 @@ protected:
         const Color tint = mul(Color::White, TransitionAlpha());
         std::vector<std::string> lines;
         lines.push_back("CNA::Graphics::RenderPipelineSettings -- HDR/exposure/gamma, tonemapping,");
-        lines.push_back("bloom, SSAO, render & shadow quality. A real, faithful settings bag: every");
-        lines.push_back("property set above was read back exactly, defaults match the header too.");
+        lines.push_back("bloom, SSAO, render & shadow quality. Defaults and every value set above");
+        lines.push_back("round-trip exactly, confirming this configuration object's value contract.");
         lines.emplace_back();
-        lines.push_back("But grep the whole of ../cna: nothing outside this type's own .cpp reads");
-        lines.push_back("it. No GraphicsDevice, no backend, no effect consults these values -- the");
-        lines.push_back("header's own \"construct via GetRenderPipelineSettings()\" names a method");
-        lines.push_back("that does not exist anywhere in CNA. Setting these has zero visible effect.");
+        lines.push_back("cnanext's RenderPipeline and post-processing passes consume these settings.");
+        lines.push_back("This catalog screen tests the object itself; it does not create or attach a");
+        lines.push_back("RenderPipeline to this GraphicsDevice, so changing it here has no visual effect.");
         const Vector2 end = DrawLines(sb, font, Vector2(40.0f, 82.0f), lines, tint);
 
         const bool storeIsHonest = defaultsMatch_ && roundTripExact_;
         DrawVerdict(sb, font, end.Y + 6.0f,
-                    mul(storeIsHonest ? Color(230, 170, 40, 255) : Color(220, 60, 60, 255), TransitionAlpha()),
+                    mul(storeIsHonest ? Color(70, 200, 100, 255) : Color(220, 60, 60, 255), TransitionAlpha()),
                     tint,
                     storeIsHonest
-                        ? "Verified live: a real, faithful store -- and, by source grep, an unread one."
+                        ? "Verified live: defaults and all configured values round-trip exactly."
                         : "Round trip mismatch -- the store is not faithful (see NEXT.md).");
     }
 

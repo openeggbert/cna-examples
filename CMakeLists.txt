@@ -7,17 +7,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # ---------------------------------------------------------------------------
-# CNA dependency — consumed as a sibling add_subdirectory, same as
-# ../cna-samples, so CNA's own CMake machinery (SDL vendoring, backend
+# CNA dependency — consumed as a sibling add_subdirectory, so CNA's own CMake
+# machinery (SDL vendoring, renderer
 # selection, ...) is fully reused rather than duplicated here.
 # ---------------------------------------------------------------------------
 
-# EasyGL is CNA's strongest backend today (see plan.md section 3); a preset
-# or -DCNA_GRAPHICS_BACKEND=<X> on the command line still wins because CACHE
-# variables set earlier on the command line are not overwritten here.
-if(NOT DEFINED CNA_GRAPHICS_BACKEND)
-    set(CNA_GRAPHICS_BACKEND "EASYGL" CACHE STRING
-        "Graphics backend to use (SDL_RENDERER, EASYGL, BGFX, VULKAN, WEBGPU, ...)")
+# OPENGLES3 is CNA's Linux default renderer and the successor to the old
+# EASYGL selection. A preset or -DCNA_GRAPHICS_RENDERER=<X> on the command
+# line still wins because CACHE variables set earlier on the command line are
+# not overwritten here.
+if(NOT DEFINED CNA_GRAPHICS_RENDERER)
+    set(CNA_GRAPHICS_RENDERER "OPENGLES3" CACHE STRING
+        "Graphics renderer to use (SDL_RENDERER, OPENGLES3, OPENGL33, VULKAN, WEBGPU, ...)")
 endif()
 
 set(CNA_BUILD_TESTS           OFF CACHE BOOL "Build CNA tests"           FORCE)
@@ -33,23 +34,15 @@ set(CNA_DEVICES ON CACHE BOOL "Enable CNA-specific device/sensor extensions" FOR
 
 # CNA::Graphics::RenderPipelineSettings (D2's honesty screen) lives entirely
 # behind this flag -- default OFF in CNA itself, same reasoning as
-# CNA_DEVICES above (a NOXNA extension beyond XNA 4.0). Small, self-contained
-# surface (7 files total in ../cna: RenderPipelineSettings + PbrMaterial +
-# their 3 small enum headers), no dependency on any other subsystem.
-set(CNA_NOXNA ON CACHE BOOL "Enable CNA NOXNA extended graphics layer" FORCE)
+# CNA_DEVICES above (an extension beyond XNA 4.0).
+set(CNA_CNAEXT ON CACHE BOOL "Enable CNA's extended graphics layer" FORCE)
 
-add_subdirectory(../cna CNA_BUILD)
+# cnanext consumes sharp-runtime as a sibling checkout. Pin that consumed
+# checkout explicitly so a build never silently falls back to ../sharp-runtime.
+set(CNA_SHARP_RUNTIME_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../sharp-runtimenext"
+    CACHE PATH "Path to the sharp-runtime checkout consumed by CNA" FORCE)
 
-# Re-export the backend target name CNA sets internally, for the linker
-# group in ExamplesHelpers.cmake. Falls back gracefully if CNA doesn't
-# export it (no linker group — a normal link is attempted instead).
-if(NOT DEFINED BACKEND_TARGET)
-    if(CNA_GRAPHICS_BACKEND STREQUAL "EASYGL")
-        set(BACKEND_TARGET "easy-gl")
-    elseif(CNA_GRAPHICS_BACKEND STREQUAL "VULKAN")
-        set(BACKEND_TARGET "cna_backend_graphics_vulkan")
-    endif()
-endif()
+add_subdirectory(../cnanext CNA_BUILD)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(ExamplesHelpers)

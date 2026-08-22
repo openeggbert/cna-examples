@@ -26,9 +26,9 @@ using Microsoft::Xna::Framework::Graphics::Texture2D;
 // LZX-compressed variant.
 //
 // These fixtures are NOT part of this repository. They are copied out of
-// ../cna/tests/assets at build time, because they are Ms-PL while this repo is
+// ../cnanext/tests/assets at build time, because they are Ms-PL while this repo is
 // MIT, and because CNA consumes .xnb without ever writing it, so unlike every
-// other asset here they cannot be generated locally. A checkout without ../cna
+// other asset here they cannot be generated locally. A checkout without ../cnanext
 // has none, and this screen reports that rather than throwing.
 //
 // FontCalibri14.xnb is excluded even from the copy: it embeds a rasterised
@@ -87,12 +87,12 @@ protected:
             lines.push_back(MissingFixturesMessage());
             lines.emplace_back();
             lines.push_back("These are real MonoGame-produced .xnb files, copied from");
-            lines.push_back("../cna/tests/assets/xnb at build time rather than committed here:");
+            lines.push_back("../cnanext/tests/assets/xnb at build time rather than committed here:");
             lines.push_back("  - they are Ms-PL, and this repository is MIT;");
             lines.push_back("  - CNA reads .xnb but never writes it, so they cannot be generated");
             lines.push_back("    locally the way every other asset in this app is.");
             lines.emplace_back();
-            lines.push_back("Build with ../cna checked out alongside this repo and they appear.");
+            lines.push_back("Build with ../cnanext checked out alongside this repo and they appear.");
             DrawLines(sb, font, Vector2(40.0f, 82.0f), lines, mul(Color::White, TransitionAlpha()));
             return;
         }

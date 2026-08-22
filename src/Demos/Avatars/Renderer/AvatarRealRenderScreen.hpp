@@ -44,7 +44,7 @@ using Microsoft::Xna::Framework::GamerServices::AvatarRenderer;
 
 // Phase E: the headline demo -- a real, GPU-skinned avatar body (not the faithful no-op XNA
 // surface AvatarFaithfulDrawScreen covers) via AvatarRenderer::EnableRealRenderingEXT +
-// DrawRealEXT, following ../cna/examples/demo_avatar/src/AvatarDemo.cpp's exact proven call
+// DrawRealEXT, following ../cnanext/modules/gamer-services/examples/demo_avatar/src/AvatarDemo.cpp's exact proven call
 // sequence: ContentManager.Load<shared_ptr<SkinnedModelEXT>>(AvatarBodyTypeToContentNameEXT(...)),
 // EnableRealRenderingEXT, SetAppearanceEXT, standard lighting, then per-frame
 // DrawRealEXT(clipName, position, loop). Both genders load side by side in the same frame.
@@ -105,7 +105,7 @@ protected:
         lines.push_back("the CNA extension, NOT the faithful (never-renders) XNA API AvatarFaithfulDrawScreen covers.");
         if (!error_.empty()) {
             lines.push_back("Load FAILED: " + error_);
-            lines.push_back("(../cna checkout missing or avatar content not built -- see cmake/ExamplesHelpers.cmake)");
+            lines.push_back("(../cnanext checkout missing or avatar content not built -- see cmake/ExamplesHelpers.cmake)");
         }
         const Vector2 end = DrawLines(sb, font, Vector2(40.0f, 82.0f), lines, mul(Color::White, TransitionAlpha()));
 

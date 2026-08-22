@@ -7,19 +7,15 @@
 
 # cna_examples_configure_target(target_name)
 #
-# Links `target_name` against CNA/SHARP_RUNTIME (with a linker group on
-# GCC/Clang Linux to resolve the circular CNA <-> graphics-backend
-# reference), applies Emscripten/Windows packaging specifics, and copies
-# Content/ next to the built executable.
+# Links `target_name` against CNA/SHARP_RUNTIME, applies
+# Emscripten/Windows packaging specifics, and copies Content/ next to the
+# built executable.
 function(cna_examples_configure_target target_name)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT WIN32 AND NOT EMSCRIPTEN)
-        if(DEFINED BACKEND_TARGET AND TARGET ${BACKEND_TARGET})
-            target_link_libraries(${target_name} PRIVATE
-                -Wl,--start-group CNA ${BACKEND_TARGET} -Wl,--end-group
-                SHARP_RUNTIME)
-        else()
-            target_link_libraries(${target_name} PRIVATE CNA SHARP_RUNTIME)
-        endif()
+        # cnanext's CNA umbrella target carries its selected modular renderer
+        # transitively, so no hand-maintained backend target or linker group is
+        # needed here.
+        target_link_libraries(${target_name} PRIVATE CNA SHARP_RUNTIME)
     elseif(EMSCRIPTEN)
         # Deliberately does NOT name an SDL3 target. CNA imports SDL3 via
         # find_package inside its own cna_configure_vendored_sdl() FUNCTION, and
@@ -67,28 +63,28 @@ function(cna_examples_configure_target target_name)
     )
 
     # ---------------------------------------------------------------------
-    # Borrowed content: copied from ../cna at build time, never committed here.
+    # Borrowed content: copied from ../cnanext at build time, never committed here.
     #
     # The Content area's .xnb demos need real, externally-produced .xnb files,
     # and CNA consumes that format without ever writing it -- so they cannot be
     # generated locally the way every other asset in this repo is. The only
-    # available fixtures are MonoGame-produced ones under ../cna/tests/assets,
+    # available fixtures are MonoGame-produced ones under ../cnanext/tests/assets,
     # which are Ms-PL. This repo is MIT and states that it ships no ported
     # Microsoft content, so they are copied into the build output instead of
     # being vendored into version control. (One of them, FontCalibri14.xnb,
     # also embeds a rasterised Calibri glyph atlas -- a proprietary typeface --
     # and is excluded entirely, below.)
     #
-    # ../cna is already a hard dependency of this build (add_subdirectory), so
+    # ../cnanext is already a hard dependency of this build (add_subdirectory), so
     # this introduces nothing new. It is still guarded: a missing directory
     # leaves the demos to report the absence on screen rather than fail to build.
     # ---------------------------------------------------------------------
     # ---------------------------------------------------------------------
-    # Borrowed source: XactFileGen.hpp, included from ../cna, never copied.
+    # Borrowed source: XactFileGen.hpp, included from ../cnanext, never copied.
     #
     # The Audio area's XACT demos need real .xgs/.xsb/.xwb bank files, and CNA
     # reads that format without ever writing it -- so, like the .xnb fixtures
-    # below, they cannot be produced locally. ../cna already solved this for its
+    # below, they cannot be produced locally. ../cnanext already solved this for its
     # own demo_xact program with a 389-line, dependency-free generator.
     #
     # That header is Ms-PL (it lives in the Ms-PL cna repository) and this repo
@@ -100,7 +96,7 @@ function(cna_examples_configure_target target_name)
     # Guarded: without it the XACT demos compile to a screen explaining why they
     # are unavailable, instead of failing the build.
     # ---------------------------------------------------------------------
-    set(_cna_xact_filegen "${CMAKE_CURRENT_SOURCE_DIR}/../cna/examples/demo_xact/src")
+    set(_cna_xact_filegen "${CMAKE_CURRENT_SOURCE_DIR}/../cnanext/modules/audio/examples/demo_xact/src")
     if(EXISTS "${_cna_xact_filegen}/XactFileGen.hpp")
         target_include_directories(${target_name} PRIVATE "${_cna_xact_filegen}")
         target_compile_definitions(${target_name} PRIVATE CNA_EXAMPLES_HAS_XACT_FILEGEN=1)
@@ -110,7 +106,7 @@ function(cna_examples_configure_target target_name)
                        " -- the Audio area's XACT demos will report it as unavailable")
     endif()
 
-    set(_cna_xnb_fixtures "${CMAKE_CURRENT_SOURCE_DIR}/../cna/tests/assets/xnb")
+    set(_cna_xnb_fixtures "${CMAKE_CURRENT_SOURCE_DIR}/../cnanext/tests/assets/xnb")
     if(EXISTS "${_cna_xnb_fixtures}")
         add_custom_command(TARGET ${target_name} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -133,18 +129,18 @@ function(cna_examples_configure_target target_name)
 
     # ---------------------------------------------------------------------
     # Borrowed content: real avatar meshes/skeletons/clips, copied from
-    # ../cna at build time, never committed here.
+    # ../cnanext at build time, never committed here.
     #
     # The Avatars area's real-rendering demos need a real .skinnedmodel.json
     # (skeleton + skinned mesh parts + baked animation clips) -- procedurally
-    # generated by ../cna's own tools/avatar_builder/ pipeline, not hand-built
-    # here the way most of this repo's fixtures are. It lives only in ../cna
+    # generated by ../cnanext's own tools/avatar_builder/ pipeline, not hand-built
+    # here the way most of this repo's fixtures are. It lives only in ../cnanext
     # (Ms-PL), so it is copied into the build output the same way the .xnb
     # fixtures above are, never into this repo's git history. Guarded: a
     # missing directory leaves the Avatars demos to report the absence on
     # screen (via a caught ContentLoadException) rather than fail the build.
     # ---------------------------------------------------------------------
-    set(_cna_avatar_content "${CMAKE_CURRENT_SOURCE_DIR}/../cna/examples/demo_avatar/Content")
+    set(_cna_avatar_content "${CMAKE_CURRENT_SOURCE_DIR}/../cnanext/modules/gamer-services/examples/demo_avatar/Content")
     if(EXISTS "${_cna_avatar_content}")
         add_custom_command(TARGET ${target_name} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory

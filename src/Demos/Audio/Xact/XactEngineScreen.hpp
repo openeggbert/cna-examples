@@ -72,8 +72,8 @@ protected:
             lines.push_back("on Linux -- so unlike every other asset here they cannot be generated");
             lines.push_back("locally.");
             lines.emplace_back();
-            lines.push_back("../cna already solved this for its own demo_xact program. That header");
-            lines.push_back("is put on the include path when ../cna is present, but never copied");
+            lines.push_back("../cnanext already solved this for its own demo_xact program. That header");
+            lines.push_back("is put on the include path when ../cnanext is present, but never copied");
             lines.push_back("into this repository: it is Ms-PL and this repo is MIT.");
             DrawLines(sb, font, Vector2(40.0f, 82.0f), lines, mul(Color::White, TransitionAlpha()));
             return;

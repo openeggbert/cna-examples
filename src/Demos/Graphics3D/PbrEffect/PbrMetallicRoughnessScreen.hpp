@@ -90,14 +90,10 @@ using CNA::Graphics::PbrMaterial;
 // THAT at its own real (48-byte) stride -- never the polymorphic struct's
 // raw bytes directly.
 //
-// A SEPARATE finding, made while following up on this screen: CNA::Graphics::PbrMaterial
-// (a glTF-style texture-slot + factor settings bag, also NOXNA) exists and plan.md's
-// original D2 note claiming otherwise was stale. It is the SAME situation as
-// RenderPipelineSettingsScreen.hpp, not new demo substance: PbrEffect (below) and CNA's own
-// glTF loader (RuntimeGltfModelTests.cpp) both set PbrEffect's OWN properties directly
-// (getTextureProperty/getMetallicFactorProperty/etc., exactly as this screen does) --
-// PbrMaterial is never constructed by anything outside its own round-trip test
-// (../cna/examples/noxna_settings_example.cpp). Verified live below rather than assumed.
+// CNA::Graphics::PbrMaterial is the CNAEXT material representation for a glTF-style set of
+// texture slots and scalar factors. cnanext's glTF/content path and extended material binding
+// now consume it; PbrEffect still exposes its own direct properties, which this screen uses to
+// render the grid. The screen also verifies PbrMaterial's independent value round trip.
 class PbrMetallicRoughnessScreen : public DemoScreen {
 public:
     PbrMetallicRoughnessScreen() : DemoScreen("PbrEffect: Metallic & Roughness") {}
@@ -130,8 +126,7 @@ public:
         effect_->setTextureProperty(&*baseColor_);
         effect_->setDiffuseColorProperty(Vector3(0.85f, 0.68f, 0.30f));
 
-        // PbrMaterial round trip -- the only thing about this disconnected type that is
-        // testable (see the class comment above). Non-default values, read back exactly.
+        // PbrMaterial's independent value contract: non-default values, read back exactly.
         PbrMaterial mat;
         const bool defaultsMatch = mat.getAlbedoTexture() == nullptr &&
                                     mat.getMetallicFactor() == 0.0f &&
@@ -167,8 +162,8 @@ protected:
         lines.push_back("A metal has NO diffuse term, so the bottom row darkens where it reflects nothing.");
         lines.push_back("VertexPositionNormalTangentTexture is polymorphic (hidden vtable ptr inflates its");
         lines.push_back("size past the naive 48 bytes) -- fix: repack into a private, packed POD first.");
-        lines.push_back("PbrMaterial (a related NOXNA type) round-trips faithfully but is never read by");
-        lines.push_back("PbrEffect or CNA's glTF loader -- both set PbrEffect's own properties directly.");
+        lines.push_back("PbrMaterial is CNAEXT's related material representation: cnanext's glTF/content");
+        lines.push_back("path consumes it, while this grid uses PbrEffect's direct properties separately.");
         const Vector2 end = DrawLines(sb, font, Vector2(40.0f, 82.0f), lines, tint);
 
         // rendered_ reflects the PREVIOUS frame's probe (the probe itself can only run after
@@ -185,7 +180,7 @@ protected:
                         ? "Probe found no geometry -- the centre sphere is not rendering."
                         : !pbrMaterialHonest_
                               ? "Sphere renders, but PbrMaterial's round trip is no longer faithful."
-                              : "Verified live: sphere renders, PbrMaterial round-trips faithfully (unread).");
+                              : "Verified live: sphere renders and PbrMaterial round-trips faithfully.");
 
         sb.End();
         DrawGrid();

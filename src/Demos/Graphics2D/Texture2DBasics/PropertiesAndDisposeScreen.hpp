@@ -17,7 +17,7 @@ using Microsoft::Xna::Framework::Graphics::Texture2D;
 
 // Demonstrates Texture2D's inspectable properties (Width/Height/Bounds) and
 // its disposal lifecycle -- IsDisposed (inherited from GraphicsResource) and
-// the NOXNA HasBackend() live/disposed check.
+// the CNAEXT HasRenderer() live/disposed check.
 class PropertiesAndDisposeScreen : public DemoScreen {
 public:
     PropertiesAndDisposeScreen() : DemoScreen("Texture2D: Properties & Dispose") {}
@@ -52,7 +52,7 @@ protected:
         lines.push_back("Bounds: (" + std::to_string(bounds.X) + "," + std::to_string(bounds.Y) + "," +
                          std::to_string(bounds.Width) + "," + std::to_string(bounds.Height) + ")");
         lines.push_back("IsDisposed: " + std::string(texture_->getIsDisposedProperty() ? "true" : "false"));
-        lines.push_back("HasBackend(): " + std::string(texture_->HasBackend() ? "true" : "false"));
+        lines.push_back("HasRenderer(): " + std::string(texture_->HasRenderer() ? "true" : "false"));
         lines.push_back("Dispose() calls: " + std::to_string(disposeAttempts_));
         const Vector2 end = DrawLines(sb, font, Vector2(40.0f, 90.0f), lines, mul(Color::White, TransitionAlpha()));
 

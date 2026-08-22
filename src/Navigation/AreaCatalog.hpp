@@ -1046,7 +1046,7 @@ inline std::vector<DemoEntry> BuildDiagnosticsPlatformDemos() {
     std::vector<DemoEntry> demos;
     demos.push_back(MakeDemo<PlatformInfoScreen>(
         "Platform & Build", "Which platform, backend and optional subsystems this binary has",
-        {"CNA::getCurrentPlatform", "CNA::getCurrentGraphicsBackendName", "CNA_DEVICES"}));
+        {"CNA::getCurrentPlatform", "CNA::getCurrentGraphicsRendererName", "CNA_DEVICES"}));
     return demos;
 }
 
@@ -1056,7 +1056,7 @@ inline std::vector<DemoEntry> BuildDiagnosticsCapabilitiesDemos() {
     demos.push_back(MakeDemo<GraphicsCapabilityScreen>(
         "Graphics Capabilities", "All eight GraphicsCapability values, queried live",
         {"GraphicsDevice::SupportsCapability", "CNA::GraphicsCapability",
-         "CNA::GraphicsBackendType"}));
+         "CNA::GraphicsRendererType"}));
     return demos;
 }
 
@@ -1364,8 +1364,8 @@ inline std::vector<DemoEntry> BuildPbrEffectDemos() {
         "The glTF metallic-roughness BRDF on a 5x3 sphere grid, verified live by pixel probe",
         {"PbrEffect"}));
     demos.push_back(MakeDemo<RenderPipelineSettingsScreen>(
-        "RenderPipelineSettings: A Store With No Reader",
-        "A real, faithful CNA_NOXNA settings bag -- verified live, and by source grep, read by nothing",
+        "RenderPipelineSettings: Extended Configuration",
+        "CNA_CNAEXT pipeline configuration -- defaults and every mutated value round-trip exactly",
         {"RenderPipelineSettings"}));
     return demos;
 }

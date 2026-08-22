@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "CNA/GraphicsBackendType.hpp"
+#include "CNA/GraphicsRendererType.hpp"
 #include "CNA/GraphicsCapability.hpp"
 #include "Microsoft/Xna/Framework/Graphics/GraphicsDevice.hpp"
 
@@ -15,16 +15,16 @@ namespace CnaExamples::Demos::Diagnostics::CapabilitiesDemos {
 using namespace CnaExamples::GameStateManagement;
 using CnaExamples::Demos::DemoScreen;
 
-// CNA picks its graphics backend at COMPILE time (CNA_GRAPHICS_BACKEND), and
+// CNA picks its graphics backend at COMPILE time (CNA_GRAPHICS_RENDERER), and
 // the backends genuinely differ in what they can do. SDL_RENDERER, DX3 and
 // CANVAS are 2D-only by design: every 3D call throws. Others lack MSAA, or
 // multiple render targets, or occlusion queries.
 //
 // GraphicsDevice::SupportsCapability is how an application asks instead of
-// finding out by exception. Each of the eight values maps to a real,
+// finding out by exception. Each capability value maps to a real,
 // already-documented gap somewhere in CNA -- this is not a speculative list.
 //
-// This screen queries all eight live. It is also the screen that makes the
+// This screen queries every capability live. It is also the screen that makes the
 // second-backend work meaningful: a build against SDL_RENDERER shows ThreeD
 // as unsupported here, and a catalog that gates on that reports honestly
 // instead of crashing.
@@ -37,9 +37,9 @@ protected:
         auto& device = GetScreenManager()->getGraphicsDeviceProperty();
 
         std::vector<std::string> lines;
-        lines.push_back("Backend chosen at compile time: " +
-                        std::string(CNA::getCurrentGraphicsBackendName()));
-        lines.push_back("(the CNA_GRAPHICS_BACKEND CMake option -- not a runtime switch)");
+        lines.push_back("Renderer chosen at compile time: " +
+                        std::string(CNA::getCurrentGraphicsRendererName()));
+        lines.push_back("(the CNA_GRAPHICS_RENDERER CMake option -- not a runtime switch)");
         lines.emplace_back();
         lines.push_back("GraphicsDevice::SupportsCapability, queried live:");
         lines.emplace_back();
@@ -55,10 +55,6 @@ protected:
         lines.push_back(std::to_string(supported) + " of " +
                         std::to_string((int)std::size(kCapabilities)) + " supported here.");
         lines.emplace_back();
-        lines.push_back("Ask, do not try-and-catch. SDL_RENDERER, DX3 and CANVAS are 2D-only by");
-        lines.push_back("design -- every 3D call throws on them -- so a catalog like this one has");
-        lines.push_back("to gate its 3D demos on ThreeD rather than assume a full pipeline.");
-
         DrawLines(sb, font, Vector2(40.0f, 82.0f), lines, mul(Color::White, TransitionAlpha()));
     }
 
@@ -80,6 +76,18 @@ private:
         {CNA::GraphicsCapability::WireFrame,               "WireFrame",               "FillMode::WireFrame"},
         {CNA::GraphicsCapability::OcclusionQuery,          "OcclusionQuery",          "real GPU pixel counts"},
         {CNA::GraphicsCapability::CustomEffects,           "CustomEffects",           "a non-stock Effect in SpriteBatch"},
+        {CNA::GraphicsCapability::Texture3D,                "Texture3D",               "real volume texture storage"},
+        {CNA::GraphicsCapability::MultiStreamVertexInput,  "MultiStreamVertexInput",  "several vertex-buffer input streams"},
+        {CNA::GraphicsCapability::Instancing,               "Instancing",              "DrawInstancedPrimitives"},
+        {CNA::GraphicsCapability::StencilBuffer,            "StencilBuffer",           "an independent stencil plane"},
+        {CNA::GraphicsCapability::AdditiveBlending,         "AdditiveBlending",        "genuine BlendState::Additive"},
+        {CNA::GraphicsCapability::CompiledEffects,          "CompiledEffects",         "XNA/FNA compiled effect bytecode"},
+        {CNA::GraphicsCapability::FloatRenderTargets,       "FloatRenderTargets",      "32-bit float render targets"},
+        {CNA::GraphicsCapability::HalfFloatRenderTargets,   "HalfFloatRenderTargets",  "16-bit float render targets"},
+        {CNA::GraphicsCapability::HalfFloatTextureLinearFiltering,
+                                                        "HalfFloatTextureFiltering", "linear filtering of half-float textures"},
+        {CNA::GraphicsCapability::ComputeShaders,           "ComputeShaders",          "compute shaders and storage buffers"},
+        {CNA::GraphicsCapability::IndirectDraw,             "IndirectDraw",            "GPU-buffer-driven draw arguments"},
     };
 
     static std::string Pad(const std::string& text, std::size_t width) {
