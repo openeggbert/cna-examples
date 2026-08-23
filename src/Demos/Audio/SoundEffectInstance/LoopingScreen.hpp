@@ -25,8 +25,8 @@ using Microsoft::Xna::Framework::Audio::SoundState;
 
 // Demonstrates IsLooped: a short (0.4s) tone that either plays once and
 // stops (State -> Stopped) or repeats indefinitely (State stays Playing),
-// toggled live -- IsLooped must be set before Play() to take effect for
-// that playback (matching FNA), so toggling it restarts the instance.
+// toggled live. IsLooped becomes immutable after the instance's first Play()
+// (matching FNA), so each toggle creates and starts a fresh instance.
 class LoopingScreen : public DemoScreen {
 public:
     LoopingScreen() : DemoScreen("SoundEffectInstance: Looping") {}
@@ -51,6 +51,8 @@ protected:
         if (input.IsMenuSelect(ControllingPlayer(), playerIndex)) {
             looped_ = !looped_;
             instance_->Stop(true);
+            instance_.reset();
+            instance_ = effect_->CreateInstance();
             instance_->setIsLoopedProperty(looped_);
             instance_->Play();
         }
